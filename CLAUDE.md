@@ -96,3 +96,6 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run demo` | build both games → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
 | `npm run preview` / `npm run preview:https` | serve the production build on :4173 (https: self-signed cert in `.tmp/cert`) |
 | `npm run bench:scan` | 50 KB cartridge through the browser scanner with a fake camera → `bench/scan.md` |
+| `npm run test:blackbox` | BLACKBOX (PLAN Part 2): generated data up to date, ROM vs LAYOUT, every room in RAM vs LAYOUT, replays with per-frame hashes and oracle checks |
+| `npm run blackbox:gen` | regenerate `games/blackbox/rooms.gen.asm` and `tiles.gen.asm` from LAYOUT.md / tools |
+| `npm run blackbox:record [name…]` | re-record bot replays (`games/blackbox/tools/routes.ts`) into `games/blackbox/replays/`, then `npm run refs:games` |

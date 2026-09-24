@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M13 — Engine: rooms, movement, HUD (Part 2: BLACKBOX)
+**Current milestone:** M14 — Stealth: guards, cameras, drones, EMP (Part 2: BLACKBOX)
 **Status:** Part 1 (M0–M11) complete; Part 2 in progress
 **Last updated:** 2026-09-24
 
@@ -24,7 +24,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 Part 2 — BLACKBOX (design: `games/blackbox/`)
 
 - [x] M12 Tools for a large game (macros, include, symbols, trace)
-- [ ] M13 Engine: rooms, movement, HUD
+- [x] M13 Engine: rooms, movement, HUD
 - [ ] M14 Stealth: guards, cameras, drones, EMP
 - [ ] M15 Text and the ORACLE engine
 - [ ] M16 Content, sections 0–3
@@ -34,8 +34,8 @@ Part 2 — BLACKBOX (design: `games/blackbox/`)
 ## Current work
 
 Part 2 planned (PLAN.md M12–M18); design complete in `games/blackbox/`. Part 1 still awaits the human's
-real-device check (PLAN.md *Manual acceptance*). Record the M12 commit hash here when M12 is done — it is the
-baseline for the "runtime does not change" rule.
+real-device check (PLAN.md *Manual acceptance*). **M12 baseline commit: 5a7ca7d** — from here on
+`git diff 5a7ca7d -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
 
 ## Key numbers (fill in as measured)
 

@@ -23,7 +23,7 @@ Mira** (optional flags are not used by the check).
 | `L` | lift / blast door / warp point (see *warp*) | blocks, use with A | blocks |
 | `K` | the cable (7.4) | blocks, use with A | free |
 | `i` | pick-up on the floor | free | free |
-| `@` | player start (0.1 only) | free | free |
+| `@` | player start (0.1) / arrival point in a room entered by warp that has no `L` tile (1.1) | free | free |
 | `g d h u p a` | guard, drone, heavy guard, hunter, prototype, ORACLE agent — start cell | free | – |
 | `n b` | NPC, boss — start cell | free | – |
 
@@ -96,7 +96,7 @@ warp:
 locks:
 gives:
 events:
-objects: g(7,6) patrols row 6 between columns 2 and 13, looking along the row. Player arrives at (1,12).
+objects: g(7,6) patrols row 6 between columns 2 and 13, looking along the row. Player arrives at @(1,12).
 ################
 #..............#
 #..............#
@@ -109,7 +109,7 @@ objects: g(7,6) patrols row 6 between columns 2 and 13, looking along the row. P
 #..=====..=====#
 #..............#
 #..............#
-#..............#
+#@.............#
 #..............#
 ################
 ```

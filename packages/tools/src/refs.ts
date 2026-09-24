@@ -3,6 +3,7 @@
 //   frame1.png        frame 1 (seed 1, no input) dumped from the VM framebuffer
 //   reference.json    frame-1 hashes and cartridge size
 //   hashes.txt        per-frame VM state hashes of replay.json (if the game has one)
+//   replays/*.hashes.txt  per-frame hashes of every replays/*.json (games with several replays)
 // References always come from the headless VM, never from a browser canvas.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -28,6 +29,16 @@ for (const name of readdirSync(GAMES_DIR)) {
     const hashes = replay(VM.fromCartridge(cart, { seed: rf.seed ?? 1 }), rf.inputs, rf.frames);
     writeFileSync(join(dir, 'hashes.txt'), hashes.join('\n') + '\n');
     extra = `, ${hashes.length} replay hashes`;
+  }
+  const replayDir = join(dir, 'replays');
+  if (existsSync(replayDir)) {
+    const files = readdirSync(replayDir).filter((f) => f.endsWith('.json'));
+    for (const f of files) {
+      const rf = JSON.parse(readFileSync(join(replayDir, f), 'utf8')) as ReplayFile & { frames: number };
+      const hashes = replay(VM.fromCartridge(cart, { seed: rf.seed ?? 1 }), rf.inputs, rf.frames);
+      writeFileSync(join(replayDir, f.replace(/\.json$/, '.hashes.txt')), hashes.join('\n') + '\n');
+    }
+    extra += `, ${files.length} replays in replays/`;
   }
   console.log(`${name}: ${bytes.length} bytes${extra}`);
 }

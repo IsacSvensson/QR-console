@@ -13,7 +13,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.pure.json && tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice",
+    "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice --project blackbox",
     "check": "npm run typecheck && npm run lint && npm test",
     "bench:fountain": "tsx bench/fountain.ts",
     "qrc": "tsx packages/tools/src/cli.ts",
@@ -27,7 +27,10 @@
     "demo": "tsx packages/tools/src/demo.ts",
     "preview:https": "node scripts/https-cert.mjs && npm run build -w apps/web && QRC_HTTPS=1 npm run preview -w apps/web",
     "preview": "npm run build -w apps/web && npm run preview -w apps/web",
-    "bench:scan": "QRC_BIG_FIXTURE=1 playwright test --project measure"
+    "bench:scan": "QRC_BIG_FIXTURE=1 playwright test --project measure",
+    "test:blackbox": "vitest run --project blackbox --reporter=verbose",
+    "blackbox:gen": "tsx games/blackbox/tools/gen.ts && tsx games/blackbox/tools/tiles.ts",
+    "blackbox:record": "tsx games/blackbox/tools/record.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
