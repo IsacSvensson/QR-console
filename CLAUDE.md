@@ -87,3 +87,4 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run test:slice` | layer-2 vertical slice: hello.asm → QR images / GIF → decode → VM → reference frame |
 | `npm run test:qr-robust` | layer 3: moderate camera distortion, default params must decode ≥ 95 % |
 | `npm run bench:qr` | QR decoder/version/ECC × distortion benchmark + transfer estimate → `bench/qr.md` (~5 min) |
+| `npm run test:games` | every game with a `replay.json`: assemble, size, per-frame hash replay, `games/<g>/checks.ts` rules |

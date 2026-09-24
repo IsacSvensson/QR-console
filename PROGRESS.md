@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M7 — Breakout
+**Current milestone:** M8 — Second game (Pong)
 **Status:** in progress
 **Last updated:** 2026-09-24
 
@@ -15,7 +15,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 - [x] M4 Layer 2 + first vertical slice
 - [x] M5 Layer 3 + QR benchmark
 - [x] M6 Full VM + determinism
-- [ ] M7 Breakout
+- [x] M7 Breakout
 - [ ] M8 Second game (no runtime changes)
 - [ ] M9 PWA: scanner, library, player
 - [ ] M10 Offline
@@ -34,12 +34,13 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 | QR version / ECC / frame ms | v12 / M / 150 ms; decoder zxing-wasm (+GlobalHistogram fallback) | bench/qr.md, D-007 |
 | Payload bytes per frame | 262 (287 − 25 overhead) | bench/qr.md |
 | 50 KB transfer: frames / seconds / KB/s | K=196, loop 294; p90 259 frames / 38.9 s / 1.29 KB/s (simulated 20 % loss) | bench/qr.md |
-| Breakout cartridge size | — | test:games |
+| Breakout cartridge size | 877 B (ROM 1551 B, deflate-raw); target ≤ 10 KB met | test:games |
 | Second game cartridge size | — | test:games |
 
 ## Known issues
 
-—
+- Commit 8bec378 (and possibly 4436750) had a red `npm run check`: the `unit` Vitest project globbed
+  `test/**` and ran the slow robust test with a 5 s timeout. Fixed in d53dc27; later commits verified green.
 
 ## Blocked / needs human
 
