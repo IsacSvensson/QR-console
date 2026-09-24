@@ -12,6 +12,7 @@
 .include "actors.asm"
 .include "text.asm"
 .include "oracle.asm"
+.include "code.asm"
 .include "sounds.asm"
 .include "draw.asm"
 .include "gfx.asm"

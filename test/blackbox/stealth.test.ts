@@ -7,7 +7,11 @@ beforeAll(async () => {
   bb = await buildBlackbox();
 });
 
-const REPLAYS = ['m13-walk', 'm14-caught', 'm14-labs'];
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { GAME_DIR } from './oracle';
+
+const REPLAYS = readdirSync(join(GAME_DIR, 'replays')).filter((f) => /^m\d+-[\w-]+\.json$/.test(f) && !f.endsWith('.frames.json')).map((f) => f.replace('.json', ''));
 
 /**
  * Reference judgement of a frame in which the actors ran: does any watcher see the player's centre cell, or

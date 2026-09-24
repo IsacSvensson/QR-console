@@ -156,4 +156,7 @@ CH_LISTEN  = 2
 .var mira_followed          ; ORACLE profile: compliance
 .var final_guess            ; CH_* forecast of the final choice
 .var pct_before             ; accuracy just before the last action
+.var code_bits, 6           ; access code bit stream (40 bits)
+.var code_pos
+.var code_text, 10          ; the 8-character code + 0
 .var dbg_oracle             ; TEST HOOK: 1 = recompute the ORACLE values and render "<PCT> <N>/<N> <X>" 

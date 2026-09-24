@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFramePng } from '@qrc/tools';
@@ -96,13 +96,19 @@ describe('text (M15)', () => {
     expect(s).toBe(docBoxes()[0]!.text);
   });
 
-  for (const [name, frame] of [['m13-walk', 13], ['m14-labs', 1096]] as const) {
-    it(`${name}: frame ${frame} (${name === 'm13-walk' ? 'dialogue box' : 'terminal'}) matches the committed reference image`, () => {
+  for (const [name, kind] of [['m13-walk', 'M_DIALOG'], ['m14-labs', 'M_TERM']] as const) {
+    it(`${name}: the committed reference frame (${kind === 'M_DIALOG' ? 'dialogue box' : 'terminal'}) matches, and shows that mode`, () => {
+      const [frame] = JSON.parse(readFileSync(join(GAME_DIR, 'replays', `${name}.frames.json`), 'utf8')) as number[];
       const ref = readFramePng(join(GAME_DIR, 'replays', `${name}.f${frame}.png`));
       let got: Uint8Array | null = null;
+      let mode = -1;
       runReplay(bb, name, (v) => {
-        if (v.f + 1 === frame) got = v.vm.fb.slice();
+        if (v.f + 1 === frame) {
+          got = v.vm.fb.slice();
+          mode = v.mode;
+        }
       });
+      expect(mode).toBe(symbol(bb.sym, kind));
       expect(got).not.toBeNull();
       expect(Buffer.from(got!).equals(Buffer.from(ref))).toBe(true);
     });
@@ -121,7 +127,7 @@ const refGuess = (emp: number, logs: number, mira: number) => (mira >= logs && m
 describe('ORACLE engine (M15)', () => {
   it('every replay: the derived ORACLE values in RAM equal the reference model after every frame', () => {
     const problems: string[] = [];
-    for (const name of ['m13-walk', 'm14-caught', 'm14-labs']) {
+    for (const name of readdirSync(join(GAME_DIR, 'replays')).filter((f) => /^m\d+-[\w-]+\.json$/.test(f) && !f.endsWith('.frames.json')).map((f) => f.replace('.json', ''))) {
       let charges = -1;
       let empUses = 0;
       runReplay(bb, name, (v) => {

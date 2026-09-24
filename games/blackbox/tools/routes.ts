@@ -6,6 +6,48 @@ const EMP_R = 40;
 const machineNear = (b: Bot) =>
   b.actors().some((a) => [2, 4, 5, 6].includes(a.type) && a.stun === 0 && Math.abs(a.x - b.ram('px')) <= EMP_R && Math.abs(a.y - b.ram('py')) <= EMP_R);
 
+/** title -> the director's office -> 3.1, optionally visiting Dr. Reyes */
+const SECTIONS_0_2 = (reyes: boolean): Step[] => [
+  ...TO_CORRIDOR,
+  { exit: 'N' },
+  { room: '2.1' },
+  ...(reyes
+    ? ([{ exit: 'E' }, { room: '2.3' }, { exit: 'N' }, { room: '2.4' }, { use: [5, 3] }, { use: [11, 2] }, { exit: 'S' }, { room: '2.3' }, { exit: 'W' }, { room: '2.1' }] as Step[])
+    : []),
+  { exit: 'W' },
+  { room: '2.2' },
+  { use: [4, 5] },
+  { exit: 'N' },
+  { room: '2.5' },
+  { to: [3, 11] },
+  { exit: 'E' },
+  { room: '2.6' },
+  { use: [5, 3] },
+  { use: [10, 3] },
+  { exit: 'N' },
+  { room: '3.1' },
+  { use: [2, 2] },
+];
+
+/** 3.1 -> the crossroads (P1) -> armory -> lift down to 4.1 */
+const SECTION_3 = (first: 'left' | 'right'): Step[] => [
+  { exit: 'N' },
+  { room: '3.3' },
+  { to: [7, 7] },
+  ...(first === 'right' ? ([{ exit: 'E' }, { room: '3.4' }, { use: [3, 3] }, { exit: 'W' }, { room: '3.3' }] as Step[]) : []),
+  { exit: 'W' },
+  { room: '3.2' },
+  { to: [3, 3] },
+  { use: [10, 5] },
+  { exit: 'E' },
+  { room: '3.3' },
+  { exit: 'N' },
+  { room: '3.5' },
+  { use: [7, 1] },
+  { room: '4.1' },
+  { wait: 20 },
+];
+
 /** from the title screen to the corridor (1.4), with the badge */
 const TO_CORRIDOR: Step[] = [
   { wait: 10 },
@@ -78,6 +120,19 @@ export const ROUTES: Record<string, { seed: number; route: Step[]; note: string 
       { room: '1.4' },
       { wait: 20 },
     ],
+  },
+
+  // M16: sections 0-3, obeying Mira at P1 (left), reading Dr. Reyes' notes; ends on the lift down.
+  'm16-left': {
+    seed: 4,
+    note: 'P1 hit, D1-D4 + D6, L1-L3, access codes 2 and 3',
+    route: [...SECTIONS_0_2(true), ...SECTION_3('left')],
+  },
+  // M16: right first at P1 (alarm centre, D5), then back to the armory.
+  'm16-right': {
+    seed: 5,
+    note: 'P1 miss, D5',
+    route: [...SECTIONS_0_2(false), ...SECTION_3('right')],
   },
 
   // M14: to the labs — copier, janitor's closet (spare charge), vent, the director's safe, the camera index,

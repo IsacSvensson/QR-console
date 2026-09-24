@@ -32,7 +32,8 @@ OP_PROF   = 16              ; k: profile counter +1 (1 curiosity, 2 compliance)
 OP_IFHIT  = 17              ; p, target: jump if prediction p came true
 OP_IFGUESS = 18             ; choice, target: jump if ORACLE forecasts that final choice
 OP_SNAP   = 19              ; remember the accuracy before the last action
-NUM_OPS   = 20
+OP_CODE   = 20              ; section: show the access code to resume at that section (waits for A)
+NUM_OPS   = 21
 
 .macro TR_ENTER script
     .byte TK_ENTER, 0, 0
@@ -131,6 +132,9 @@ NUM_OPS   = 20
 .endm
 .macro S_SNAP
     .byte OP_SNAP
+.endm
+.macro S_CODE sec
+    .byte OP_CODE, sec
 .endm
 PROF_LOGS = 1
 PROF_MIRA = 2
@@ -415,6 +419,32 @@ op_ifguess:
     ADD r0, 4
     RET
 
+op_code:
+    MOV r1, r0
+    ADD r1, 2
+    ST [script_pc], r1
+    LDB r0, [r0 + 1]
+    CALL make_code
+    LDI r1, text_buf        ; "ACCESS CODE" / the code, in a SYSTEM box
+    LDI r0, s_access
+    CALL copy_str
+    LDI r0, code_text
+    CALL copy_str
+    LDI r0, 0
+    STB [r1], r0
+    SUB r1, text_buf
+    ST [box_len], r1
+    LDI r0, SP_SYSTEM
+    ST [box_spk], r0
+    LDI r0, BOX_SAY
+    ST [box_kind], r0
+    LDI r0, 0
+    ST [reveal], r0
+    LDI r0, M_DIALOG
+    ST [mode], r0
+    LDI r0, 0
+    RET
+
 op_snap:
     PUSH r0
     CALL accuracy
@@ -425,5 +455,6 @@ op_snap:
 
 .data
 op_table: .word op_end, op_set, op_clr, op_if, op_ifnot, op_jmp, op_event, op_ifev, op_warp, op_sfx, op_wait
-          .word op_say, op_ask, op_log, op_bark, op_pred, op_prof, op_ifhit, op_ifguess, op_snap
+          .word op_say, op_ask, op_log, op_bark, op_pred, op_prof, op_ifhit, op_ifguess, op_snap, op_code
+s_access: .string "ACCESS CODE\n\n    "
 prof_vars: .word 0, logs_read, mira_followed

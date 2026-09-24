@@ -234,3 +234,12 @@ Decision: a box whose text is exactly `<PROTOCOL>` (D16) is shown on the full-sc
 9 lines; a dialogue box has 5). Every change to a profile counter recomputes the forecast immediately, so the
 RAM state is always consistent (found by the per-frame reference-model test: after the first EMP the forecast
 in RAM was stale until the next prediction).
+
+## D-018 — Access codes shown on entering a section; D5 on the right-hand path
+Date: 2026-09-24 · Milestone: M16
+Decision: the access code for section n is shown when the player first enters that section's first room
+(2.1, 3.1, … 7.1), not when leaving the previous one, so a code box never interrupts a room transition and
+"resume" means exactly that room. Format (code.asm): section 3 bits, prediction masks 8+8, the three profile
+counters 3+3+3, charges 3, 9-bit checksum over the first 32 bits; 8 symbols from a 32-letter alphabet without
+I, O, 0, 1, each XORed with a per-position key. D5 (the alarm log) is reachable only by disobeying Mira at P1:
+the player who disobeys learns early that the break-in was expected.

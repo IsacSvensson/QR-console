@@ -563,6 +563,8 @@ got_caught:
     ST [det_count], r0
     LDI r0, SFX_ALARM
     SYS SFX
+    LDI r0, box_BARK_9      ; "DETECTED. RESTARTING ROOM."
+    CALL open_bark
 @already:
     RET
 
