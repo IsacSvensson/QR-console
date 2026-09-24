@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M8 — Second game (Pong)
+**Current milestone:** M9 — PWA: scanner, library, player
 **Status:** in progress
 **Last updated:** 2026-09-24
 
@@ -16,7 +16,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 - [x] M5 Layer 3 + QR benchmark
 - [x] M6 Full VM + determinism
 - [x] M7 Breakout
-- [ ] M8 Second game (no runtime changes)
+- [x] M8 Second game (no runtime changes)
 - [ ] M9 PWA: scanner, library, player
 - [ ] M10 Offline
 - [ ] M11 CLI, docs, report
@@ -35,7 +35,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 | Payload bytes per frame | 262 (287 − 25 overhead) | bench/qr.md |
 | 50 KB transfer: frames / seconds / KB/s | K=196, loop 294; p90 259 frames / 38.9 s / 1.29 KB/s (simulated 20 % loss) | bench/qr.md |
 | Breakout cartridge size | 877 B (ROM 1551 B, deflate-raw); target ≤ 10 KB met | test:games |
-| Second game cartridge size | — | test:games |
+| Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
 
 ## Known issues
 

@@ -136,3 +136,14 @@ last failed attempt. When source packets arrive *after* repair packets (camera j
 unknowns shrink while the equation count stays the same, so GE was wrongly skipped until an extra repair packet
 arrived. Found through the loop simulation in bench/qr.md (p90 ≫ one loop). Replaced by a dirty flag set on
 every change to the residual system; regression test "looping-animation order" added.
+
+## D-009 — Game-specific test logic lives in games/<name>/checks.ts; second game = Pong
+Date: 2026-09-24 · Milestone: M7/M8
+Decision: `test/games/games.test.ts` is fully generic (discovers every game with a `replay.json`); what a run
+must demonstrate is asserted by `games/<name>/checks.ts` via RAM symbols from the assembler. Replays are
+recorded once by a small bot script in the game's folder (`record-replay.ts`) and committed as data.
+Pong (player vs CPU, first to 5) is the second game; it uses a different syscall mix from Breakout (LINE net,
+RECTFILL sprites-free drawing, direct SOUND jingle vs Breakout's MAP tilemap bricks and SPR ball).
+M8 was done with zero changes under `packages/` and `apps/` relative to the M7 commit bd2e1b8.
+Alternatives: per-game branches in the shared test (would put game knowledge outside games/<name>/).
+Why: PLAN M8 forbids game-specific code outside the game's folder.

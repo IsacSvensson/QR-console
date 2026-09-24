@@ -57,6 +57,6 @@ describe.each(games)('games/%s', (name) => {
   });
 });
 
-it('at least one playable game is checked', () => {
-  expect(games.length).toBeGreaterThanOrEqual(1);
+it('at least two playable games are checked (Breakout + a second game)', () => {
+  expect(games.length).toBeGreaterThanOrEqual(2);
 });
