@@ -305,3 +305,14 @@ player to get out of sight within the grace period and stay unseen 120 frames mo
 fails on 2.6 → 2.1 (the reported bug) and 7.2 → 7.1 (the boss room: the same trap). The stealth reference oracle
 treats frames with `grace_t > 0` as non-detecting; m14-caught checks that a restart sets the grace period, and its
 route now waits out the grace period before walking into view. All replays re-recorded.
+
+## D-023 — BLACKBOX: a music loop per section (human play test)
+Date: 2026-09-24 · After M18
+Observation (phone): the music was the same in every room. True by design: DESIGN.md §5 budgeted three loops
+(ambient for sections 0-6, alarm in the boss rooms, ORACLE from 6.5), which M18 implemented.
+Chosen: five more original two-voice loops so every section 1-7 has its own (administration: orderly D minor with
+one wrong note per half; security: clipped E-phrygian pulse; laboratory: whole-tone arpeggios; underground:
+almost silent; server complex: fast arpeggios shifting by ORACLE's semitone). Cost ~0.2 KB ROM; the sequencer is
+unchanged. The M18 music test now reads every track (MUS_COUNT) from ROM, requires every track to be heard in the
+replays, and a new test requires distinct tracks for sections 1-7. PLAN.md's "three music loops" is a minimum
+already met; DESIGN.md §5 updated.

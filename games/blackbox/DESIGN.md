@@ -203,7 +203,7 @@ spelarens förväntade position). Sprites: Eli, forskare, forskningschef, 6 fien
 | 37 rum (8×8 byggblock à 2×2 tiles, 64 B/rum) + blocktabell + objektlistor | ~3 |
 | Text: 20 dialoger + 10 loggar, **uppmätt** 1 382 ord / 8,4 KB rått → ~7 KB med enkel ordbok (se nedan) | ~6–7 |
 | Grafik: ~60 tiles + sprites | ~6 |
-| Musik: 3 slingor (mörk ambient, larm/boss, ORACLE) + ljudeffekter | ~1.5 |
+| Musik: 8 slingor (en per avsnitt 1–6, larm/boss, ORACLE; se D-023) + ljudeffekter | ~1.5 |
 | Kod: motor, smygande, skripttolk, ORACLE-motor, musik, access codes | 12–15 |
 | **Summa** | **~29–33** ⚠ |
 

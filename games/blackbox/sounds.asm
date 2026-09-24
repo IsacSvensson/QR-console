@@ -24,6 +24,12 @@ MUS_NONE    = 0
 MUS_AMBIENT = 1
 MUS_ALARM   = 2
 MUS_ORACLE  = 3
+MUS_ADMIN   = 4
+MUS_SECUR   = 5
+MUS_LAB     = 6
+MUS_UNDER   = 7
+MUS_SERVER  = 8
+MUS_COUNT   = 9
 MUSIC_VOL   = 4
 MUSIC_CH0   = 0             ; melody
 MUSIC_CH1   = 1             ; bass
@@ -42,6 +48,11 @@ tracks:                     ; per track: melody, bass (track 0 = silence)
     .word amb_mel, amb_bass
     .word alm_mel, alm_bass
     .word orc_mel, orc_bass
+    .word adm_mel, adm_bass
+    .word sec_mel, sec_bass
+    .word lab_mel, lab_bass
+    .word und_mel, und_bass
+    .word srv_mel, srv_bass
 
 ; ambient: a slow A-minor pulse, notes falling away into rests
 amb_mel:
@@ -103,6 +114,146 @@ orc_mel:
 orc_bass:
     N 82, 192
     N 87, 72
+    LOOP
+
+; administration: D minor, even and orderly like office lights — one note in each half is slightly wrong
+adm_mel:
+    N 294, 12
+    N 349, 12
+    N 440, 12
+    N 349, 12
+    N 294, 12
+    N 349, 12
+    N 466, 12
+    N 440, 24
+    N 0, 36
+    N 262, 12
+    N 330, 12
+    N 392, 12
+    N 330, 12
+    N 262, 12
+    N 330, 12
+    N 440, 12
+    N 415, 12
+    N 0, 36
+    LOOP
+adm_bass:
+    N 73, 24
+    N 0, 24
+    N 73, 24
+    N 0, 24
+    N 73, 24
+    N 0, 24
+    N 65, 24
+    N 0, 24
+    N 65, 24
+    N 0, 24
+    N 65, 24
+    N 0, 24
+    LOOP
+
+; security: E phrygian, a clipped low pulse and far-off pings
+sec_mel:
+    N 659, 6
+    N 0, 42
+    N 698, 6
+    N 0, 42
+    N 659, 6
+    N 0, 18
+    N 587, 6
+    N 0, 66
+    LOOP
+sec_bass:
+    N 82, 8
+    N 0, 16
+    N 82, 8
+    N 0, 16
+    N 82, 8
+    N 0, 16
+    N 82, 8
+    N 0, 16
+    N 87, 8
+    N 0, 16
+    N 87, 8
+    N 0, 16
+    N 82, 8
+    N 0, 16
+    N 82, 8
+    N 0, 16
+    LOOP
+
+; laboratory: clean whole-tone arpeggios over a descending bass
+lab_mel:
+    N 523, 8
+    N 587, 8
+    N 659, 8
+    N 740, 8
+    N 659, 8
+    N 587, 8
+    N 523, 8
+    N 0, 8
+    N 466, 8
+    N 523, 8
+    N 587, 8
+    N 659, 8
+    N 587, 8
+    N 523, 8
+    N 466, 8
+    N 0, 8
+    N 0, 64
+    LOOP
+lab_bass:
+    N 131, 64
+    N 117, 64
+    N 104, 64
+    LOOP
+
+; underground: almost nothing — three falling notes, a long silence, the floor moving under them
+und_mel:
+    N 0, 60
+    N 392, 36
+    N 370, 36
+    N 0, 24
+    N 349, 72
+    N 0, 60
+    LOOP
+und_bass:
+    N 98, 144
+    N 92, 144
+    LOOP
+
+; server complex: fast data arpeggios; the second one shifts up a semitone, ORACLE's interval
+srv_mel:
+    N 440, 6
+    N 659, 6
+    N 880, 6
+    N 659, 6
+    N 440, 6
+    N 659, 6
+    N 880, 6
+    N 659, 6
+    N 466, 6
+    N 698, 6
+    N 932, 6
+    N 698, 6
+    N 466, 6
+    N 698, 6
+    N 932, 6
+    N 698, 6
+    N 440, 6
+    N 659, 6
+    N 880, 6
+    N 659, 6
+    N 440, 6
+    N 659, 6
+    N 880, 6
+    N 659, 6
+    N 0, 48
+    LOOP
+srv_bass:
+    N 110, 96
+    N 117, 48
+    N 110, 48
     LOOP
 
 .code

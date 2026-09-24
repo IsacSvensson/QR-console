@@ -107,10 +107,11 @@ describe('music (M18)', () => {
       for (let a = addr; rom[a + 2] !== 0; a += 3) notes.push({ hz: w16(a), frames: rom[a + 2]! });
       return notes;
     };
-    const tracks = [0, 1, 2, 3].map((t) => (t === 0 ? null : [voice(w16(S('tracks') + t * 4)), voice(w16(S('tracks') + t * 4 + 2))]));
+    const tracks = Array.from({ length: S('MUS_COUNT') }, (_, t) => (t === 0 ? null : [voice(w16(S('tracks') + t * 4)), voice(w16(S('tracks') + t * 4 + 2))]));
     const VOL = S('MUSIC_VOL');
     let resumes = 0;
     let notes = 0;
+    const heard = new Set<number>();
     const problems: string[] = [];
     for (const name of ['m17-obedient', 'm17-cable', 'm18-resume']) {
       let track = 0;
@@ -152,6 +153,7 @@ describe('music (M18)', () => {
           if (c.channel < 2) mutedSince[c.channel] = v.f;
         }
         const now = v.vm.read16(v.S('music_track'));
+        if (got.length) heard.add(track);
         if (now !== track) {
           track = now;
           t[0] = t[1] = 0;
@@ -163,5 +165,15 @@ describe('music (M18)', () => {
     expect(problems.slice(0, 5)).toEqual([]);
     expect(notes).toBeGreaterThan(500);
     expect(resumes).toBeGreaterThan(10);
+    expect([...heard].sort((a, b) => a - b), 'tracks heard').toEqual(Array.from({ length: S('MUS_COUNT') - 1 }, (_, i) => i + 1));
+  });
+
+  it('each section from 1 (entrance) to 7 (core) has its own track', () => {
+    const rom = new Uint8Array(0x10000);
+    rom.set(bb.cart.sections.code, 0);
+    rom.set(bb.cart.sections.rodata, bb.cart.sections.code.length);
+    const zm = Array.from({ length: 8 }, (_, z) => rom[symbol(bb.sym, 'zone_music') + z]!);
+    expect(new Set(zm.slice(1)).size, `zone_music ${zm}`).toBe(7);
+    expect(zm.every((t) => t > 0 && t < symbol(bb.sym, 'MUS_COUNT'))).toBe(true);
   });
 });

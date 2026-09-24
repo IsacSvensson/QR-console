@@ -94,7 +94,7 @@ Then:
 3. Open `demo/breakout.gif` on the laptop, full screen (the loop is 8 frames × 150 ms).
 4. In the app: **Scan**, point at the screen until the bar reaches 100 % and the title appears, press **PLAY**.
    Controls: on-screen D-pad and A/B (keyboard: arrows, Z/Space = A, X = B).
-5. Repeat with `demo/pong.gif` and `demo/blackbox.gif` (13 s loop; B on BLACKBOX's title screen enters an access code).
+5. Repeat with `demo/pong.gif` and `demo/blackbox.gif` (13 s loop; B on BLACKBOX's title screen enters an access code). How to play: `games/blackbox/GUIDE.md` (Swedish).
 
 This real-device test has **not** been performed by the agent that built the prototype; see `REPORT.md`.
 
