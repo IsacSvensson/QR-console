@@ -201,3 +201,24 @@ describe(`corruption and foreign packets (seed ${SEED})`, () => {
     expect(toHex(sha256(dec.getResult()!).slice(0, 8))).toBe(toHex(enc.id));
   });
 });
+
+describe(`looping-animation order (seed ${SEED})`, () => {
+  it('repair packets seen before the remaining source packets still decode as soon as rank allows', () => {
+    // The camera may join a looping GIF mid-way: repair packets first, then source packets.
+    for (let t = 0; t < 50; t++) {
+      const data = randomBytes(SEED + t, 50 * 1024);
+      const enc = new FountainEncoder(data, { blockSize: BLOCK, mode: Mode.Systematic });
+      const K = enc.K;
+      const dec = new FountainDecoder();
+      const r = rng(SEED + t);
+      const repair = 5 + Math.floor(r() * 20);
+      for (let s = K; s < K + repair; s++) dec.receive(enc.packet(s));
+      let fed = repair;
+      for (let s = 0; s < K && !dec.done; s++, fed++) dec.receive(enc.packet(s));
+      // K - repair source packets + repair dense packets = K equations: full rank needs at most a couple more
+      for (let s = K + repair; !dec.done; s++, fed++) dec.receive(enc.packet(s));
+      expect(fed, `trial seed ${SEED + t}`).toBeLessThanOrEqual(K + 3);
+      expect(toHex(dec.getResult()!)).toBe(toHex(data));
+    }
+  });
+});

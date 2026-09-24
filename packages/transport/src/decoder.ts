@@ -48,7 +48,8 @@ export class FountainDecoder {
   private eqs = new Map<number, Equation>();
   private blockEqs = new Map<number, Set<number>>();
   private nextEqId = 0;
-  private lastFailedGeSize = -1;
+  /** Set whenever the residual system changes; Gaussian elimination only re-runs when it is set. */
+  private dirty = false;
   private result: Uint8Array | null = null;
   private failed = false;
   private readonly gaussian: boolean;
@@ -102,6 +103,7 @@ export class FountainDecoder {
 
     const before = this.known;
     const added = this.addEquation(neighbours(this.mode, p.seed, this.K), p.payload);
+    if (added) this.dirty = true;
     if (this.known < this.K && this.gaussian) this.tryGaussian();
     if (this.known === this.K) return this.finish();
     return added || this.known > before ? 'accepted' : 'redundant';
@@ -166,7 +168,7 @@ export class FountainDecoder {
   private tryGaussian() {
     const u = this.K - this.known;
     const m = this.eqs.size;
-    if (m < u || m === this.lastFailedGeSize) return;
+    if (m < u || !this.dirty) return;
     this.gaussianRuns++;
     const unknown: number[] = [];
     const col = new Map<number, number>();
@@ -190,7 +192,7 @@ export class FountainDecoder {
       let p = c;
       while (p < m && !(bits[order[p]!]![w]! & mask)) p++;
       if (p === m) {
-        this.lastFailedGeSize = m;
+        this.dirty = false; // rank deficient: wait for the system to change
         return;
       }
       [order[c], order[p]] = [order[p]!, order[c]!];

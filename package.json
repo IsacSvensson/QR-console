@@ -17,8 +17,11 @@
     "check": "npm run typecheck && npm run lint && npm test",
     "bench:fountain": "tsx bench/fountain.ts",
     "qrc": "tsx packages/tools/src/cli.ts",
-    "refs:hello": "npm run -s qrc -- build games/hello && npm run -s qrc -- run games/hello/hello.qrc --frames 1 --dump-frame games/hello/frame1.png --write-ref games/hello/reference.json",
-    "test:slice": "vitest run --project slice"
+    "test:slice": "vitest run --project slice",
+    "bench:qr": "tsx bench/qr.ts",
+    "test:qr-robust": "vitest run --project robust --reporter=verbose",
+    "refs:games": "tsx packages/tools/src/refs.ts",
+    "test:games": "vitest run --project games --reporter=verbose"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

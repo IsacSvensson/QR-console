@@ -89,3 +89,50 @@ measurement in M5.
 Alternatives: own QR encoder (large, error-prone), gifenc (writer only).
 Why: small, dependency-free, well-used libraries; lossless output.
 Revisit if: M5 benchmark shows a better decoder.
+
+## D-006 — Definition of distortion levels for layer-3 tests (recorded BEFORE measuring)
+Date: 2026-09-24 · Milestone: M5
+Decision: The simulator renders the QR at 4 px/module with a 4-module quiet zone (what a phone camera
+frame downscaled to ~640 px sees when a v12 code fills roughly half the frame), then applies, with
+parameters drawn uniformly per frame from a seeded RNG:
+
+| level | scale | rotation | perspective (max corner shift, fraction of size) | Gaussian blur σ (px) | contrast (white−black)/255 | noise σ (0–255) | illumination gradient |
+|---|---|---|---|---|---|---|---|
+| none | 1 | 0° | 0 | 0 | 1.0 | 0 | 0 |
+| mild | 0.8–1.25 | ±3° | 0.02 | 0.5 | 0.8 | 4 | ±5 % |
+| **moderate** | **0.6–1.4** | **±7°** | **0.04** | **0.8** | **0.6** | **8** | **±10 %** |
+| strong | 0.5–1.5 | ±10° | 0.06 | 1.2 | 0.45 | 14 | ±20 % |
+
+Resampling is bilinear from the output pixel through the inverse homography; outside the source is
+white (the screen around the code). "Decoded" means the decoder returned exactly the packet bytes.
+Acceptance (`npm run test:qr-robust`): default parameters decode ≥ 95 % of frames at **moderate**.
+Alternatives: define levels after seeing results (explicitly disallowed by PLAN.md).
+Why: covers the ranges PLAN.md M5 lists; "moderate" sits in the middle of each range.
+Revisit if: real-device testing shows camera frames are much worse or better than "moderate".
+
+## D-007 — QR decoder: zxing-wasm with binarizer fallback; defaults stay v12-M / 150 ms; loop = K + 50 %
+Date: 2026-09-24 · Milestone: M5
+Decision: The scanner uses **zxing-wasm** (reader build, wasm bundled locally and passed as a binary, never
+fetched from a CDN), `tryHarder`, first with its default LocalAverage binarizer and, only when that finds
+nothing, again with GlobalHistogram. QR defaults unchanged: version 12, ECC M, 150 ms/frame, 4 px/module in
+tests. Generated animations loop over N = K + max(4, ⌈K/2⌉) frames.
+Alternatives: jsQR (pure JS); zxing single pass; ECC Q (100 % at moderate in the first run but −32 % payload);
+FixedThreshold binarizer (200/200 on the robust frames, but only because the simulator keeps mid-grey at 128 —
+rejected as overfitting to the simulator); BarcodeDetector (returns only a text `rawValue`, violating L9).
+Why: bench/qr.md. jsQR: 0 % at moderate for every version/ECC and 20–100 ms/frame; zxing single pass: 90 %
+overall, 97 % for v12-M, ~2.5 ms. History, for honesty: the first `test:qr-robust` run (single pass, 200 frames)
+measured **92.5 %** (fail). Diagnosis showed all 15 failures were the smallest-scale frames; GlobalHistogram
+recovered 14. The fallback was then validated on the benchmark's independent seeds: moderate 90 % → 99 %
+overall, v12-M 97 %, no time cost, and `test:qr-robust` now gives 99.5 %. With the fallback no version/ECC in
+10–15 × L/M/Q is clearly better than v12-M at moderate, so SPEC defaults stay. Loop length: the 50 KB transfer
+simulation (20 % loss) needs p90 = 259 frames with K + 50 % vs 300 with K + 25 % and 396 with K + 10 %;
+K + 100 % gives no further gain.
+Revisit if: real-device scanning (human test) shows a different failure mode, e.g. moiré from screens.
+
+## D-008 — Abandoned: GE retry guard keyed on equation count
+Date: 2026-09-24 · Milestone: M5
+The fountain decoder skipped Gaussian elimination when the number of stored equations equalled that of the
+last failed attempt. When source packets arrive *after* repair packets (camera joining a looping GIF mid-way),
+unknowns shrink while the equation count stays the same, so GE was wrongly skipped until an extra repair packet
+arrived. Found through the loop simulation in bench/qr.md (p90 ≫ one loop). Replaced by a dirty flag set on
+every change to the residual system; regression test "looping-animation order" added.

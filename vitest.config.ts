@@ -7,6 +7,7 @@ const pkg = (name: string) => ({
 export default defineConfig({
   test: {
     passWithNoTests: true,
+    silent: false,
     projects: [
       { test: { name: 'unit', include: ['test/**/*.test.ts'] } },
       pkg('cartridge'),
@@ -15,6 +16,8 @@ export default defineConfig({
       pkg('asm'),
       pkg('qr'),
       pkg('tools'),
+      { test: { name: 'robust', include: ['test/robust/**/*.test.ts'], testTimeout: 600_000 } },
+      { test: { name: 'games', include: ['test/games/**/*.test.ts'], testTimeout: 120_000 } },
       { test: { name: 'slice', include: ['test/slice/**/*.test.ts'], testTimeout: 120_000 } },
     ],
   },
