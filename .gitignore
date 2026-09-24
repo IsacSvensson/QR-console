@@ -1,8 +1,8 @@
-node_modules/
-dist/
-coverage/
-test-results/
-playwright-report/
 *.tsbuildinfo
 .tmp/
 /demo/*.qrc
+coverage/
+dist/
+node_modules/
+playwright-report/
+test-results/
