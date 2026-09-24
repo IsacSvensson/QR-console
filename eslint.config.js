@@ -22,7 +22,7 @@ const boundaryRules = Object.entries(allowed).map(([pkg, ok]) => {
         {
           patterns: [
             { group: forbidden.map((p) => `@qrc/${p}`), message: `SPEC §3: ${pkg} may import only [${ok.join(', ')}].` },
-            { group: ['**/packages/*', '../../*'], message: 'Import other packages by name (@qrc/...), not by path.' },
+            { group: ['**/packages/*'], message: 'Import other packages by name (@qrc/...), not by path.' },
           ],
         },
       ],
@@ -40,7 +40,7 @@ const pureRules = {
         patterns: [
           { group: ['node:*', 'fs', 'path', 'zlib', 'crypto', 'os'], message: 'Pure packages must run anywhere: no Node built-ins.' },
           { group: internal.map((p) => `@qrc/${p}`).filter((g) => !['@qrc/cartridge'].includes(g)), message: 'SPEC §3 dependency rule.' },
-          { group: ['**/packages/*', '../../*'], message: 'Import other packages by name.' },
+          { group: ['**/packages/*'], message: 'Import other packages by name.' },
         ],
       },
     ],

@@ -38,3 +38,15 @@ Dependency rules (SPEC §3) are enforced twice: ESLint `no-restricted-imports` a
 Alternatives: project references with emitted builds; TS 7 native compiler.
 Why: least moving parts, no build artefacts to keep in sync.
 Revisit if: package consumers outside this repo need compiled JS.
+
+## D-002 — Cartridge layout, hashing and compression implementation
+Date: 2026-09-24 · Milestone: M1
+Decision: 52-byte fixed header + title, body = section table (code/rodata/sound, all required).
+SHA-256 is a small pure-TS implementation (sync, works without a secure context) duplicated verbatim in
+`cartridge` and `transport` (SPEC §3 forbids either importing the other; a test asserts the copies are
+identical). Compression uses `(De)CompressionStream('deflate-raw')` in both Node and browser, so the
+package has no Node imports; `auto` mode keeps whichever of raw/deflated is smaller.
+Alternatives: `crypto.subtle` (async, needs secure context), a shared `hash` package (not in SPEC layout),
+Node `zlib` for compression (would make the package Node-only).
+Why: keeps pure packages runnable anywhere with zero dependencies.
+Revisit if: hashing speed matters (it does not at ≤ 64 KB).

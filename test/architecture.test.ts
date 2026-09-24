@@ -68,3 +68,11 @@ describe('package dependency rules (SPEC §3)', () => {
     });
   }
 });
+
+describe('duplicated helpers', () => {
+  it('cartridge and transport sha256.ts are identical copies', () => {
+    const a = readFileSync(join(root, 'packages/cartridge/src/sha256.ts'), 'utf8');
+    const b = readFileSync(join(root, 'packages/transport/src/sha256.ts'), 'utf8');
+    expect(b).toBe(a);
+  });
+});

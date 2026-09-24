@@ -2,14 +2,14 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M1 — Cartridge format
+**Current milestone:** M2 — Transport layer 1 + benchmark
 **Status:** in progress
 **Last updated:** 2026-09-24
 
 ## Milestones
 
 - [x] M0 Scaffold
-- [ ] M1 Cartridge format
+- [x] M1 Cartridge format
 - [ ] M2 Transport layer 1 + fountain benchmark
 - [ ] M3 Minimal VM + assembler (HELLO WORLD)
 - [ ] M4 Layer 2 + first vertical slice

@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.png binary
+*.gif binary
+*.qrc binary
+*.y4m binary
