@@ -185,7 +185,7 @@ verklig byggnad snarare än 37 handgjorda banor.
 | 0 INTRO | 0.1 Elis rum | D1 intro: PROJECT ORACLE-fragmentet, sist `HELLO, ELI.` |
 | 1 ENTRÉ | 1.1 grind · 1.2 lobby · 1.3 säkerhetskontroll · 1.4 korridor | Smygtutorial. D2 första terminalen → VISITOR BADGE. 🔒 badge-dörr. 💾 |
 | 2 ADMINISTRATION | 2.1 kontor · 2.2 kopiering · 2.3 serverskrubb · 2.4 forskarens kontor · 2.5 städförråd · 2.6 chefskontor | L "ORACLE ISN'T DESIGNED…". D3 Mira: `YOU SHOULDN'T BE HERE.` D4 forskare. Ventilationsgenväg. SECURITY CARD. 💾 |
-| 3 SECURITY | 3.1 övervakning · 3.2 vapenförråd · 3.3 korsning · 3.4 larmcentral · 3.5 hisshall | L kamerabild av Eli. EMP + **P2** ställs. **P1**. D5 ORACLE i ett larm. D6 säkerhetsnivå höjs, HEAVY GUARD. 💾 |
+| 3 SECURITY | 3.1 övervakning · 3.3 korsning (nav) · 3.2 vapenförråd (vänster) · 3.4 larmcentral (höger) · 3.5 hisshall | L3 kameraindex. **P1** i korsningen: vänster = vapenförrådet med EMP (**P2** ställs) och terminalen som öppnar spärren mot hissen; höger = larmcentralen med kamera och drönare och den frivilliga D5 (sanningen tidigt för den som inte lyder), men vägen vidare går ändå via vapenförrådet. D6 säkerhetsnivå höjs, HEAVY GUARD. 💾 |
 | 4 LABORATORIUM | 4.1 labbkorridor · 4.2 observation · 4.3 prototyphall · 4.4 kontrollrum · 4.5 testkammare · 4.6 godshiss | **P2** avgörs. L TEST 14. D7 Mira: mänsklig respons + **P3**. **Boss 1** SECURITY DIRECTOR, D8 + **P4**. LAB CARD. 💾 |
 | 5 UNDERGROUND | 5.1 bunkertrappa · 5.2 arkiv · 5.3 arkivets innersta · 5.4 kylrum · 5.5 tyst terminal · 5.6 slussport | HUNTER. D9 experimentloggar. D10 Eli som SUBJECT. **P5**. D11 Mira tystnar. PROTOTYPE. 💾 |
 | 6 SERVER COMPLEX | 6.1 serverhall A · 6.2 serverhall B · 6.3 kylkorridor · 6.4 direktörens kontrollpunkt · 6.5 kärnans sluss | D12 ORACLE talar + **P6**, live-siffran börjar synas. ORACLE AGENT. L PERSONALITY MODEL: MIRA (frivillig). D13 forskningschefen. 💾 |
@@ -224,5 +224,5 @@ långt under 1 KB.
 1. ~~ORACLE:s prediktioner~~ (§2, detta dokument)
 2. ~~De ~20 dialogerna~~ (`DIALOGUE.md`: 20 dialoger + barks + slut, 80 textrutor, 769 ord, ~4.3 KB okomprimerat; formatet kontrolleras av `test/blackbox-text.test.ts`)
 3. ~~De ~10 loggarna~~ (`LOGS.md`: 10 loggar, 15 sidor, 610 ord; 5 frivilliga ger nyfikenhet till P8)
-4. Layout skärm för skärm: terminaler, dörrar, laddstationer, fiender, P-triggers
+4. ~~Layout skärm för skärm~~ (`LAYOUT.md`: 37 rum i motorns rumsformat; `test/blackbox-layout.test.ts` kontrollerar rutnät, dörrar åt båda håll, nåbarhet i varje rum, att alla D/L/P är placerade och att spelet går att klara även om spelaren nekar Mira)
 5. Implementation (nya milstolpar i PLAN.md först)

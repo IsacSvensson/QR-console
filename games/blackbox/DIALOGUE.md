@@ -31,7 +31,7 @@ Speakers: `ELI` (Eli's thoughts/speech), `MIRA` / `UNKNOWN` (terminal text), `OR
 | D2 | 1.2 Lobby | use reception terminal | TERMINAL, ELI | A hacks terminals; badge opens doors; something expected him | – |
 | D3 | 2.3 Server closet | enter room | UNKNOWN, ELI | an ally exists: Mira; cameras matter | – |
 | D4 | 2.4 Researcher's office | talk to Dr. Reyes | DR. REYES, ELI | nobody has seen ORACLE; it is always right; where the card code is; Eli was on the schedule | – |
-| D5 | 3.4 Alarm centre | use alarm console | ALARM LOG, ELI | his break-in was forecast and allowed | – |
+| D5 | 3.4 Alarm centre | use alarm console — **optional**, only on the right-hand path at P1 | ALARM LOG, ELI | his break-in was forecast and allowed (disobeying Mira shows the truth early) | follows P1 miss |
 | D6 | 3.5 Lift hall | enter room | PA, MIRA | stakes rise; heavy guards; Mira is guiding him | – |
 | D7 | 4.4 Control room | use console | MIRA | ORACLE predicts *human response*; Mira asks for trust | **P3** asked |
 | D8 | 4.5 Test chamber | enter / boss defeated | SYSTEM, MIRA, ELI | boss rules; Mira knows the future ("lucky guess") | **P4** asked |
