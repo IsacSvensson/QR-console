@@ -1,5 +1,7 @@
 # QR Console assembler
 
+> Practical guide with examples, idioms and traps: `docs/PROGRAMMING.md`. This file is the terse reference.
+
 `assemble(source)` turns one `.asm` file into the three cartridge sections; `buildCartridge(source)`
 also serializes the cartridge. CLI: `npm run qrc -- build games/<name>`. Instruction set and syscalls:
 `packages/vm/VM.md`.

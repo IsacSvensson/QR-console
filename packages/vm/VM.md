@@ -1,5 +1,7 @@
 # QR Console VM — ISA version 1
 
+> Practical guide with examples, idioms and traps: `docs/PROGRAMMING.md`. This file is the terse reference.
+
 A tiny deterministic 16-bit machine for small games (SPEC L2–L7). The VM core (`src/vm.ts`) has no
 DOM dependencies: it produces a framebuffer and a list of audio commands per frame; canvas and WebAudio
 are backends in `apps/web`.

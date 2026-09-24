@@ -7,6 +7,7 @@ through animated QR codes and runs them in a tiny custom VM.
 - **How it is proven**: `PLAN.md` (milestones, acceptance criteria, commands)
 - **Where you are**: `PROGRESS.md` (you keep this current)
 - **Why you chose what you chose**: `DECISIONS.md` (you append to this)
+- **How to write games** (assembly, bytecode, syscalls, idioms, tooling): `docs/PROGRAMMING.md`
 
 Read all four before writing any code. Re-read `PROGRESS.md` and the current milestone in
 `PLAN.md` whenever you resume after a break or context compaction.

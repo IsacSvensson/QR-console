@@ -11,6 +11,7 @@ bar fill as frames arrive in any order, press **PLAY** — no network needed aft
 - The player never knows which game it runs: Breakout and Pong both run with zero game-specific code in
   the runtime.
 
+Writing games: **`docs/PROGRAMMING.md`** (assembly and bytecode guide with runnable examples).
 Design: `SPEC.md`. Milestones and proofs: `PLAN.md`. Status: `PROGRESS.md`. Decisions: `DECISIONS.md`.
 Results: `REPORT.md`.
 
