@@ -192,6 +192,8 @@ event_test:                 ; -> r0 = 1 if the event has happened
 enter_room:
     LDI r1, 0
     ST [room_det], r1
+    LDI r1, GRACE_FRAMES
+    ST [grace_t], r1
     CALL load_room
     LDI r0, TK_ENTER
     LDI r1, 0

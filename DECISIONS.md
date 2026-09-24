@@ -290,3 +290,18 @@ Options for a human: (a) register the worker with `updateViaCache: 'all'` and se
 in production hosting and in the e2e server (app + server change); (b) make the test environment really offline
 (shut the server) and assert on attempted requests through CDP instead; (c) accept the browser's update check as
 out of scope for "the app makes no network requests" and state that in PLAN.md M10.
+
+## D-022 — BLACKBOX: one second of grace on entering a room (bug found on a phone)
+Date: 2026-09-24 · After M18 (human play test)
+Bug: entering 2.1 from 2.6 (its N door) put the player in the office guard's line of sight at once (the guard
+spawns at (7,5) looking north up the centre aisle — the D-015 fix for the S door made the N door the trap).
+The detection restarted the room at the same doorway with the guard respawned the same way: an endless loop.
+No recorded route used 2.6 → 2.1, so no test saw it.
+Chosen: a general rule instead of moving that one guard: for GRACE_FRAMES (60) after entering a room or a
+restart nobody can detect the player (`grace_t`, counted down while the actors run; `got_caught` ignores
+detections meanwhile). Same idea as boss 1's BOSS_WAKE. Moving the guard alone would only move the trap again.
+Test: `test/blackbox/entrances.test.ts` walks through every doorway cell of every room (66) and requires the
+player to get out of sight within the grace period and stay unseen 120 frames more. With the grace period off it
+fails on 2.6 → 2.1 (the reported bug) and 7.2 → 7.1 (the boss room: the same trap). The stealth reference oracle
+treats frames with `grace_t > 0` as non-detecting; m14-caught checks that a restart sets the grace period, and its
+route now waits out the grace period before walking into view. All replays re-recorded.

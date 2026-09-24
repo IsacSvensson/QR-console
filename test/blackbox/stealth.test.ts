@@ -20,6 +20,8 @@ const REPLAYS = readdirSync(join(GAME_DIR, 'replays')).filter((f) => /^m\d+-[\w-
 function referenceDetects(v: FrameView): string | null {
   const T = (n: string) => v.S(`O_${n}`);
   const range: Record<number, number> = { [T('GUARD')]: v.S('GUARD_RANGE'), [T('DRONE')]: v.S('DRONE_RANGE'), [T('HEAVY')]: v.S('HEAVY_RANGE'), [T('CAMERA')]: v.S('CAM_RANGE') };
+  // just come in (or restarted): nobody detects for GRACE_FRAMES; the entrance test checks when grace_t is set
+  if (v.vm.read16(v.S('grace_t')) > 0) return null;
   const pcell: [number, number] = [(v.px + 4) >> 3, (v.py + 4) >> 3];
   const box = { x: v.px + v.S('PBOX_X'), y: v.py + v.S('PBOX_Y'), w: v.S('PBOX_W'), h: v.S('PBOX_H') };
   const touches = (a: { x: number; y: number }) => box.x < a.x + 7 && a.x + 1 < box.x + box.w && box.y < a.y + 7 && a.y + 1 < box.y + box.h;
@@ -98,6 +100,7 @@ describe('stealth (M14)', () => {
         restartChecked = true;
         if (v.px !== firstEntry.px || v.py !== firstEntry.py) problems.push(`player at ${v.px},${v.py}, entered at ${firstEntry.px},${firstEntry.py}`);
         if (snapshot !== firstEntry.actors) problems.push('actors not reset to their spawn state');
+        if (v.vm.read16(v.S('grace_t')) < v.S('GRACE_FRAMES') - 1) problems.push(`grace ${v.vm.read16(v.S('grace_t'))} after the restart`);
       }
       prevCaught = caught;
     });

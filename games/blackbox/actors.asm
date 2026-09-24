@@ -68,6 +68,12 @@ spawn_actors:
 update_actors:
     LDI r0, 1
     ST [act_ran], r0
+    LD r0, [grace_t]
+    CMP r0, 0
+    JEQ @no_grace
+    SUB r0, 1
+    ST [grace_t], r0
+@no_grace:
     LD r0, [px]
     ADD r0, 4
     SAR r0, 3
@@ -592,6 +598,9 @@ touching:
     RET
 
 got_caught:
+    LD r0, [grace_t]        ; just came in: not yet
+    CMP r0, 0
+    JNE @already
     LD r0, [caught_t]
     CMP r0, 0
     JNE @already
@@ -620,6 +629,8 @@ restart_room:
     ST [py], r0
     LD r0, [enter_dir]
     ST [pdir], r0
+    LDI r0, GRACE_FRAMES
+    ST [grace_t], r0
     RET
 
 ; ---- the EMP ----------------------------------------------------------------------------------

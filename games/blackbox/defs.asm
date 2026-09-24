@@ -114,6 +114,7 @@ EMP_STUN    = 240           ; frames a machine stays stunned (4 s)
 EMP_R       = 40            ; EMP reach in pixels (5 tiles)
 MAX_CHARGES = 4
 CAUGHT_FRAMES = 45
+GRACE_FRAMES  = 60          ; after entering a room or a restart nobody can detect the player for 1 s
 
 ; flags defined by the game beyond LAYOUT.md's (rooms.gen.asm: NUM_LAYOUT_FLAGS)
 F_PICK0  = NUM_LAYOUT_FLAGS + 0     ; pick-up 0 (the EMP) taken
@@ -140,6 +141,7 @@ SPR_BOSS      = 15          ; boss sprites: 4 per boss (TL, TR, BL, BR)
 BOX_MENU      = 2
 
 .var room_det               ; detections in this room since entering it (not reset by a restart)
+.var grace_t                ; > 0: the player has just come in and cannot be detected yet
 .var menu_sel
 .var menu_choice
 

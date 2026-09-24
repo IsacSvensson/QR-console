@@ -265,6 +265,7 @@ export const ROUTES: Record<string, { seed: number; route: Step[]; note: string 
       { exit: 'E' },
       { room: '1.3' },
       { allowCaught: true },
+      { when: (b) => b.ram('grace_t') === 0, note: 'the entry grace period is over' },
       { when: (b) => b.actors()[0]!.dir === 2, note: 'guard 0 facing south' },
       { to: [3, 7], unsafe: true },
       { allowCaught: false },
