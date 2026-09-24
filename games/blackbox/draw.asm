@@ -2,6 +2,14 @@
 .code
 
 draw_play:
+    LDI r0, F_ENDING        ; after the final action: only text on black
+    CALL flag_test
+    CMP r0, 0
+    JEQ @world
+    LDI r0, 0
+    SYS CLS
+    RET
+@world:
     LD r0, [floor_col]
     SYS CLS
     LDI r0, room_buf

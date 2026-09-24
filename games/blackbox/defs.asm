@@ -102,6 +102,8 @@ MAX_ACT  = 8
 .var emp_uses               ; ORACLE profile: aggressiveness
 .var room_emp               ; EMP uses in the current room (P2)
 .var emp_fx                 ; EMP pulse animation
+.var ch_dx                  ; chase: distance to the target
+.var ch_dy
 
 GUARD_RANGE = 7             ; cells of sight
 HEAVY_RANGE = 9
@@ -122,7 +124,23 @@ F_TRUE   = NUM_LAYOUT_FLAGS + 5     ; always set (S_PRED p, F_TRUE = hit)
 F_FALSE  = NUM_LAYOUT_FLAGS + 6     ; never set
 F_ROOM_EMP = NUM_LAYOUT_FLAGS + 7   ; the EMP was used in the current room (P2)
 F_P4OK   = NUM_LAYOUT_FLAGS + 8     ; boss 1: first panel hacked in the first turn window
-F_P5OK   = NUM_LAYOUT_FLAGS + 9     ; 5.4: passed the guard after it turned
+F_P5OK   = NUM_LAYOUT_FLAGS + 9     ; (unused)
+F_HACKED = NUM_LAYOUT_FLAGS + 10    ; the last S_HACK succeeded
+F_P6READ = NUM_LAYOUT_FLAGS + 11    ; 6.1: the player used the terminal (P6)
+
+; ---- bosses (M17) -----------------------------------------------------------------------------
+BOSS_RANGE    = 15          ; boss 1's line of sight
+BOSS_PULSE    = 40          ; frames between its pulses
+BOSS_TURN     = 120         ; frames its back stays turned
+BOSS_WAKE     = 60          ; frames boss 1 needs to power up after the player comes in
+BOSS_BODY     = 14          ; contact box of a 16x16 boss, centred on its cell
+BOSS_BODY_OFS = 3
+SPR_BOSS      = 15          ; boss sprites: 4 per boss (TL, TR, BL, BR)
+BOX_MENU      = 2
+
+.var room_det               ; detections in this room since entering it (not reset by a restart)
+.var menu_sel
+.var menu_choice
 
 ; ---- text and the ORACLE engine (M15) ---------------------------------------------------------
 BOX_Y       = 84            ; dialogue box: header row + 5 text rows

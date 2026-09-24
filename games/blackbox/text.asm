@@ -261,6 +261,8 @@ mode_dialog:
     LD r0, [box_kind]
     CMP r0, BOX_ASK
     JEQ @ask
+    CMP r0, BOX_MENU
+    JEQ @menu
     AND r2, BTN_A
     JZ @draw
     JMP @close
@@ -282,7 +284,40 @@ mode_dialog:
 @draw:
     CALL draw_play
     CALL draw_box
+    LD r0, [box_kind]
+    CMP r0, BOX_MENU
+    JNE @done
+    LD r1, [menu_sel]       ; the menu cursor
+    MUL r1, 6
+    ADD r1, BOX_Y + 9
+    LDI r0, 50
+    LDI r2, 3
+    LDI r3, 5
+    LDI r4, 14
+    SYS RECTFILL
+@done:
     RET
+@menu:
+    LD r1, [menu_sel]
+    MOV r0, r2
+    AND r0, BTN_UP
+    JZ @m_down
+    CMP r1, 0
+    JEQ @m_down
+    SUB r1, 1
+@m_down:
+    MOV r0, r2
+    AND r0, BTN_DOWN
+    JZ @m_store
+    CMP r1, 2
+    JGE @m_store
+    ADD r1, 1
+@m_store:
+    ST [menu_sel], r1
+    AND r2, BTN_A
+    JZ @draw
+    ST [menu_choice], r1
+    JMP @close
 
 draw_box:
     LDI r0, 0

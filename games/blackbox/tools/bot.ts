@@ -18,7 +18,11 @@ export type Step =
   | { until: string; frames?: number }
   | { when: (bot: Bot) => boolean; max?: number; note?: string }
   | { allowCaught: boolean }
-  | { answer: 'A' | 'B' };
+  | { answer: 'A' | 'B' }
+  | { run: (bot: Bot) => void; note?: string }
+  | { menu: number | ((bot: Bot) => number) }
+  | { exitEnd: Side }
+  | { untilMode: string; max?: number };
 
 const DIR_BTN: Record<Side, number> = { N: BUTTONS.UP, S: BUTTONS.DOWN, E: BUTTONS.RIGHT, W: BUTTONS.LEFT };
 const DELTA: Record<Side, [number, number]> = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
@@ -31,7 +35,7 @@ export async function loadGame(seed = 1) {
 }
 
 /** Actor sight as the engine defines it (actors.asm): type -> range in cells (0 = does not watch). */
-const SIGHT: Record<number, number> = { 1: 7, 2: 5, 3: 9, 10: 8 };
+const SIGHT: Record<number, number> = { 1: 7, 2: 5, 3: 9, 10: 8, 8: 15 };
 const ACT_SIZE = 24;
 
 export interface ActorView {
@@ -92,7 +96,7 @@ export class Bot {
    * Cells watched now by any guard, drone, heavy guard or camera — plus, for a watcher about to turn (a turner
    * near the end of its period, a patrol near its end point), the cells it will watch after turning.
    */
-  danger(): Set<string> {
+  danger(now = false): Set<string> {
     const out = new Set<string>();
     const base = this.sym.get('actors')!;
     const ray = (cx: number, cy: number, dir: number, range: number) => {
@@ -108,12 +112,26 @@ export class Bot {
     };
     this.actors().forEach((a, i) => {
       if (a.stun > 0 || a.type === 0) return;
+      if (a.type === 5 && this.vm.read16(base + i * ACT_SIZE + 8) === 0) return; // decorative prototype
       const cx = (a.x + 4) >> 3;
       const cy = (a.y + 4) >> 3;
-      if ([1, 2, 3, 4, 5, 6].includes(a.type)) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) out.add(`${cx + dx},${cy + dy}`);
+      const body = a.type === 8 ? 2 : 1;
+      if ([1, 2, 3, 4, 5, 6, 8].includes(a.type)) for (let dy = -body; dy <= body; dy++) for (let dx = -body; dx <= body; dx++) out.add(`${cx + dx},${cy + dy}`);
+      if (a.type === 8 && this.vm.read16(base + i * ACT_SIZE + 8) !== 0) return; // the measuring unit does not watch
+      if (a.type === 8 && a.state === 0) {
+        for (let d = 0; d < 4; d++) ray(cx, cy, d, 15); // firing: it re-aims every frame, so every line is live
+        return;
+      }
+      if (a.type === 4 && a.state === 0) {
+        const wake = this.vm.read16(base + i * ACT_SIZE + 8);
+        for (let d = 0; d < 4; d++) ray(cx, cy, d, wake); // a sleeping hunter wakes when it sees the player
+        return;
+      }
       const range = SIGHT[a.type];
       if (!range) return;
-      ray(cx, cy, a.dir, range);
+      const moving = a.type !== 10 && [0, 1, 3].includes(this.vm.read16(base + i * ACT_SIZE + 8));
+      ray(cx, cy, a.dir, range + (moving && !now ? 1 : 0)); // a patrol advances: its line reaches further soon
+      if (now) return; // only what is watched this very frame
       const w = (o: number) => (this.vm.read16(base + i * ACT_SIZE + o) << 16) >> 16;
       const mode = w(8);
       if (a.type !== 10 && mode === 2) {
@@ -135,7 +153,7 @@ export class Bot {
   settle() {
     for (let i = 0; i < 4000; i++) {
       const m = this.mode;
-      if (m === this.sym.get('M_DIALOG') && this.ram('box_kind') === this.sym.get('BOX_ASK')) return;
+      if (m === this.sym.get('M_DIALOG') && (this.ram('box_kind') === this.sym.get('BOX_ASK') || this.ram('box_kind') === this.sym.get('BOX_MENU'))) return;
       if (m !== this.sym.get('M_DIALOG') && m !== this.sym.get('M_TERM')) {
         if (this.ram('script_pc') === 0) return;
         this.frame(0); // a script is still running (it continues after the box closed)
@@ -217,6 +235,44 @@ export class Bot {
     this.frame(b);
   }
 
+  /** Standing in a watched cell: the way to the nearest unwatched one (through watched cells), or null. */
+  escape(target?: [number, number]): [number, number][] | null {
+    const seen = this.danger(true);
+    if (!seen.has(this.cell.join(','))) return null;
+    // the nearest unwatched cells; among them the one closest to where we are going; never a border pocket
+    const ok = (x: number, y: number) => !seen.has(`${x},${y}`) && x > 0 && y > 0 && x < 15 && y < 14;
+    const first = this.path(ok, false);
+    if (!first || !target) return first;
+    const d = first.length;
+    let best = first;
+    for (const [dx, dy] of Object.values(DELTA)) {
+      const [cx, cy] = this.cell;
+      const n: [number, number] = [cx + dx, cy + dy];
+      if (d === 2 && ok(...n) && !this.solid(...n)) {
+        const score = (c: [number, number]) => Math.abs(c[0] - target[0]) + Math.abs(c[1] - target[1]);
+        if (score(n) < score(best[best.length - 1]!)) best = [this.cell, n];
+      }
+    }
+    return best;
+  }
+
+  /** One frame towards cell (tx, ty) (waits if every way is watched); true once there. */
+  stepTo(tx: number, ty: number, safe = true): boolean {
+    if (this.ram('px') === tx * 8 && this.ram('py') === ty * 8) return true;
+    const out = safe ? this.escape([tx, ty]) : null;
+    if (out && out.length > 1) {
+      this.stepTowards(out[1]![0], out[1]![1]);
+      return false;
+    }
+    const p = this.path((x, y) => x === tx && y === ty, safe);
+    if (!p) this.frame(0);
+    else {
+      const next = p.length > 1 ? p[1]! : p[0]!;
+      this.stepTowards(next[0], next[1]);
+    }
+    return false;
+  }
+
   goTo(tx: number, ty: number, safe = true) {
     const start = this.room;
     const det = this.ram('det_count');
@@ -228,6 +284,11 @@ export class Bot {
         continue;
       }
       if (this.ram('px') === tx * 8 && this.ram('py') === ty * 8) return;
+      const out = safe ? this.escape([tx, ty]) : null;
+      if (out && out.length > 1) {
+        this.stepTowards(out[1]![0], out[1]![1]); // get out of a line of sight first
+        continue;
+      }
       const p = this.path((x, y) => x === tx && y === ty, safe);
       if (!p) {
         this.frame(0); // everything is watched: wait for the guards to turn
@@ -261,9 +322,32 @@ export class Bot {
     this.settle();
   }
 
+  /** Raw 16-bit word of actor i at byte offset o (see defs.asm AC_*). */
+  actorWord(i: number, o: number) {
+    return (this.vm.read16(this.sym.get('actors')! + i * ACT_SIZE + o) << 16) >> 16;
+  }
+  flag(name: string) {
+    const f = this.sym.get(`F_${name}`)!;
+    return ((this.vm.read8(this.sym.get('flags')! + (f >> 3)) >> (f & 7)) & 1) === 1;
+  }
+  wait(cond: () => boolean, max = 3000) {
+    for (let i = 0; i < max && !cond(); i++) this.frame(0);
+    return cond();
+  }
+  /** Face the adjacent cell (tx, ty) and press A. */
+  poke(tx: number, ty: number) {
+    const [cx, cy] = this.cell;
+    const side = (Object.entries(DELTA) as [Side, [number, number]][]).find(([, [dx, dy]]) => cx + dx === tx && cy + dy === ty)?.[0];
+    if (!side) throw new Error(`bot: ${tx},${ty} is not next to ${cx},${cy}`);
+    this.frame(DIR_BTN[side]);
+    this.frame(0);
+    this.frame(BUTTONS.A);
+    this.frame(0);
+  }
+
   run(route: Step[]) {
     for (const s of route) {
-      if (!('answer' in s) && !('press' in s)) this.settle();
+      if (!('answer' in s) && !('press' in s) && !('menu' in s) && !('untilMode' in s)) this.settle();
       if ('press' in s) {
         const b = s.press === 'A' ? BUTTONS.A : s.press === 'B' ? BUTTONS.B : DIR_BTN[s.press];
         for (let i = 0; i < (s.frames ?? 1); i++) this.frame(b);
@@ -281,7 +365,26 @@ export class Bot {
         for (; i < (s.max ?? 3000) && !s.when(this); i++) this.frame(0);
         if (!s.when(this)) throw new Error(`bot: condition never met (${s.note ?? 'when'}) in ${this.room}`);
       } else if ('allowCaught' in s) this.allowCaught = s.allowCaught;
-      else if ('answer' in s) {
+      else if ('run' in s) s.run(this);
+      else if ('menu' in s) {
+        if (this.mode !== this.sym.get('M_DIALOG') || this.ram('box_kind') !== this.sym.get('BOX_MENU')) throw new Error(`bot: no menu in ${this.room}`);
+        const want = typeof s.menu === 'function' ? s.menu(this) : s.menu;
+        while (this.ram('reveal') < this.ram('box_len')) this.frame(0);
+        for (let i = 0; i < want; i++) {
+          this.frame(BUTTONS.DOWN);
+          this.frame(0);
+        }
+        this.frame(BUTTONS.A);
+        this.frame(0);
+      } else if ('exitEnd' in s) {
+        const door = this.route((x, y) => (s.exitEnd === 'N' ? y === 0 : s.exitEnd === 'S' ? y === 14 : s.exitEnd === 'E' ? x === 15 : x === 0));
+        const [dx, dy] = door[door.length - 1]!;
+        this.goTo(dx, dy);
+        for (let i = 0; i < 100 && this.mode === this.sym.get('M_PLAY'); i++) this.frame(DIR_BTN[s.exitEnd]);
+      } else if ('untilMode' in s) {
+        for (let i = 0; i < (s.max ?? 6000) && this.mode !== this.sym.get(s.untilMode); i++) this.frame(i % 2 ? 0 : BUTTONS.A);
+        if (this.mode !== this.sym.get(s.untilMode)) throw new Error(`bot: never reached mode ${s.untilMode}`);
+      } else if ('answer' in s) {
         if (this.mode !== this.sym.get('M_DIALOG') || this.ram('box_kind') !== this.sym.get('BOX_ASK')) throw new Error(`bot: no question to answer in ${this.room}`);
         for (let i = 0; i < 400 && this.mode === this.sym.get('M_DIALOG'); i++) this.frame(i % 2 ? 0 : s.answer === 'A' ? BUTTONS.A : BUTTONS.B);
         this.settle();

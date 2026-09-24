@@ -87,7 +87,7 @@ Tonen skärps gradvis: först uppenbara instruktioner, sedan förutsägelser om 
 | P2 | 3.2 → 4.1 | Mira | `YOU WILL NEED THE EMP.` | EMP används i 4.1 innan rummet lämnas | EMP använd | aggressivitet +1 per EMP (hela spelet) |
 | P3 | 4.4 Kontrollrum | Mira | `SEND ME YOUR ACCESS KEY.` (A = ja, B = nej) | spelaren ger Mira åtkomst | ja (dold prediktion: SUBJECT WILL TRUST MIRA) | följsamhet +1 om ja |
 | P4 | 4.5 Boss 1 | Mira | `IT WILL FIRE THREE TIMES.` / `THEN TURN.` | första hacket sker i bossens första vändfönster | första fönstret | – |
-| P5 | 5.4 Kylrum | Mira | `THE GUARD WILL TURN` / `IN THREE SECONDS.` | spelaren passerar vaktposten först efter vändningen | efter | följsamhet +1 om rätt |
+| P5 | 5.4 Kylrum | Mira | `THE GUARD WILL TURN` / `IN THREE SECONDS.` (och vakten vänder exakt 3 s senare — ORACLE styr den) | spelaren tar sig förbi utan att bli upptäckt efter varningen | ingen upptäckt | följsamhet +1 om rätt |
 | P6 | 6.1 Serverhall A | ORACLE | `YOU WILL READ THIS MESSAGE.` (syns bara nära terminalen) | spelaren aktiverar terminalen | aktiverar | nyfikenhet +1 |
 | P7 | 7.2 Förgrening | ORACLE | `LEFT: YOU SURVIVE.` / `RIGHT: YOU LEARN THE TRUTH.` | vald väg | LEFT (→ tidigt slut) | – |
 | P8 | 7.4 Terminalen | ORACLE | `YOU WILL SELECT <X>.` | slutvalet | menyvalet = X | – |

@@ -40,6 +40,12 @@ spawn_actors:
     LDB r0, [r1 + 3]
     ST [r3 + AC_DIR], r0
     ST [r3 + AC_D0], r0
+    LDB r4, [r1]
+    CMP r4, O_BOSS
+    JNE @not_boss
+    LDI r4, 0               ; bosses use AC_D0 as a counter
+    ST [r3 + AC_D0], r4
+@not_boss:
     LDB r0, [r1 + 4]
     ST [r3 + AC_MODE], r0
     LDB r0, [r1 + 5]
@@ -385,54 +391,87 @@ patrol:
     ST [r6 + AC_CNT], r0
     RET
 
-; r0, r1 = target pixel: one pixel along the axis with the larger distance (if that way is free)
+; r0, r1 = target pixel: one pixel along the axis with the larger distance; if that way is blocked, one
+; pixel along the other axis (so chasers slide round shelves instead of sticking to them)
 chase:
     LD r6, [ap]
     LD r2, [r6 + AC_X]
-    LD r3, [r6 + AC_Y]
-    SUB r0, r2              ; dx
-    SUB r1, r3              ; dy
+    SUB r0, r2
+    LD r2, [r6 + AC_Y]
+    SUB r1, r2
+    ST [ch_dx], r0
+    ST [ch_dy], r1
     MOV r4, r0
     CALL abs4
     MOV r5, r1
     CALL abs5
     CMP r4, r5
-    JLT @vert
+    JLT @vert_first
+    CALL chase_h
     CMP r0, 0
-    JEQ @done
-    LDI r4, 1
+    JNE @done
+    CALL chase_v
+    RET
+@vert_first:
+    CALL chase_v
+    CMP r0, 0
+    JNE @done
+    CALL chase_h
+@done:
+    RET
+
+; one pixel towards ch_dx along x -> r0 = 1 if moved
+chase_h:
+    LD r0, [ch_dx]
+    LDI r1, 1
     LDI r7, DIR_E
     CMP r0, 0
-    JGT @h
-    LDI r4, -1
+    JEQ chase_no
+    JGT chase_try_h
+    LDI r1, -1
     LDI r7, DIR_W
-@h:
-    ADD r2, r4
-    JMP @try
-@vert:
-    LDI r4, 1
+chase_try_h:
+    LD r6, [ap]
+    LD r2, [r6 + AC_X]
+    ADD r2, r1
+    LD r3, [r6 + AC_Y]
+    JMP chase_try
+
+; one pixel towards ch_dy along y -> r0 = 1 if moved
+chase_v:
+    LD r0, [ch_dy]
+    LDI r1, 1
     LDI r7, DIR_S
-    CMP r1, 0
-    JGT @v
-    LDI r4, -1
+    CMP r0, 0
+    JEQ chase_no
+    JGT chase_try_v
+    LDI r1, -1
     LDI r7, DIR_N
-@v:
-    ADD r3, r4
-@try:
-    ST [r6 + AC_DIR], r7
+chase_try_v:
+    LD r6, [ap]
+    LD r2, [r6 + AC_X]
+    LD r3, [r6 + AC_Y]
+    ADD r3, r1
+chase_try:                  ; r2, r3 = new position, r7 = direction
     PUSH r2
     PUSH r3
+    PUSH r7
     MOV r0, r2
     MOV r1, r3
     CALL box_blocked
+    POP r7
     POP r3
     POP r2
     CMP r0, 0
-    JNE @done
+    JNE chase_no
     LD r6, [ap]
     ST [r6 + AC_X], r2
     ST [r6 + AC_Y], r3
-@done:
+    ST [r6 + AC_DIR], r7
+    LDI r0, 1
+    RET
+chase_no:
+    LDI r0, 0
     RET
 
 ; ---- sight ------------------------------------------------------------------------------------
@@ -565,6 +604,9 @@ got_caught:
     SYS SFX
     LDI r0, box_BARK_9      ; "DETECTED. RESTARTING ROOM."
     CALL open_bark
+    LD r0, [room_det]
+    ADD r0, 1
+    ST [room_det], r0
 @already:
     RET
 
@@ -693,6 +735,12 @@ draw_actors:
     LDB r0, [r5 + sight_range]
     CMP r0, 0
     JEQ @sprite
+    CMP r5, O_BOSS          ; only boss 1 watches
+    JNE @ray
+    LD r1, [r6 + AC_MODE]
+    CMP r1, 0
+    JNE @sprite
+@ray:
     LDI r1, 1
     ST [ray_mode], r1
     CALL ray
@@ -701,6 +749,18 @@ draw_actors:
     LD r5, [r6 + AC_TYPE]
     CMP r5, O_CAMERA
     JEQ @next               ; cameras are tiles
+    CMP r5, O_BOSS
+    JNE @small
+    LD r0, [r6 + AC_STUN]
+    CMP r0, 0
+    JEQ @big
+    LD r0, [frame]
+    AND r0, 4
+    JNZ @next
+@big:
+    CALL draw_boss
+    JMP @next
+@small:
     LD r0, [r6 + AC_STUN]
     CMP r0, 0
     JEQ @visible
@@ -743,10 +803,10 @@ draw_actors:
 
 .data
 ;                none guard drone heavy hunter proto agent npc boss pickup camera
-actor_logic: .word act_none, act_guard, act_drone, act_heavy, act_hunter, act_proto, act_agent, act_none, act_none, act_pickup, act_camera
+actor_logic: .word act_none, act_guard, act_drone, act_heavy, act_hunter, act_proto, act_agent, act_none, act_boss, act_pickup, act_camera
 is_machine:   .byte 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1
-sight_range:  .byte 0, GUARD_RANGE, DRONE_RANGE, HEAVY_RANGE, 0, 0, 0, 0, 0, 0, CAM_RANGE
-ray_colour:   .byte 0, 14, 13, 9, 0, 0, 0, 0, 0, 0, 6
+sight_range:  .byte 0, GUARD_RANGE, DRONE_RANGE, HEAVY_RANGE, 0, 0, 0, 0, BOSS_RANGE, 0, CAM_RANGE
+ray_colour:   .byte 0, 14, 13, 9, 0, 0, 0, 0, 6, 0, 6
 has_poses:    .byte 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0
 sprite_base:  .byte 0, 0, 3, 4, 7, 8, 9, 10, 12, 13, 0
 uses_id:      .byte 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0

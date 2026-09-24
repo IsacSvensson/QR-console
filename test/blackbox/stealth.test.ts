@@ -25,6 +25,18 @@ function referenceDetects(v: FrameView): string | null {
   const touches = (a: { x: number; y: number }) => box.x < a.x + 7 && a.x + 1 < box.x + box.w && box.y < a.y + 7 && a.y + 1 < box.y + box.h;
   for (const [i, a] of v.actors.entries()) {
     if (a.stun > 0 || a.type === 0) continue;
+    if (a.type === T('BOSS')) {
+      // boss 1 watches once powered up; both bosses have a 16x16 body centred on their cell
+      const base = v.S('actors') + i * v.S('ACT_SIZE');
+      const d0 = s16v(v, base + v.S('AC_D0'));
+      if (a.mode === 0 && d0 >= v.S('BOSS_WAKE') && sees(v.room, a, v.S('BOSS_RANGE'), pcell, v.flag)) return `boss ${i} sees the player`;
+      const o = v.S('BOSS_BODY_OFS');
+      const n = v.S('BOSS_BODY');
+      const bx = a.x - o;
+      const by = a.y - o;
+      if ((a.mode === 1 || d0 >= v.S('BOSS_WAKE')) && box.x < bx + n && bx < box.x + box.w && box.y < by + n && by < box.y + box.h) return `boss ${i} touches the player`;
+      continue;
+    }
     if (range[a.type] && sees(v.room, a, range[a.type]!, pcell, v.flag)) return `actor ${i} (type ${a.type}) sees the player`;
     const dangerous = [T('GUARD'), T('DRONE'), T('HEAVY'), T('AGENT')].includes(a.type) || (a.type === T('HUNTER') && a.state === 1);
     if (dangerous && touches(a)) return `actor ${i} touches the player`;
@@ -32,6 +44,8 @@ function referenceDetects(v: FrameView): string | null {
   }
   return null;
 }
+
+const s16v = (v: FrameView, addr: number) => (v.vm.read16(addr) << 16) >> 16;
 
 describe('stealth (M14)', () => {
   for (const name of REPLAYS) {

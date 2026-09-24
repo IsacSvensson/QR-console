@@ -45,7 +45,7 @@ export const ACTORS: Record<string, ActorSpec> = {
   '4.5 7,5': { id: 0, dir: 2 },
   '5.1 6,6': { range: 4, dir: 2 },
   '5.2 7,13': { range: 4, dir: 0 },
-  '5.4 7,6': { mode: 't', dir: 0, dir2: 1, period: 360 },
+  '5.4 3,6': { mode: 't', dir: 1, dir2: 2, period: 360 }, // P5: the warning sets its timer to turn in 3 s
   '5.6 10,7': { active: 1, dir: 3 },
   '6.2 7,5': { dir: 2 },
   '6.4 7,3': { id: 1 },

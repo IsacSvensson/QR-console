@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M17 — Content, sections 4–7, bosses and endings (Part 2: BLACKBOX)
+**Current milestone:** M18 — Music, access codes, delivery (Part 2: BLACKBOX)
 **Status:** Part 1 (M0–M11) complete; Part 2 in progress
 **Last updated:** 2026-09-24
 
@@ -28,7 +28,7 @@ Part 2 — BLACKBOX (design: `games/blackbox/`)
 - [x] M14 Stealth: guards, cameras, drones, EMP
 - [x] M15 Text and the ORACLE engine
 - [x] M16 Content, sections 0–3
-- [ ] M17 Content, sections 4–7, bosses and endings
+- [x] M17 Content, sections 4–7, bosses and endings
 - [ ] M18 Music, access codes, delivery
 
 ## Current work
@@ -47,6 +47,7 @@ real-device check (PLAN.md *Manual acceptance*). **M12 baseline commit: 5a7ca7d*
 | Payload bytes per frame | 262 (287 − 25 overhead) | bench/qr.md |
 | 50 KB transfer: frames / seconds / KB/s | K=196, loop 294; p90 259 frames / 38.9 s / 1.29 KB/s (simulated 20 % loss); browser fake camera 34.7 s / 1.44 KB/s | bench/qr.md, bench/scan.md |
 | Breakout cartridge size | 877 B (ROM 1551 B, deflate-raw); target ≤ 10 KB met | test:games |
+| BLACKBOX ROM / cartridge | 24.4 KB of 32 KB ROM (74 %) / 14.0 KB cartridge; 4 endings replayed (7.4k–8.2k frames each) | test:blackbox |
 | Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
 
 ## Known issues

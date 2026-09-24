@@ -5,3 +5,5 @@
 .sfx SFX_EMP,    2, 1600, 24, 13, -60
 .sfx SFX_EMPTY,  1, 180, 6, 6
 .sfx SFX_USE,    1, 520, 4, 7
+.sfx SFX_PULSE,  0, 1200, 10, 11, -60
+.sfx SFX_DOWN,   0, 400, 40, 12, -8

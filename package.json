@@ -30,7 +30,7 @@
     "bench:scan": "QRC_BIG_FIXTURE=1 playwright test --project measure",
     "test:blackbox": "vitest run --project blackbox --reporter=verbose",
     "blackbox:gen": "tsx games/blackbox/tools/gen.ts && tsx games/blackbox/tools/tiles.ts && tsx games/blackbox/tools/text.ts",
-    "blackbox:record": "tsx games/blackbox/tools/record.ts"
+    "blackbox:record": "tsx games/blackbox/tools/record.ts && tsx games/blackbox/tools/pick-frames.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

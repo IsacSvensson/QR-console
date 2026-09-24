@@ -622,7 +622,7 @@ warp:
 locks:
 gives: LABCARD
 events: D8, P4
-objects: b(7,5) SECURITY DIRECTOR: fires 3 times, then turns for 2 s. T(1,1), T(14,1), T(4,13) override panels — hack all three while its back is turned. P4 = first panel hacked in the first turn window. Drops the LAB CARD.
+objects: b(7,5) SECURITY DIRECTOR: powers up for 1 s when the player comes in (the S door is in its column), then fires 3 times and turns for 2 s. T(1,1), T(14,1), T(4,13) override panels — hack all three while its back is turned. P4 = first panel hacked in the first turn window. Drops the LAB CARD.
 ################
 #T............T#
 #..............#
@@ -728,14 +728,14 @@ warp:
 locks:
 gives:
 events: P5, L7
-objects: The wall on row 5 has one gap (7..8,5). g(7,6) guards it facing north, turns east every 6 s. Mira: THE GUARD WILL TURN IN THREE SECONDS. (P5) when the player reaches row 4. P5 = hit if the player passes the gap after the turn. T(4,11) incident report (L7, optional).
+objects: The wall on row 5 has one gap (7..8,5). g(3,6) watches the row below the gap (facing east) and turns south every 6 s. Mira: THE GUARD WILL TURN IN THREE SECONDS. (P5) when the player reaches row 4 — and the guard does turn exactly 3 s later (ORACLE controls it). P5 = hit if the player gets past without being detected after the warning, miss if detected here first. T(4,11) incident report (L7, optional).
 #######+########
 #..............#
 #.SS.SS.SS.SS..#
 #..............#
 #..............#
 #######..#######
-#......g.......#
+#..g...........#
 #..............+
 #..............#
 #.SS.SS.SS.SS..#
@@ -912,12 +912,12 @@ warp: 7.1
 locks:
 gives:
 events:
-objects: L(13,7),(14,7) the last door. Silence; the ORACLE music loop starts here.
+objects: L(13,7),(14,7) the last door. E(14,4) a last charging station before the core. Silence; the ORACLE music loop starts here.
 ################
 #..............#
 #..............#
 #..SS......SS..#
-#..............#
+#.............E#
 #..............#
 #..............#
 +............LL#

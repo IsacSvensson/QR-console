@@ -33,7 +33,15 @@ OP_IFHIT  = 17              ; p, target: jump if prediction p came true
 OP_IFGUESS = 18             ; choice, target: jump if ORACLE forecasts that final choice
 OP_SNAP   = 19              ; remember the accuracy before the last action
 OP_CODE   = 20              ; section: show the access code to resume at that section (waits for A)
-NUM_OPS   = 21
+OP_HACK   = 21              ; panel: try to hack a boss panel (sets F_HACKED on success)
+OP_IFSTUN = 22              ; actor, target: jump if that actor is stunned
+OP_ACTT   = 23              ; actor, frames (word): set its timer and face its first direction
+OP_IFDET  = 24              ; target: jump if the player was detected in this room since entering
+OP_MENU   = 25              ; box: three-way menu (UP/DOWN, A); the choice goes to menu_choice
+OP_PREDCH = 26              ; p: resolve prediction p: hit if menu_choice = ORACLE's forecast
+OP_IFCH   = 27              ; choice, target: jump if menu_choice = choice
+OP_ENDING = 28              ; the end screen
+NUM_OPS   = 29
 
 .macro TR_ENTER script
     .byte TK_ENTER, 0, 0
@@ -135,6 +143,35 @@ NUM_OPS   = 21
 .endm
 .macro S_CODE sec
     .byte OP_CODE, sec
+.endm
+.macro S_HACK panel
+    .byte OP_HACK, panel
+.endm
+.macro S_IFSTUN act, target
+    .byte OP_IFSTUN, act
+    .word target
+.endm
+.macro S_ACTT act, frames
+    .byte OP_ACTT, act
+    .word frames
+.endm
+.macro S_IFDET target
+    .byte OP_IFDET
+    .word target
+.endm
+.macro S_MENU bx
+    .byte OP_MENU
+    .word bx
+.endm
+.macro S_PREDCH p
+    .byte OP_PREDCH, p
+.endm
+.macro S_IFCH ch, target
+    .byte OP_IFCH, ch
+    .word target
+.endm
+.macro S_ENDING
+    .byte OP_ENDING
 .endm
 PROF_LOGS = 1
 PROF_MIRA = 2
@@ -309,13 +346,13 @@ op_ifev:
     ADD r0, 4
     RET
 
-op_warp:
-    PUSH r0
-    LDB r0, [r0 + 1]
-    CALL load_room
-    CALL place_at_arrival
-    POP r0
-    ADD r0, 2
+op_warp:                    ; ends this script; the new room's ENTER trigger runs
+    LDB r1, [r0 + 1]
+    LDI r0, 0
+    ST [script_pc], r0
+    MOV r0, r1
+    CALL enter_room_at_arrival
+    LDI r0, 0
     RET
 
 op_sfx:
@@ -445,6 +482,97 @@ op_code:
     LDI r0, 0
     RET
 
+op_hack:
+    PUSH r0
+    LDB r0, [r0 + 1]
+    CALL boss_hack
+    POP r0
+    ADD r0, 2
+    RET
+
+; r1 = actor index -> r6 = its record
+actor_rec:
+    MOV r6, r1
+    MUL r6, ACT_SIZE
+    ADD r6, actors
+    RET
+
+op_ifstun:
+    LDB r1, [r0 + 1]
+    CALL actor_rec
+    LD r1, [r6 + AC_STUN]
+    CMP r1, 0
+    JEQ @no
+    LD r0, [r0 + 2]
+    RET
+@no:
+    ADD r0, 4
+    RET
+
+op_actt:
+    LDB r1, [r0 + 1]
+    CALL actor_rec
+    LD r1, [r0 + 2]
+    ST [r6 + AC_T], r1
+    LD r1, [r6 + AC_D0]
+    ST [r6 + AC_DIR], r1
+    ADD r0, 4
+    RET
+
+op_ifdet:
+    LD r1, [room_det]
+    CMP r1, 0
+    JEQ @no
+    LD r0, [r0 + 1]
+    RET
+@no:
+    ADD r0, 3
+    RET
+
+op_menu:
+    LDI r1, 0
+    ST [menu_sel], r1
+    LDI r2, BOX_MENU
+    JMP box_op
+
+op_predch:
+    PUSH r0
+    CALL oracle_update
+    LD r1, [menu_choice]
+    LD r2, [final_guess]
+    LDI r3, 0
+    CMP r1, r2
+    JNE @miss
+    LDI r3, 1
+@miss:
+    POP r0
+    PUSH r0
+    MOV r1, r3
+    LDB r0, [r0 + 1]
+    CALL resolve_pred
+    POP r0
+    ADD r0, 2
+    RET
+
+op_ifch:
+    LDB r1, [r0 + 1]
+    LD r2, [menu_choice]
+    CMP r1, r2
+    JNE @no
+    LD r0, [r0 + 2]
+    RET
+@no:
+    ADD r0, 4
+    RET
+
+op_ending:
+    LDI r1, 0
+    ST [script_pc], r1
+    LDI r1, M_ENDING
+    ST [mode], r1
+    LDI r0, 0
+    RET
+
 op_snap:
     PUSH r0
     CALL accuracy
@@ -456,5 +584,6 @@ op_snap:
 .data
 op_table: .word op_end, op_set, op_clr, op_if, op_ifnot, op_jmp, op_event, op_ifev, op_warp, op_sfx, op_wait
           .word op_say, op_ask, op_log, op_bark, op_pred, op_prof, op_ifhit, op_ifguess, op_snap, op_code
+          .word op_hack, op_ifstun, op_actt, op_ifdet, op_menu, op_predch, op_ifch, op_ending
 s_access: .string "ACCESS CODE\n\n    "
 prof_vars: .word 0, logs_read, mira_followed

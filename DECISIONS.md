@@ -243,3 +243,21 @@ Decision: the access code for section n is shown when the player first enters th
 counters 3+3+3, charges 3, 9-bit checksum over the first 32 bits; 8 symbols from a 32-letter alphabet without
 I, O, 0, 1, each XORed with a per-position key. D5 (the alarm log) is reachable only by disobeying Mira at P1:
 the player who disobeys learns early that the break-in was expected.
+
+## D-019 — Level-design fixes found by playing BLACKBOX with the bot (M17)
+Date: 2026-09-24 · Milestone: M17
+Each was found when the recording bot could not complete a route; each is a real design flaw, fixed in the
+design documents first:
+- **5.4 (P5):** the guard stood in the gap's column facing the entrance — the player was seen on entering, and
+  after "waiting" could not get past the guard's own body. Now it watches the row below the gap from (3,6), and
+  ORACLE's warning *sets its timer* so it really turns 3 s later (ORACLE controls it). P5 = hit if the player
+  gets past without a detection after the warning.
+- **4.5 boss 1:** the south door (the route after refusing Mira) is in the boss's column; it re-aims every frame,
+  so the player was seen on the first frame. It now powers up for 1 s (BOSS_WAKE) after the player comes in.
+- **6.5:** added a charging station before the core: without it a player who used the EMP on the agent in 6.2
+  could not win the 7.1 fight (the unit's panels are hackable only while it is stunned).
+- **Chasers** (hunter, agent, unit) stuck on shelves when the step along the dominant axis was blocked; they
+  now try the other axis.
+Bot strategies (tools/routes.ts) for the bosses and for crossing 4.1's drones without the EMP compute their
+timing windows from the actors' speeds and sight ranges (documented next to the code).
+Alternatives: tuning the bot until it squeezed through (would have hidden the flaws).

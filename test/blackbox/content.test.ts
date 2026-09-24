@@ -98,9 +98,9 @@ describe('sections 0-3 (M16)', () => {
   });
 
   for (const name of ['m16-left', 'm16-right']) {
-    it(`${name}: access codes for sections 2 and 3 are shown, each equal to the reference encoding of the state`, () => {
+    it(`${name}: access codes for sections 2, 3 and 4 are shown on entering them, each equal to the reference encoding`, () => {
       const r = play(name);
-      expect(r.codes.map((c) => c.room)).toEqual(['2.1', '3.1']);
+      expect(r.codes.map((c) => c.room)).toEqual(['2.1', '3.1', '4.1']);
       for (const c of r.codes) expect(c.shown, c.room).toBe(c.expected);
     });
   }

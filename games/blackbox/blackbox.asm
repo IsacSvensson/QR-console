@@ -13,6 +13,7 @@
 .include "text.asm"
 .include "oracle.asm"
 .include "code.asm"
+.include "boss.asm"
 .include "sounds.asm"
 .include "draw.asm"
 .include "gfx.asm"
@@ -173,14 +174,30 @@ mode_play:
     CALL draw_play
     RET
 
-; placeholder until M17 (endings)
 mode_ending:
-    LDI r0, M_PLAY
+    LD r0, [pressed]
+    AND r0, BTN_A
+    JZ @draw
+    LDI r0, M_TITLE
     ST [mode], r0
+@draw:
+    LDI r0, 0
+    SYS CLS
+    LDI r0, s_title
+    LDI r1, 48
+    LDI r2, 56
+    LDI r3, 15
+    SYS TEXT
+    LDI r0, s_end
+    LDI r1, 50
+    LDI r2, 66
+    LDI r3, 7
+    SYS TEXT
     RET
 
 .data
 mode_table: .word mode_title, mode_play, mode_dialog, mode_term, mode_ending
 s_title:    .string "BLACKBOX"
 s_press:    .string "PRESS A"
+s_end:      .string "THE END"
 dbg_oracle_text: .byte 2, ' ', 3, '/', 3, ' ', 1, 0
