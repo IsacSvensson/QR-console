@@ -22,7 +22,8 @@ export type Step =
   | { run: (bot: Bot) => void; note?: string }
   | { menu: number | ((bot: Bot) => number) }
   | { exitEnd: Side }
-  | { untilMode: string; max?: number };
+  | { untilMode: string; max?: number }
+  | { enterCode: string };
 
 const DIR_BTN: Record<Side, number> = { N: BUTTONS.UP, S: BUTTONS.DOWN, E: BUTTONS.RIGHT, W: BUTTONS.LEFT };
 const DELTA: Record<Side, [number, number]> = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
@@ -384,6 +385,24 @@ export class Bot {
       } else if ('untilMode' in s) {
         for (let i = 0; i < (s.max ?? 6000) && this.mode !== this.sym.get(s.untilMode); i++) this.frame(i % 2 ? 0 : BUTTONS.A);
         if (this.mode !== this.sym.get(s.untilMode)) throw new Error(`bot: never reached mode ${s.untilMode}`);
+      } else if ('enterCode' in s) {
+        // on the access-code screen: UP/DOWN pick each character (from 'A'), RIGHT to the next, A to submit
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        if (this.mode !== this.sym.get('M_CODE')) throw new Error('bot: not on the access-code screen');
+        for (const [i, ch] of [...s.enterCode].entries()) {
+          const n = alphabet.indexOf(ch);
+          const [btn, times] = n <= 16 ? [BUTTONS.UP, n] : [BUTTONS.DOWN, 32 - n];
+          for (let k = 0; k < times; k++) {
+            this.frame(btn);
+            this.frame(0);
+          }
+          if (i < 7) {
+            this.frame(BUTTONS.RIGHT);
+            this.frame(0);
+          }
+        }
+        this.frame(BUTTONS.A);
+        this.frame(0);
       } else if ('answer' in s) {
         if (this.mode !== this.sym.get('M_DIALOG') || this.ram('box_kind') !== this.sym.get('BOX_ASK')) throw new Error(`bot: no question to answer in ${this.room}`);
         for (let i = 0; i < 400 && this.mode === this.sym.get('M_DIALOG'); i++) this.frame(i % 2 ? 0 : s.answer === 'A' ? BUTTONS.A : BUTTONS.B);

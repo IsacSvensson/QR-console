@@ -21,6 +21,7 @@ M_PLAY   = 1
 M_DIALOG = 2
 M_TERM   = 3
 M_ENDING = 4
+M_CODE   = 5
 
 ; ---- player -----------------------------------------------------------------------------------
 PBOX_X = 1                  ; collision box inside the 8x8 sprite
@@ -177,4 +178,21 @@ CH_LISTEN  = 2
 .var code_bits, 6           ; access code bit stream (40 bits)
 .var code_pos
 .var code_text, 10          ; the 8-character code + 0
+.var code_ok
+.var code_cur
+.var code_msg
+.var code_sel, 8
+.var dc_section             ; decoded access code fields
+.var dc_done
+.var dc_hit
+.var dc_emp
+.var dc_logs
+.var dc_mira
+.var dc_charges
+.var dbg_code               ; TEST HOOK: 1 = decode code_text and resume if valid (code_ok says whether it was)
+.var music_track
+.var voice_t, 4             ; per voice: frames left of the current note
+.var voice_p, 4             ; next note
+.var voice_s, 4             ; start of the voice (loop)
+.var sfx_busy, 6            ; per channel: frames an effect still owns it
 .var dbg_oracle             ; TEST HOOK: 1 = recompute the ORACLE values and render "<PCT> <N>/<N> <X>" 

@@ -126,3 +126,276 @@ make_code:
 .data
 code_alphabet: .byte "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 code_key:      .byte 19, 7, 28, 3, 22, 11, 30, 14
+
+; ---- entering a code --------------------------------------------------------------------------
+; code_text (8 characters) -> code_ok = 1 and the state restored (resume_section = section), or code_ok = 0
+decode_code:
+    LDI r0, 0
+    ST [code_ok], r0
+    CALL bits_reset
+    LDI r6, 0
+@sym:
+    LDB r2, [r6 + code_text]
+    LDI r3, 0               ; position in the alphabet
+@find:
+    LDB r4, [r3 + code_alphabet]
+    CMP r4, r2
+    JEQ @found
+    ADD r3, 1
+    CMP r3, 32
+    JLT @find
+    RET                     ; not a code character
+@found:
+    LDB r4, [r6 + code_key]
+    XOR r3, r4
+    MOV r0, r3
+    LDI r1, 5
+    PUSH r6
+    CALL put_bits
+    POP r6
+    ADD r6, 1
+    CMP r6, 8
+    JLT @sym
+    ; the checksum covers the first 31 bits (bit 32 belongs to the checksum itself)
+    LDB r0, [code_bits + 3]
+    PUSH r0
+    AND r0, 0xFE
+    STB [code_bits + 3], r0
+    CALL code_checksum
+    MOV r5, r0
+    POP r0
+    STB [code_bits + 3], r0
+    LDI r0, 0
+    ST [code_pos], r0
+    LDI r1, 3
+    CALL get_bits
+    ST [dc_section], r0
+    LDI r1, 8
+    CALL get_bits
+    ST [dc_done], r0
+    LDI r1, 8
+    CALL get_bits
+    ST [dc_hit], r0
+    LDI r1, 3
+    CALL get_bits
+    ST [dc_emp], r0
+    LDI r1, 3
+    CALL get_bits
+    ST [dc_logs], r0
+    LDI r1, 3
+    CALL get_bits
+    ST [dc_mira], r0
+    LDI r1, 3
+    CALL get_bits
+    ST [dc_charges], r0
+    LDI r1, 9
+    PUSH r5
+    CALL get_bits
+    POP r5
+    CMP r0, r5
+    JNE @bad
+    LD r0, [dc_section]     ; plausibility: section 2..7, at most 4 charges, hits only among resolved
+    CMP r0, 2
+    JLT @bad
+    CMP r0, 7
+    JGT @bad
+    LD r0, [dc_charges]
+    CMP r0, MAX_CHARGES
+    JGT @bad
+    LD r0, [dc_hit]
+    LD r1, [dc_done]
+    XOR r1, -1
+    AND r0, r1
+    JNZ @bad
+    LDI r0, 1
+    ST [code_ok], r0
+@bad:
+    RET
+
+; resume from the decoded fields: a fresh game, then everything the earlier sections imply
+resume_game:
+    CALL new_state
+    LD r0, [dc_done]
+    ST [pred_done], r0
+    LD r0, [dc_hit]
+    ST [pred_hit], r0
+    LD r0, [dc_emp]
+    ST [emp_uses], r0
+    LD r0, [dc_logs]
+    ST [logs_read], r0
+    LD r0, [dc_mira]
+    ST [mira_followed], r0
+    LD r0, [dc_charges]
+    ST [charges], r0
+    CALL oracle_update
+    LD r5, [dc_section]
+    LDI r6, 2               ; flags of every section before the one we resume in
+@sec:
+    CMP r6, r5
+    JGT @enter
+    MOV r1, r6
+    SHL r1, 1
+    LD r4, [r1 + section_flags - 4]
+@flag:
+    LDB r0, [r4]
+    CMP r0, 255
+    JEQ @next
+    PUSH r4
+    PUSH r5
+    PUSH r6
+    CALL flag_set
+    POP r6
+    POP r5
+    POP r4
+    ADD r4, 1
+    JMP @flag
+@next:
+    MOV r0, r6              ; that section's code has been shown
+    ADD r0, EV_C1 - 1
+    PUSH r5
+    PUSH r6
+    CALL event_set
+    POP r6
+    POP r5
+    ADD r6, 1
+    JMP @sec
+@enter:
+    LDI r0, M_PLAY
+    ST [mode], r0
+    MOV r1, r5
+    LDB r0, [r1 + section_start - 2]
+    CALL enter_room_at_arrival
+    RET
+
+; the access-code screen (from the title with B)
+mode_code:
+    LD r2, [pressed]
+    LD r5, [code_cur]
+    MOV r0, r2
+    AND r0, BTN_LEFT
+    JZ @no_l
+    CMP r5, 0
+    JEQ @no_l
+    SUB r5, 1
+@no_l:
+    MOV r0, r2
+    AND r0, BTN_RIGHT
+    JZ @no_r
+    CMP r5, 7
+    JGE @no_r
+    ADD r5, 1
+@no_r:
+    ST [code_cur], r5
+    LDB r3, [r5 + code_sel]
+    MOV r0, r2
+    AND r0, BTN_UP
+    JZ @no_u
+    ADD r3, 1
+@no_u:
+    MOV r0, r2
+    AND r0, BTN_DOWN
+    JZ @no_d
+    SUB r3, 1
+@no_d:
+    AND r3, 31
+    STB [r5 + code_sel], r3
+    LDB r3, [r3 + code_alphabet]
+    STB [r5 + code_text], r3
+    MOV r0, r2
+    AND r0, BTN_B
+    JZ @no_b
+    LDI r0, M_TITLE
+    ST [mode], r0
+    RET
+@no_b:
+    AND r2, BTN_A
+    JZ @draw
+    CALL submit_code
+    RET
+@draw:
+    LDI r0, 0
+    SYS CLS
+    LDI r0, s_enter_code
+    LDI r1, 42
+    LDI r2, 44
+    LDI r3, 7
+    SYS TEXT
+    LDI r0, 0
+    STB [code_text + 8], r0
+    LDI r0, code_text
+    LDI r1, 48
+    LDI r2, 58
+    LDI r3, 15
+    SYS TEXT
+    LD r0, [code_cur]       ; cursor under the current character
+    SHL r0, 2
+    ADD r0, 48
+    LDI r1, 64
+    LDI r2, 3
+    LDI r3, 1
+    LDI r4, 14
+    SYS RECTFILL
+    LD r0, [code_msg]
+    CMP r0, 0
+    JEQ @keys
+    SUB r0, 1
+    ST [code_msg], r0
+    LDI r0, s_invalid
+    LDI r1, 40
+    LDI r2, 76
+    LDI r3, 6
+    SYS TEXT
+@keys:
+    LDI r0, s_code_keys
+    LDI r1, 8
+    LDI r2, 110
+    LDI r3, 3
+    SYS TEXT
+    RET
+
+submit_code:
+    CALL decode_code
+    LD r0, [code_ok]
+    CMP r0, 0
+    JNE @ok
+    LDI r0, 90
+    ST [code_msg], r0
+    LDI r0, SFX_EMPTY
+    CALL play_sfx
+    RET
+@ok:
+    CALL resume_game
+    RET
+
+; title: B opens the code screen with the code "AAAAAAAA"
+open_code_screen:
+    LDI r6, 0
+@clear:
+    LDI r0, 0
+    STB [r6 + code_sel], r0
+    LDB r0, [code_alphabet]
+    STB [r6 + code_text], r0
+    ADD r6, 1
+    CMP r6, 8
+    JLT @clear
+    LDI r0, 0
+    ST [code_cur], r0
+    ST [code_msg], r0
+    LDI r0, M_CODE
+    ST [mode], r0
+    RET
+
+.data
+; first room of each section 2..7
+section_start: .byte R_2_1, R_3_1, R_4_1, R_5_1, R_6_1, R_7_1
+; flags earned in the sections before section n (n = 2..7), each list ends with 255
+section_flags: .word sf2, sf3, sf4, sf5, sf6, sf7
+sf2: .byte F_BADGE, 255
+sf3: .byte F_L1, F_KEYNOTE, F_CARD, F_DIRDOOR, 255
+sf4: .byte F_L3, F_EMP, F_SHUTTER, F_PICK0, F_PICK1, 255
+sf5: .byte F_L4, F_LABCARD, 255
+sf6: .byte F_L6, 255
+sf7: .byte F_HALE, F_LIVE, 255
+s_enter_code: .string "ACCESS CODE"
+s_invalid:    .string "INVALID CODE"
+s_code_keys:  .string "ARROWS: EDIT  A: OK  B: BACK"

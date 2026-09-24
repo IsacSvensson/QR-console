@@ -26,6 +26,8 @@ test('offline: after one online load the app starts, lists the Library, scans Po
   });
   context.on('requestfailed', (r) => seen.push({ url: r.url(), fromSW: false, byServiceWorker: !!r.serviceWorker(), failed: r.failure()?.errorText }));
   await context.setOffline(true);
+  const offlineAt = Date.now();
+  console.log(`[timing] offline at ${offlineAt}, server log had ${serverLinesBefore} lines`);
   await page.reload();
 
   // 3. app starts and shows the stored cartridge
@@ -42,6 +44,7 @@ test('offline: after one online load the app starts, lists the Library, scans Po
 
   // 5. zero network requests after going offline
   const newServerRequests = serverLog().slice(serverLinesBefore);
+  console.log(`[timing] server requests after the count: ${JSON.stringify(newServerRequests)}`);
   expect(newServerRequests, 'requests that reached the server after going offline').toEqual([]);
   const networkBySW = seen.filter((s) => s.byServiceWorker);
   const failed = seen.filter((s) => s.failed);

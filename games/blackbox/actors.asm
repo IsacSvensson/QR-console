@@ -178,7 +178,7 @@ act_hunter:
     LDI r0, 1
     ST [r6 + AC_ST], r0
     LDI r0, SFX_WAKE
-    SYS SFX
+    CALL play_sfx
     RET
 @chase:
     LD r0, [frame]
@@ -276,7 +276,7 @@ act_pickup:
 @ok:
     ST [charges], r0
     LDI r0, SFX_PICKUP
-    SYS SFX
+    CALL play_sfx
     LD r6, [ap]
     LD r1, [r6 + AC_MODE]
     LDI r0, TK_TOUCH
@@ -601,7 +601,7 @@ got_caught:
     ADD r0, 1
     ST [det_count], r0
     LDI r0, SFX_ALARM
-    SYS SFX
+    CALL play_sfx
     LDI r0, box_BARK_9      ; "DETECTED. RESTARTING ROOM."
     CALL open_bark
     LD r0, [room_det]
@@ -644,7 +644,7 @@ use_emp:
     LDI r0, 16
     ST [emp_fx], r0
     LDI r0, SFX_EMP
-    SYS SFX
+    CALL play_sfx
     LDI r6, actors
     LD r7, [n_actors]
 @each:
@@ -674,7 +674,7 @@ use_emp:
     JMP @each
 @empty:
     LDI r0, SFX_EMPTY
-    SYS SFX
+    CALL play_sfx
 @no:
     RET
 
@@ -690,7 +690,7 @@ recharge:
     LDI r0, 3
     ST [charges], r0
     LDI r0, SFX_PICKUP
-    SYS SFX
+    CALL play_sfx
 @no:
     RET
 

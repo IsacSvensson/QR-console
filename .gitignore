@@ -8,3 +8,5 @@ playwright-report/
 test-results/
 games/**/*.sym
 games/**/*.lst
+/demo/*.sym
+/demo/*.lst

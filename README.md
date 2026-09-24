@@ -8,8 +8,8 @@ bar fill as frames arrive in any order, press **PLAY** — no network needed aft
   (`packages/cartridge/FORMAT.md`), and run by a 16-bit VM (`packages/vm/VM.md`, `packages/asm/ASM.md`).
 - Cartridges travel as a fountain code (systematic LT + Gaussian elimination, `packages/transport/PACKET.md`),
   one packet per QR frame (raw byte mode), looped in a lossless GIF.
-- The player never knows which game it runs: Breakout and Pong both run with zero game-specific code in
-  the runtime.
+- The player never knows which game it runs: Breakout, Pong and **BLACKBOX** (a story-driven stealth adventure,
+  `games/blackbox/`) all run with zero game-specific code in the runtime.
 
 Writing games: **`docs/PROGRAMMING.md`** (assembly and bytecode guide with runnable examples).
 Design: `SPEC.md`. Milestones and proofs: `PLAN.md`. Status: `PROGRESS.md`. Decisions: `DECISIONS.md`.
@@ -31,6 +31,7 @@ npm run check              # typecheck + lint + unit tests (all packages, layer-
 npm run test:slice         # layer 2: hello.asm → QR images / GIF → decode → VM → reference frame
 npm run test:qr-robust     # layer 3: simulated camera distortion, ≥ 95 % frames must decode
 npm run test:games         # Breakout + Pong: size, 1200/1800-frame replay hashes, game-rule checks
+npm run test:blackbox      # BLACKBOX: rooms vs LAYOUT.md, stealth/ORACLE/music oracles, four endings replayed
 npm run test:e2e           # Playwright: player vs VM reference, fake-camera scan, Library persistence
 npm run test:e2e:offline   # Playwright: production build + service worker, offline scan & play, zero requests
 npm run bench:fountain     # → bench/fountain.md
@@ -61,7 +62,7 @@ npm run refs:games                                         # regenerate committe
 ### Generate the demo GIFs
 
 ```sh
-npm run demo     # builds both games, writes demo/breakout.gif and demo/pong.gif,
+npm run demo     # builds the games, writes demo/breakout.gif, demo/pong.gif and demo/blackbox.gif,
                  # decodes them back with the CLI and checks the SHA-256 of the result
 ```
 
@@ -94,7 +95,7 @@ Then:
 3. Open `demo/breakout.gif` on the laptop, full screen (the loop is 8 frames × 150 ms).
 4. In the app: **Scan**, point at the screen until the bar reaches 100 % and the title appears, press **PLAY**.
    Controls: on-screen D-pad and A/B (keyboard: arrows, Z/Space = A, X = B).
-5. Repeat with `demo/pong.gif`.
+5. Repeat with `demo/pong.gif` and `demo/blackbox.gif` (13 s loop; B on BLACKBOX's title screen enters an access code).
 
 This real-device test has **not** been performed by the agent that built the prototype; see `REPORT.md`.
 

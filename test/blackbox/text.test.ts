@@ -130,9 +130,16 @@ describe('ORACLE engine (M15)', () => {
     for (const name of readdirSync(join(GAME_DIR, 'replays')).filter((f) => /^m\d+-[\w-]+\.json$/.test(f) && !f.endsWith('.frames.json')).map((f) => f.replace('.json', ''))) {
       let charges = -1;
       let empUses = 0;
+      let prevMode = -1;
       runReplay(bb, name, (v) => {
         const r = (n: string) => v.vm.read16(v.S(n));
         const c = r('charges');
+        if (prevMode === v.S('M_CODE') && v.mode !== v.S('M_CODE')) {
+          // resumed from an access code: the profile comes from the code (checked in delivery.test.ts)
+          empUses = r('emp_uses');
+          charges = c;
+        }
+        prevMode = v.mode;
         if (charges >= 0 && c === charges - 1) empUses = Math.min(7, empUses + 1);
         charges = c;
         const done = r('pred_done');

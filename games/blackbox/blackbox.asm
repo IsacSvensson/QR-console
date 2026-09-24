@@ -25,6 +25,9 @@
 init:
     LDI r0, M_TITLE
     ST [mode], r0
+    LDI r0, MUS_NONE
+    ST [music_track], r0
+    CALL oracle_update      ; derived ORACLE values are consistent from the first frame
     RET
 
 update:
@@ -48,13 +51,26 @@ update:
 @dispatch:
     LD r0, [dbg_oracle]     ; TEST HOOK: ORACLE values and their rendering
     CMP r0, 0
-    JEQ @go
+    JEQ @no_oracle
     LDI r0, 0
     ST [dbg_oracle], r0
     CALL oracle_update
     LDI r0, dbg_oracle_text
     LDI r1, text_buf
     CALL decode_text
+@no_oracle:
+    LD r0, [dbg_code]       ; TEST HOOK: decode code_text
+    CMP r0, 0
+    JEQ @music
+    LDI r0, 0
+    ST [dbg_code], r0
+    CALL decode_code
+    LD r0, [code_ok]
+    CMP r0, 0
+    JEQ @music
+    CALL resume_game
+@music:
+    CALL music_step
 @go:
     LD r1, [mode]
     SHL r1, 1
@@ -64,6 +80,14 @@ update:
 
 ; ---- title ------------------------------------------------------------------------------------
 mode_title:
+    LDI r0, MUS_NONE
+    CALL set_music
+    LD r0, [pressed]
+    AND r0, BTN_B
+    JZ @no_code
+    CALL open_code_screen
+    RET
+@no_code:
     LD r0, [pressed]
     AND r0, BTN_A
     JZ @draw
@@ -93,14 +117,28 @@ mode_title:
     AND r0, 32
     JZ @blink
     LDI r0, s_press
-    LDI r1, 50
+    LDI r1, 34
     LDI r2, 100
     LDI r3, 7
     SYS TEXT
 @blink:
+    LDI r0, s_code_hint
+    LDI r1, 34
+    LDI r2, 108
+    LDI r3, 3
+    SYS TEXT
     RET
 
 new_game:
+    CALL new_state
+    LDI r0, M_PLAY          ; before entering: the room's ENTER script may open a dialogue
+    ST [mode], r0
+    LDI r0, R_0_1
+    CALL enter_room_at_arrival
+    RET
+
+; everything a fresh game starts with
+new_state:
     LDI r1, 0
 @clear:
     LDI r0, 0
@@ -129,10 +167,6 @@ new_game:
     ST [pct_before], r0
     LDI r0, DIR_S
     ST [pdir], r0
-    LDI r0, M_PLAY          ; before entering: the room's ENTER script may open a dialogue
-    ST [mode], r0
-    LDI r0, R_0_1
-    CALL enter_room_at_arrival
     RET
 
 mode_play:
@@ -196,8 +230,9 @@ mode_ending:
     RET
 
 .data
-mode_table: .word mode_title, mode_play, mode_dialog, mode_term, mode_ending
+mode_table: .word mode_title, mode_play, mode_dialog, mode_term, mode_ending, mode_code
 s_title:    .string "BLACKBOX"
-s_press:    .string "PRESS A"
+s_press:    .string "A: NEW GAME"
+s_code_hint: .string "B: ACCESS CODE"
 s_end:      .string "THE END"
 dbg_oracle_text: .byte 2, ' ', 3, '/', 3, ' ', 1, 0

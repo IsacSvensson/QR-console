@@ -22,10 +22,20 @@ Playwright, Node 22, Linux dev container) and passed. **No real phone or camera 
 | 9 | PWA: Library (IndexedDB), Scan (camera → zxing in a Web Worker → fountain → verify), Play (canvas, WebAudio, touch + keyboard). Canvas output equals the VM reference frame byte-for-byte for hello, Breakout, Pong | [tested] `npm run test:e2e` |
 | 10 | Fake-camera scan of the Breakout GIF (as `.y4m`) to 100 %, PLAY, first frame matches, cartridge persists after reload and plays from the Library | [tested] `npm run test:e2e` |
 | 11 | Keyboard (arrows, Z, X) and on-screen touch buttons reach the VM input; A starts a game | [tested] `npm run test:e2e` |
-| 12 | Offline: after one online load, offline reload starts the app, Library shows the stored cartridge, fake-camera scan of Pong completes and plays; zero requests reached the server, the service worker made no network fetches, no request failed, every page request was answered from the SW cache | [tested] `npm run test:e2e:offline` (negative controls done by hand: fails without SW; fails with wasm missing from the precache) |
+| 12 | Offline: after one online load, offline reload starts the app, Library shows the stored cartridge, fake-camera scan of Pong completes and plays; the service worker made no network fetches, no page request failed, every page request was answered from the SW cache | [tested] `npm run test:e2e:offline` — **but see the correction below: the "zero requests reached the server" assertion fails in 5 of 8 runs** |
 | 13 | CLI `qrc build / encode / decode / inspect / run / replay`; `npm run demo` builds both games, writes `demo/breakout.gif` and `demo/pong.gif`, decodes them back and the SHA-256 matches | [tested] |
 | 14 | Installable manifest + icons, `preview:https` with a self-signed certificate | [tested] build + HTTPS smoke test only; **installation on a phone [not verified]** |
 | 15 | Audio: VM emits correct audio commands [tested]; that the WebAudio backend *sounds* right | [not verified] |
+
+### Correction (found in Part 2): the offline test is flaky
+
+The Part 1 claim that `npm run test:e2e:offline` passes was true for the runs made then, but **measured over 8
+consecutive runs it passes 3 times and fails 5 times** [measured]. Every failure is a single `GET /sw.js` reaching
+the test server about 2 s after going offline: Chromium's service-worker *update check* on reload, issued by the
+browser process, which Playwright's offline emulation does not cover. The app's own code makes no request, and
+every other offline assertion holds in every run. On a really offline phone the attempt cannot leave the device
+[not verified on a device]. The assertion was not weakened; fixing it needs a change in `apps/web` (frozen during
+Part 2) or a decision about what the criterion means — options in DECISIONS.md D-021.
 
 ## Benchmark headlines
 
@@ -62,6 +72,34 @@ How the fallback was found (the first robust run measured 92.5 % and failed) is 
 **Cartridge sizes** [measured]: Breakout **877 B** (target ≤ 10 KB met), Pong **789 B**, HELLO WORLD 126 B —
 each fits in **4 QR frames** (8-frame loops, 1.2 s).
 
+## Part 2 — BLACKBOX
+
+An original stealth adventure (story, characters, pixel art and music all made for this project), designed in
+`games/blackbox/DESIGN.md`, `LAYOUT.md`, `DIALOGUE.md`, `LOGS.md` and built with **no change to the runtime**:
+`git diff 5a7ca7d -- packages/vm packages/cartridge packages/transport packages/qr apps` is empty after M12
+[tested]. The only VM change in Part 2 is a read-only trace hook, added before that baseline (D-013).
+
+| # | Capability | Status |
+|---|---|---|
+| B1 | Tools: `.include`, `.macro` with local labels, symbol file, listing, `qrc run --ram/--trace` with disassembly | [tested] `npm test -w packages/asm -w packages/tools` |
+| B2 | All 37 rooms: the ROM room table (decoded independently) and every room unpacked into RAM by the engine equal `LAYOUT.md` tile class by tile class | [tested] `npm run test:blackbox` |
+| B3 | Movement and collision: in every frame of every replay the player's box overlaps no blocking tile of `LAYOUT.md`; locked doors hold until their flag | [tested] |
+| B4 | Stealth: every detection in 10 replays is confirmed by an independent line-of-sight model, and no frame has sight or contact without a detection; the room restarts with the player at the entrance and actors reset; EMP stuns machines for exactly 240 frames; charges and recharging | [tested] |
+| B5 | Text: all 80 dialogue boxes and 15 log pages in ROM equal the documents byte for byte; dialogue box and terminal reference frames | [tested] |
+| B6 | ORACLE engine: derived values equal a reference model in every frame of every replay; accuracy, THIS SUBJECT and the forecast checked for all 6 561 prediction states and all 512 profiles, against the long formula (974 + c)/(1000 + n) | [tested] |
+| B7 | Four endings played end to end by recorded bot replays: E1 obedient (accuracy 97.4 %), E4 cable (PREDICTION ERROR), E2 forecast (CONFIRMED), E3 other (RECALIBRATING); the accuracy screen text equals the model; together with the M16 run they reach all D1–D20, L1–L10, P1–P8 | [tested] |
+| B8 | Access codes: 306 states round-trip (independent encoder → VM decoder); a replay types R1's code and resumes with R1's exact ORACLE state; 3 720/3 720 single-character typos rejected | [tested] / [measured] |
+| B9 | Music: 761 notes in three replays equal a reference sequencer reading the note data from ROM; effects mute their channel and the music resumes (43 times) | [tested] |
+| B10 | Delivery: `demo/blackbox.gif` (87 frames, 13.1 s loop, 1.2 MB) decodes back byte-identical; the unchanged web app scans it with a fake camera to 100 % (11 s) and renders the VM reference frame | [tested] `npm run demo`, `npm run test:e2e` |
+| B11 | Size and speed: ROM 26.1 KB of 32 KB (80 %), cartridge 15.0 KB; heaviest frame in any replay well under the 25 000-cycle limit | [measured] |
+| B12 | Whether it is fun; how it sounds; playing it on a phone | [not verified] — the human's manual check |
+
+Design flaws found by making a bot play the game (each fixed in the design documents first, D-015, D-019): a
+guard walking into the entrance of 2.1, the 5.4 guard post that could not be passed, boss 1 seeing the player
+through the south door on the first frame, a missing charging station before the final fight, chasers stuck on
+shelves. Engine bugs found by the tests: a clobbered register in room transitions, a stale forecast in RAM, and a
+jump that skipped the music player entirely.
+
 ## Known limitations
 
 - **Real-device scanning is not verified.** The distortion simulator (scale, rotation, perspective, blur,
@@ -76,6 +114,9 @@ each fits in **4 QR frames** (8-frame loops, 1.2 s).
   Acceptable for a prototype.
 - Git history: commit 8bec378 (and possibly 4436750) had a red `npm run check` because the `unit` test
   project also globbed the slow suites; fixed in d53dc27. All later commits were verified green.
+- The offline e2e test is flaky (above); `npm run check` takes about 2½ minutes now that it replays BLACKBOX.
+- BLACKBOX replays are recorded by a bot, so "completable" means completable by that bot's routes; difficulty
+  and fairness for a human player are [not verified].
 
 ## Next steps
 

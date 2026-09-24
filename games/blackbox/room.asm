@@ -38,6 +38,23 @@ load_room:
     LDI r0, F_ROOM_EMP
     CALL flag_clr
     CALL spawn_actors
+    ; music: the zone's track; the boss rooms play the alarm; ORACLE's theme from the core airlock on
+    LD r0, [room_rec]
+    LDB r0, [r0 + RR_ZONE]
+    LDB r0, [r0 + zone_music]
+    LD r1, [room]
+    CMP r1, R_6_5
+    JNE @not_airlock
+    LDI r0, MUS_ORACLE
+@not_airlock:
+    CMP r1, R_4_5
+    JEQ @alarm
+    CMP r1, R_7_1
+    JNE @set
+@alarm:
+    LDI r0, MUS_ALARM
+@set:
+    CALL set_music
     RET
 
 ; A wall with something other than wall below it shows its front face.
@@ -309,3 +326,4 @@ use_warp:
 side_start:  .byte 0, 224, 15, 0
 side_stride: .byte 1, 1, 16, 16
 side_count:  .byte 16, 16, 15, 15
+zone_music:  .byte MUS_AMBIENT, MUS_AMBIENT, MUS_AMBIENT, MUS_AMBIENT, MUS_AMBIENT, MUS_AMBIENT, MUS_AMBIENT, MUS_ORACLE

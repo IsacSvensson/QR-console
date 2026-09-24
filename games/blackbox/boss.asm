@@ -33,7 +33,7 @@ act_boss:
     LDI r1, 0
     ST [r6 + AC_T], r1
     LDI r0, SFX_PULSE
-    SYS SFX
+    CALL play_sfx
     LD r6, [ap]
     LD r0, [r6 + AC_P1]
     ADD r0, 1
@@ -240,7 +240,7 @@ boss_hack:
     LDI r0, F_HACKED
     CALL flag_set
     LDI r0, SFX_USE
-    SYS SFX
+    CALL play_sfx
     POP r6
     POP r4
     POP r2
@@ -258,12 +258,12 @@ boss_hack:
     CALL flag_set
     CALL apply_locks
     LDI r0, SFX_DOWN
-    SYS SFX
+    CALL play_sfx
 @done:
     RET
 @fail:
     LDI r0, SFX_EMPTY
-    SYS SFX
+    CALL play_sfx
     RET
 
 ; draw a 16x16 boss: four sprites around its centre

@@ -261,3 +261,32 @@ design documents first:
 Bot strategies (tools/routes.ts) for the bosses and for crossing 4.1's drones without the EMP compute their
 timing windows from the actors' speeds and sight ranges (documented next to the code).
 Alternatives: tuning the bot until it squeezed through (would have hidden the flaws).
+
+## D-020 — BLACKBOX music and access-code entry
+Date: 2026-09-24 · Milestone: M18
+Decision: three original two-voice loops (ambient, alarm for the boss rooms, ORACLE from the core airlock) on the
+two square channels; the noise channel is left to effects. Every effect goes through `play_sfx`, which records
+the effect's channel and length (the SOUND macro emits `.sfx` plus a metadata row); the music skips notes on that
+channel while the effect lasts and resumes with the next scheduled note. The music runs in every mode except
+the title and the endings. Access codes are typed on a screen reached with B from the title (UP/DOWN change a
+character, LEFT/RIGHT move, A submits); the decoder rejects bad characters, a wrong checksum, an impossible
+section, too many charges, and hits outside the resolved predictions. Resuming restores every flag the earlier
+sections imply and marks their code boxes as seen.
+Bug found by the music test: the ORACLE test-hook check jumped past the music player (and the code hook) whenever
+the hook was off, so no music played in normal play; fixed.
+
+## D-021 — MEASURED: the M10 offline test is flaky (browser-initiated service-worker update check)
+Date: 2026-09-24 · Milestone: M18 (affects M10, Part 1)
+Measurement: 8 consecutive runs of `npm run test:e2e:offline` → 3 passed, 5 failed. Every failure is the same:
+one `GET /sw.js` reaches the static server ~2 s after `context.setOffline(true)` (logged timestamps, e.g.
+offline at …37758, request at …39691). All other offline assertions pass in every run (no page request left the
+service-worker cache, no request failed, the scan and the game work offline).
+Reasoning: Chromium performs a service-worker *update check* for the registered script on navigation; it is issued
+by the browser process, which Playwright's offline emulation does not cover, so in this test environment it reaches
+the (still running) server. The app's own code makes no request. On a phone that is really offline the attempt
+cannot leave the device. The earlier green runs (M10, M11 clean clone) were partly lucky timing.
+Not done: weakening the assertion (it is a PLAN.md criterion), or changing `apps/web` (frozen during Part 2).
+Options for a human: (a) register the worker with `updateViaCache: 'all'` and serve `sw.js` with a long max-age
+in production hosting and in the e2e server (app + server change); (b) make the test environment really offline
+(shut the server) and assert on attempted requests through CDP instead; (c) accept the browser's update check as
+out of scope for "the app makes no network requests" and state that in PLAN.md M10.

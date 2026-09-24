@@ -8,7 +8,7 @@ import { GAMES_DIR, REPO_ROOT, gifToY4m } from '@qrc/tools';
 
 const out = join(REPO_ROOT, '.tmp/e2e');
 mkdirSync(out, { recursive: true });
-for (const game of ['breakout', 'pong']) {
+for (const game of ['breakout', 'pong', 'blackbox']) {
   const bytes = new Uint8Array(readFileSync(join(GAMES_DIR, game, `${game}.qrc`)));
   const plan = planTransfer(bytes);
   const gif = writeGif(plan.packets.map((p) => renderQr(p, plan.params)), DEFAULT_FRAME_MS);

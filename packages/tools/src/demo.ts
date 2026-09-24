@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { sha256, toHex } from '@qrc/cartridge';
 import { REPO_ROOT } from './games';
 
-const GAMES = ['breakout', 'pong'];
+const GAMES = ['breakout', 'pong', 'blackbox'];
 const demo = join(REPO_ROOT, 'demo');
 mkdirSync(demo, { recursive: true });
 const qrc = (...args: string[]) =>

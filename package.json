@@ -22,7 +22,7 @@
     "test:qr-robust": "vitest run --project robust --reporter=verbose",
     "refs:games": "tsx packages/tools/src/refs.ts",
     "test:games": "vitest run --project games --reporter=verbose",
-    "test:e2e": "playwright test --project app",
+    "test:e2e": "playwright test --project app --project blackbox",
     "test:e2e:offline": "PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1 playwright test --project offline",
     "demo": "tsx packages/tools/src/demo.ts",
     "preview:https": "node scripts/https-cert.mjs && npm run build -w apps/web && QRC_HTTPS=1 npm run preview -w apps/web",

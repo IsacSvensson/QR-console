@@ -358,7 +358,7 @@ op_warp:                    ; ends this script; the new room's ENTER trigger run
 op_sfx:
     PUSH r0
     LDB r0, [r0 + 1]
-    SYS SFX
+    CALL play_sfx
     POP r0
     ADD r0, 2
     RET
@@ -566,6 +566,8 @@ op_ifch:
     RET
 
 op_ending:
+    LDI r0, MUS_NONE
+    CALL set_music
     LDI r1, 0
     ST [script_pc], r1
     LDI r1, M_ENDING
