@@ -164,3 +164,12 @@ can assert on server-side requests.
 Alternatives: vite-plugin-pwa (bigger dependency tree), React/Preact (unneeded for three screens), jsQR in
 the worker (0 % at moderate distortion, bench/qr.md).
 Revisit if: the UI grows beyond three screens.
+
+## D-011 — How "zero network requests" is asserted offline
+Date: 2026-09-24 · Milestone: M10
+Decision: Three independent checks after `context.setOffline(true)`: (1) the logging static server records no
+new requests; (2) with `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`, Playwright reports no network fetch
+made by the service worker and no failed request; (3) every page request was answered by the service worker.
+Negative controls run once by hand (not committed): without SW registration the test fails; with the wasm
+left out of the precache list the offline scan never completes and the test fails.
+Alternatives: only `page.on('request')` (cannot distinguish cache hits from network).

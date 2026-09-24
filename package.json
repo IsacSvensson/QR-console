@@ -23,7 +23,7 @@
     "refs:games": "tsx packages/tools/src/refs.ts",
     "test:games": "vitest run --project games --reporter=verbose",
     "test:e2e": "playwright test --project app",
-    "test:e2e:offline": "playwright test --project offline"
+    "test:e2e:offline": "PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1 playwright test --project offline"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

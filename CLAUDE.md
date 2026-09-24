@@ -91,3 +91,4 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run dev -w apps/web` | Vite dev server (no service worker in dev) |
 | `npm run build -w apps/web` | production build → `apps/web/dist` (incl. generated `sw.js`) |
 | `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scan of Breakout, Library persistence |
+| `npm run test:e2e:offline` | production build, SW precache, offline reload, fake-camera scan of Pong, zero network requests |
