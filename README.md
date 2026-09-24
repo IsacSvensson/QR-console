@@ -1,5 +1,4 @@
 # QR Console
-
 An offline-first PWA that receives small games ("cartridges") through **animated QR codes** and runs
 them in a tiny deterministic VM. Point the phone at a looping GIF on a laptop screen, watch the progress
 bar fill as frames arrive in any order, press **PLAY** — no network needed after the app is installed.
