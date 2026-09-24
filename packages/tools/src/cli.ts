@@ -1,23 +1,28 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { formatListing, formatSymbols } from '@qrc/asm';
 import { parseCartridge, toHex } from '@qrc/cartridge';
 import { DEFAULT_FRAME_MS, DEFAULT_QR, blockSizeFor, defaultFrameCount, planTransfer, qrByteCapacity, readGif, renderQr, writeGif, type Ecc } from '@qrc/qr';
 import { FountainDecoder, Mode, blockCount, decodePacket } from '@qrc/transport';
 import { zxingDecoder } from './node-zxing';
-import { VM, replay, type ReplayFile } from '@qrc/vm';
-import { buildGame } from './games';
+import { VM, expandInputs, replay, type ReplayFile } from '@qrc/vm';
+import { disassemble } from './disasm';
+import { buildGame, readSymbols } from './games';
 import { writeFramePng } from './png';
 
 const USAGE = `qrc — QR Console tools
 
-  qrc build <game dir> [--out file.qrc]
+  qrc build <game dir> [--out file.qrc]        (also writes <name>.sym and <name>.lst next to it)
   qrc encode <file.qrc> --out game.gif [--version 12] [--ecc M] [--frame-ms 150] [--scale 8] [--frames N] [--mode systematic|lt]
   qrc decode <file.gif> --out file.qrc
   qrc inspect <file.gif|file.qrc>
   qrc replay <file.qrc> <inputs.json> [--frames N] [--seed N]   (prints the state hash of every frame)
   qrc run <file.qrc> [--frames N] [--dump-frame out.png] [--scale S] [--seed N] [--write-ref ref.json]
+          [--inputs inputs.json] [--sym file.sym] [--ram name,name,…] [--trace N] [--trace-frame F]
+          --ram prints named RAM words every frame; --trace prints the first N instructions of frame F
+          (default: the last frame) with registers and flags
 `;
 
 async function main(argv: string[]) {
@@ -29,6 +34,10 @@ async function main(argv: string[]) {
       const { bytes, name } = await buildGame(dir);
       const out = values.out ?? join(dir, `${name}.qrc`);
       writeFileSync(out, bytes);
+      const { asm } = await buildGame(dir);
+      const stem = out.replace(/\.qrc$/, '');
+      writeFileSync(`${stem}.sym`, formatSymbols(asm));
+      writeFileSync(`${stem}.lst`, formatListing(asm));
       const cart = await parseCartridge(bytes);
       console.log(`${out}: ${bytes.length} bytes, "${cart.header.title}", id ${toHex(cart.id).slice(0, 16)}`);
       return;
@@ -37,13 +46,48 @@ async function main(argv: string[]) {
       const { values, positionals } = parseArgs({
         args: rest,
         allowPositionals: true,
-        options: { frames: { type: 'string', default: '1' }, 'dump-frame': { type: 'string' }, scale: { type: 'string', default: '1' }, seed: { type: 'string', default: '1' }, 'write-ref': { type: 'string' } },
+        options: {
+          frames: { type: 'string', default: '1' },
+          'dump-frame': { type: 'string' },
+          scale: { type: 'string', default: '1' },
+          seed: { type: 'string', default: '1' },
+          'write-ref': { type: 'string' },
+          inputs: { type: 'string' },
+          sym: { type: 'string' },
+          ram: { type: 'string' },
+          trace: { type: 'string' },
+          'trace-frame': { type: 'string' },
+        },
       });
       const file = positionals[0] ?? fail('run: missing <file.qrc>');
       const cart = await parseCartridge(new Uint8Array(readFileSync(file)));
       const vm = VM.fromCartridge(cart, { seed: Number(values.seed) });
       const frames = Number(values.frames);
-      for (let f = 0; f < frames; f++) vm.step(0);
+      const inputs = values.inputs ? expandInputs(((s) => (Array.isArray(s) ? s : s.inputs))(JSON.parse(readFileSync(values.inputs, 'utf8'))), frames) : new Uint8Array(frames);
+      const symPath = values.sym ?? file.replace(/\.qrc$/, '.sym');
+      const syms = existsSync(symPath) ? readSymbols(symPath) : new Map<string, number>();
+      const byAddr = new Map<number, string>();
+      for (const [k, v] of syms) if (!byAddr.has(v) && !/^[A-Z_0-9]+$/.test(k)) byAddr.set(v, k);
+      const ramNames = values.ram ? values.ram.split(',').map((s) => s.trim()) : [];
+      for (const n of ramNames) if (!syms.has(n)) fail(`--ram: unknown symbol '${n}' (no ${symPath}? run qrc build first)`);
+      const traceN = values.trace ? Number(values.trace) : 0;
+      const traceFrame = values['trace-frame'] ? Number(values['trace-frame']) : frames;
+      for (let f = 0; f < frames; f++) {
+        if (traceN && f + 1 === traceFrame) {
+          let n = 0;
+          console.log(`--- trace of frame ${f + 1} (first ${traceN} instructions) ---`);
+          vm.tracer = (pc) => {
+            if (n++ >= traceN) return;
+            const r = Array.from(vm.regs, (v) => v.toString(16).padStart(4, '0')).join(' ');
+            const flags = `${vm.z ? 'Z' : '-'}${vm.n ? 'N' : '-'}${vm.c ? 'C' : '-'}${vm.v ? 'V' : '-'}`;
+            const where = byAddr.get(pc);
+            console.log(`${pc.toString(16).padStart(4, '0')} ${(where ? `<${where}>` : '').padEnd(20)} ${disassemble(vm.mem, pc, (a) => byAddr.get(a)).padEnd(28)} ${r} ${flags}`);
+          };
+        } else vm.tracer = null;
+        vm.step(inputs[f]!);
+        if (ramNames.length) console.log(`${f + 1}: ${ramNames.map((n) => `${n}=${vm.read16(syms.get(n)!)}`).join(' ')}`);
+      }
+      vm.tracer = null;
       console.log(`${basename(file)}: ran ${frames} frame(s); frame hash ${vm.frameHash()}; state ${vm.stateHash()}${vm.fault ? `; FAULT: ${vm.fault}` : ''}`);
       if (values['write-ref']) {
         const ref = { frames, seed: Number(values.seed), frameHash: vm.frameHash(), stateHash: vm.stateHash() };

@@ -2,8 +2,8 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M12 — Tools for a large game (Part 2: BLACKBOX)
-**Status:** Part 1 (M0–M11) complete; Part 2 not started
+**Current milestone:** M13 — Engine: rooms, movement, HUD (Part 2: BLACKBOX)
+**Status:** Part 1 (M0–M11) complete; Part 2 in progress
 **Last updated:** 2026-09-24
 
 ## Milestones
@@ -23,7 +23,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 
 Part 2 — BLACKBOX (design: `games/blackbox/`)
 
-- [ ] M12 Tools for a large game (macros, include, symbols, trace)
+- [x] M12 Tools for a large game (macros, include, symbols, trace)
 - [ ] M13 Engine: rooms, movement, HUD
 - [ ] M14 Stealth: guards, cameras, drones, EMP
 - [ ] M15 Text and the ORACLE engine

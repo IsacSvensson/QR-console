@@ -58,6 +58,11 @@ export class VM {
   fault: string | null = null;
   cyclesLastFrame = 0;
   audio: AudioCommand[] = [];
+  /**
+   * Debug observer, called before every instruction with its address (registers and flags are readable
+   * on the VM). Read-only by contract; tools use it for `qrc run --trace`. Null in normal play.
+   */
+  tracer: ((pc: number) => void) | null = null;
 
   private rng: number;
   private held = 0;
@@ -140,9 +145,11 @@ export class VM {
     const budget = this.budget;
     const mem = this.mem;
     const r = this.regs;
+    const tracer = this.tracer;
     while (cycles < budget) {
       cycles++;
       const pc = this.pc;
+      if (tracer !== null) tracer(pc);
       const op = mem[pc]!;
       const m = mem[(pc + 1) & 0xffff]!;
       const imm = mem[(pc + 2) & 0xffff]! | (mem[(pc + 3) & 0xffff]! << 8);

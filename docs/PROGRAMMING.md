@@ -163,6 +163,31 @@ Syscalls: `CLS PSET PGET RECT RECTFILL LINE SPR MAP TEXT NUM BTN BTNP OVERLAP RN
 Buttons: `BTN_LEFT=1 BTN_RIGHT=2 BTN_UP=4 BTN_DOWN=8 BTN_A=16 BTN_B=32`. Also `RAM_START=0x8000`.
 They cannot be redefined. There are **no colour names**: define your own (`C_WHITE = 15`).
 
+### 3.6 Macros and includes
+
+```
+.include "rooms.asm"          ; inline another file from the SAME game directory (no paths)
+
+.macro CLAMP reg, lo, hi      ; parameters are replaced as whole words
+    CMP reg, lo
+    JGE @@not_low             ; @@name = a local label unique to each expansion
+    LDI reg, lo
+@@not_low:
+    CMP reg, hi
+    JLE @@done
+    LDI reg, hi
+@@done:
+.endm
+
+    CLAMP r1, 0, 120          ; expands in place (labels may precede it: `here: CLAMP r1, 0, 9`)
+```
+
+- A game directory's main file is `<dirname>.asm`; other `.asm` files there are pulled in with `.include`.
+- Macros must be defined before use; they may call other macros and be defined in included files.
+- Errors inside an include or a macro report the real file and line, plus where the macro was expanded.
+- Parameters are replaced everywhere in the body as whole words, including inside strings — pick names
+  that do not collide with symbols you use in the body.
+
 ---
 
 ## 4. Instructions
@@ -615,6 +640,84 @@ tile_data:
 
 ---
 
+## 8b. Complete example: macros
+
+```asm
+; Macros keep repetitive code short. Two sprites bounce inside different boxes.
+.title "MACROS"
+
+.macro CLAMP reg, lo, hi
+    CMP reg, lo
+    JGE @@not_low
+    LDI reg, lo
+@@not_low:
+    CMP reg, hi
+    JLE @@done
+    LDI reg, hi
+@@done:
+.endm
+
+; x += dx; bounce between lo and hi by flipping dx
+.macro BOUNCE x, dx, lo, hi
+    LD r1, [x]
+    LD r2, [dx]
+    ADD r1, r2
+    CMP r1, lo
+    JLE @@flip
+    CMP r1, hi
+    JLT @@store
+@@flip:
+    NEG r2
+    ST [dx], r2
+@@store:
+    CLAMP r1, lo, hi
+    ST [x], r1
+.endm
+
+.var ax
+.var adx
+.var bx
+.var bdx
+
+init:
+    LDI r0, 1
+    ST [adx], r0
+    LDI r0, -2
+    ST [bdx], r0
+    LDI r0, 40
+    ST [ax], r0
+    ST [bx], r0
+    RET
+
+update:
+    BOUNCE ax, adx, 0, 60
+    BOUNCE bx, bdx, 64, 120
+    LDI r0, 0
+    SYS CLS
+    LDI r0, dot
+    LD r1, [ax]
+    LDI r2, 40
+    LDI r3, 0
+    SYS SPR
+    LD r1, [bx]
+    LDI r2, 80
+    SYS SPR                 ; r0 and r3 still hold the sprite and flags
+    RET
+
+.data
+dot: .sprite
+    ..eeee..
+    .eeeeee.
+    eeeeeeee
+    eeeeeeee
+    eeeeeeee
+    eeeeeeee
+    .eeeeee.
+    ..eeee..
+```
+
+---
+
 ## 9. Traps and limits
 
 1. **Registers do not survive between frames.** Keep state in `.var`s.
@@ -643,7 +746,9 @@ tile_data:
 
 | Task | Command |
 |---|---|
-| Assemble a game directory (exactly one `.asm` in it) | `npm run qrc -- build games/<g>` |
+| Assemble a game directory (`<g>.asm`, plus files it includes) | `npm run qrc -- build games/<g>` — also writes `<g>.sym` (symbols) and `<g>.lst` (listing: address, bytes, file:line, source) |
+| Watch variables per frame | `npm run qrc -- run games/<g>/<g>.qrc --frames 300 --inputs replay.json --ram score,lives` |
+| Trace instructions with registers and flags | `npm run qrc -- run games/<g>/<g>.qrc --frames 60 --trace 200 --trace-frame 60` (disassembled, with labels) |
 | Run N frames headless, save a screenshot | `npm run qrc -- run games/<g>/<g>.qrc --frames 120 --dump-frame f.png --scale 4 [--seed N]` |
 | Per-frame state hashes for an input script | `npm run qrc -- replay games/<g>/<g>.qrc inputs.json [--frames N]` |
 | Inspect a cartridge (sizes, sections, QR frames needed) | `npm run qrc -- inspect games/<g>/<g>.qrc` |
@@ -658,7 +763,7 @@ run-length pairs `[frames, buttons]`, or a plain array with one button mask per 
 **A game directory** under test looks like this:
 
 ```
-games/<g>/<g>.asm            source (the only .asm)
+games/<g>/<g>.asm            main source (may .include other .asm files in the same directory)
 games/<g>/<g>.qrc            built cartridge            (npm run refs:games)
 games/<g>/frame1.png         frame 1, seed 1, no input  (npm run refs:games)
 games/<g>/reference.json     frame-1 hashes and size    (npm run refs:games)
@@ -670,7 +775,8 @@ games/<g>/record-replay.ts   optional bot that records replay.json
 
 **Debugging** — there is no interactive debugger yet. What works:
 
-- `qrc run --dump-frame` at the frame you care about.
+- `qrc run --dump-frame` at the frame you care about; `--ram` to watch variables; `--trace` to single-step a
+  frame with registers, flags and disassembly (labels from the `.sym` file).
 - A small `npx tsx` script: `buildCartridge()` returns the symbol table, so you can read your variables by
   name each frame (`vm.read16(asm.symbols.get('score')!)`), and check `vm.fault`, `vm.overruns` and
   `vm.cyclesLastFrame`. `games/breakout/record-replay.ts` is a template.

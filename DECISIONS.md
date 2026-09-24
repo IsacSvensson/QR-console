@@ -182,3 +182,21 @@ makes the build and the service-worker scope work under `/<repo>/`. The demo GIF
 precached (they are for the laptop, not the phone).
 Alternatives: `gh-pages` branch committed by hand; running e2e in CI (needs Playwright browsers, slower —
 left out of the deploy path).
+
+## D-013 — M12: a read-only trace hook in the VM (deviation from "M12 changes only asm and tools")
+Date: 2026-09-24 · Milestone: M12
+Decision: `VM.tracer` — an optional callback invoked with the PC before each instruction, null in normal play.
+It is used only by `qrc run --trace`. It has no effect on execution (all committed replay hashes of hello,
+Breakout and Pong are unchanged) and it lands **before** the M12 baseline commit, so the Part 2 rule
+"the runtime does not change from M12 on" is unaffected.
+Alternatives: a second interpreter in `tools` just for tracing (duplicated semantics that could drift from the
+real VM); single-stepping by a cycle budget of 1 (impossible: an exhausted budget restarts the entry point).
+Why: PLAN.md M12 asks for `--trace`; a read-only observer is the only way to trace the real VM.
+
+## D-014 — Macro and include semantics
+Date: 2026-09-24 · Milestone: M12
+Decision: a text-level preprocessor before pass 1. `.include "name.asm"` accepts only plain file names; the
+assembler stays file-system-free (the caller passes a resolver restricted to the game directory), so game code
+cannot reach outside `games/<name>/`. Macros substitute parameters as whole words and rename `@@x` to a local
+label unique per expansion; errors report the body line plus the expansion site.
+Alternatives: macros with typed parameters; `\@`-style counters (less readable).

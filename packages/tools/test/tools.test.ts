@@ -1,10 +1,11 @@
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { planTransfer, renderQr, writeGif } from '@qrc/qr';
-import { SCREEN } from '@qrc/vm';
-import { GAMES_DIR, gifToY4m, readFramePng, writeFramePng } from '../src';
+import { OPCODES, SCREEN } from '@qrc/vm';
+import { GAMES_DIR, REPO_ROOT, disassemble, gifToY4m, readFramePng, writeFramePng } from '../src';
 
 describe('tools', () => {
   it('reference PNGs round-trip palette indices exactly', () => {
@@ -26,5 +27,35 @@ describe('tools', () => {
     const y = y4m.subarray(header.length + 6, header.length + 6 + 320 * 240);
     expect(y.includes(0)).toBe(true);
     expect(y.includes(255)).toBe(true);
+  });
+});
+
+describe('qrc build/run debugging aids', () => {
+  const run = (...args: string[]) =>
+    execFileSync(process.execPath, ['--import', 'tsx', join(REPO_ROOT, 'packages/tools/src/cli.ts'), ...args], { cwd: REPO_ROOT, encoding: 'utf8' });
+
+  it('build writes .sym and .lst; run --ram and --trace use them', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'qrc-build-'));
+    const out = join(dir, 'breakout.qrc');
+    run('build', 'games/breakout', '--out', out);
+    const sym = readFileSync(join(dir, 'breakout.sym'), 'utf8');
+    expect(sym).toMatch(/^8000 var\s+state$/m);
+    expect(sym).toMatch(/^000c label update$/m);
+    expect(readFileSync(join(dir, 'breakout.lst'), 'utf8')).toMatch(/^000c\s+breakout\.asm:\d+\s+update:$/m);
+    const text = run('run', out, '--frames', '2', '--ram', 'score,lives', '--trace', '3', '--trace-frame', '2');
+    expect(text).toMatch(/^1: score=0 lives=3$/m);
+    expect(text).toMatch(/^000c <update>\s+CALL move_paddle\s+(0000 ){7}0000 /m);
+    expect(text.match(/^[0-9a-f]{4} /gm)!.length).toBe(3);
+  });
+
+  it('disassembles every instruction of a built game without illegal opcodes', () => {
+    const cart = readFileSync(join(GAMES_DIR, 'pong/pong.qrc'));
+    expect(cart.length).toBeGreaterThan(0);
+    const mem = new Uint8Array(0x10000);
+    const code = new Uint8Array([OPCODES.LD, 1 | (2 << 3), 6, 0, OPCODES.SYS, 0x80, 8, 0, OPCODES.JMP, 0x80, 0x10, 0]);
+    mem.set(code, 0);
+    expect(disassemble(mem, 0)).toBe('LD r1, [r2 + 6]');
+    expect(disassemble(mem, 4)).toBe('SYS TEXT');
+    expect(disassemble(mem, 8, (a) => (a === 0x10 ? 'there' : undefined))).toBe('JMP there');
   });
 });

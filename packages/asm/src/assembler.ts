@@ -8,10 +8,30 @@ export class AsmError extends Error {
     message: string,
     readonly file: string,
     readonly line: number,
+    readonly via?: string,
   ) {
-    super(`${file}:${line}: ${message}`);
+    super(`${file}:${line}: ${message}${via ? ` (${via})` : ''}`);
     this.name = 'AsmError';
   }
+}
+
+/** One line of the listing: where it came from and what it produced. */
+export interface ListingLine {
+  /** Absolute ROM address of the first byte (or of the label, for label-only lines). */
+  address: number;
+  bytes: Uint8Array;
+  file: string;
+  line: number;
+  text: string;
+}
+
+export interface AssembleOptions {
+  file?: string;
+  /**
+   * Returns the source of an included file (same directory as the main file). The assembler itself never
+   * touches a file system; tools supply this. Without it, `.include` is an error.
+   */
+  resolveInclude?: (name: string) => string;
 }
 
 export interface AsmResult {
@@ -19,6 +39,9 @@ export interface AsmResult {
   sections: { code: Uint8Array; rodata: Uint8Array; sound: Uint8Array };
   /** All resolved symbols: labels (absolute addresses), constants, RAM variables, sfx ids. */
   symbols: Map<string, number>;
+  /** Kind of every symbol in `symbols`. */
+  symbolKinds: Map<string, 'label' | 'var' | 'const'>;
+  listing: ListingLine[];
 }
 
 type SectionName = 'code' | 'rodata';
@@ -27,6 +50,15 @@ interface Ctx {
   file: string;
   line: number;
   scope: string;
+  via?: string;
+}
+
+/** A source line after .include and macro expansion. */
+interface SrcLine {
+  text: string;
+  file: string;
+  line: number;
+  via?: string;
 }
 
 interface Item {
@@ -37,7 +69,10 @@ interface Item {
   emit: (out: Uint8Array, at: number, ev: (e: string) => number) => void;
 }
 
-type SymDef = { kind: 'value'; value: number } | { kind: 'label'; section: SectionName; offset: number } | { kind: 'expr'; expr: string; ctx: Ctx };
+type SymDef =
+  | { kind: 'value'; value: number; isVar?: boolean }
+  | { kind: 'label'; section: SectionName; offset: number }
+  | { kind: 'expr'; expr: string; ctx: Ctx };
 
 const REG = /^r([0-7])$/i;
 const IDENT = /^[A-Za-z_@][\w@.]*$/;
@@ -168,9 +203,105 @@ function evaluate(expr: string, lookup: (name: string) => number, fail: (m: stri
   return v;
 }
 
-export function assemble(source: string, opts: { file?: string } = {}): AsmResult {
+const INCLUDE_NAME = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/;
+const MAX_DEPTH = 16;
+
+interface Macro {
+  name: string;
+  params: string[];
+  body: SrcLine[];
+}
+
+/**
+ * Expands `.include "file"` and `.macro NAME p1, p2 … .endm` into a flat list of source lines, each
+ * remembering where it came from. Macro bodies substitute parameters as whole words, and every `@@name`
+ * becomes a local label unique to that expansion.
+ */
+function preprocess(source: string, file: string, resolveInclude: AssembleOptions['resolveInclude']): SrcLine[] {
+  const out: SrcLine[] = [];
+  const macros = new Map<string, Macro>();
+  let expansion = 0;
+  const reserved = new Set([...Object.keys(OPCODES), 'LDI', ...Object.keys(COND_JUMPS)]);
+
+  const failAt = (l: SrcLine, m: string): never => {
+    throw new AsmError(m, l.file, l.line, l.via);
+  };
+
+  const emit = (lines: SrcLine[], stack: string[], depth: number) => {
+    if (depth > MAX_DEPTH) failAt(lines[0] ?? { text: '', file, line: 0 }, 'includes/macros nested too deeply');
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i]!;
+      const code = stripComment(l.text).trim();
+      const head = code.split(/\s+/)[0]?.toUpperCase() ?? '';
+      if (head === '.INCLUDE') {
+        const m = /^\.include\s+"([^"]*)"\s*$/i.exec(code);
+        if (!m) failAt(l, '.include "file.asm"');
+        const name = m![1]!;
+        if (!INCLUDE_NAME.test(name)) failAt(l, `.include: '${name}' must be a plain file name in the same directory (no paths)`);
+        if (!resolveInclude) failAt(l, '.include is not available here (no include resolver)');
+        if (stack.includes(name)) failAt(l, `.include cycle: ${[...stack, name].join(' -> ')}`);
+        let src: string;
+        try {
+          src = resolveInclude!(name);
+        } catch (e) {
+          return failAt(l, `.include: cannot read '${name}': ${(e as Error).message}`);
+        }
+        emit(src.split(/\r?\n/).map((text, k) => ({ text, file: name, line: k + 1 })), [...stack, name], depth + 1);
+        continue;
+      }
+      if (head === '.MACRO') {
+        const m = /^\.macro\s+([A-Za-z_][\w]*)\s*(.*)$/i.exec(code);
+        if (!m) failAt(l, '.macro NAME [param, …]');
+        const name = m![1]!.toUpperCase();
+        if (reserved.has(name) || name.startsWith('.')) failAt(l, `macro name '${m![1]}' is an instruction`);
+        if (macros.has(name)) failAt(l, `macro '${m![1]}' already defined`);
+        const params = m![2]!.trim() ? m![2]!.split(',').map((p) => p.trim()) : [];
+        for (const p of params) if (!/^[A-Za-z_]\w*$/.test(p)) failAt(l, `bad macro parameter '${p}'`);
+        const body: SrcLine[] = [];
+        let j = i + 1;
+        for (; j < lines.length; j++) {
+          const h = stripComment(lines[j]!.text).trim().split(/\s+/)[0]?.toUpperCase();
+          if (h === '.ENDM') break;
+          if (h === '.MACRO') failAt(lines[j]!, 'macros cannot be defined inside macros');
+          body.push(lines[j]!);
+        }
+        if (j >= lines.length) failAt(l, `.macro ${m![1]} without .endm`);
+        macros.set(name, { name: m![1]!, params, body });
+        i = j;
+        continue;
+      }
+      if (head === '.ENDM') failAt(l, '.endm without .macro');
+
+      // macro invocation, possibly after labels
+      const lm = /^((?:[A-Za-z_@][\w@.]*:\s*)*)(\S+)\s*(.*)$/.exec(code);
+      const call = lm ? macros.get(lm[2]!.toUpperCase()) : undefined;
+      if (lm && call && !/^[A-Za-z_][\w.]*\s*=/.test(code)) {
+        if (lm[1]) out.push({ ...l, text: lm[1] });
+        const args = splitOperands(lm[3]!);
+        if (args.length !== call.params.length) failAt(l, `macro ${call.name} takes ${call.params.length} argument(s), got ${args.length}`);
+        const id = ++expansion;
+        const via = `in macro ${call.name} expanded at ${l.file}:${l.line}`;
+        const body = call.body.map((b) => {
+          let text = b.text.replace(/@@([A-Za-z_]\w*)/g, (_, n: string) => `@${n}__m${id}`);
+          call.params.forEach((p, k) => {
+            text = text.replace(new RegExp(`(?<![\\w@.])${p}(?![\\w])`, 'g'), () => args[k]!);
+          });
+          return { text, file: b.file, line: b.line, via };
+        });
+        emit(body, stack, depth + 1);
+        continue;
+      }
+      out.push(l);
+    }
+  };
+  emit(source.split(/\r?\n/).map((text, k) => ({ text, file, line: k + 1 })), [file], 0);
+  return out;
+}
+
+export function assemble(source: string, opts: AssembleOptions = {}): AsmResult {
   const file = opts.file ?? '<source>';
-  const lines = source.split(/\r?\n/);
+  const lines = preprocess(source, file, opts.resolveInclude);
+  const listingRaw: { section: SectionName; offset: number; size: number; src: SrcLine }[] = [];
   const syms = new Map<string, SymDef>();
   const items: Item[] = [];
   const size: Record<SectionName, number> = { code: 4, rodata: 0 }; // code starts with the vector table
@@ -187,7 +318,7 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
 
   let ctx: Ctx = { file, line: 0, scope: '' };
   const fail = (m: string): never => {
-    throw new AsmError(m, ctx.file, ctx.line);
+    throw new AsmError(m, ctx.file, ctx.line, ctx.via);
   };
   const qualify = (name: string, sc: string) => (name.startsWith('@') ? `${sc}${name}` : name);
   const define = (name: string, def: SymDef) => {
@@ -204,13 +335,13 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
   const resolve = (name: string, sc: string, at: Ctx): number => {
     const q = qualify(name, sc);
     const def = syms.get(q);
-    if (!def) throw new AsmError(`undefined symbol '${q}'`, at.file, at.line);
+    if (!def) throw new AsmError(`undefined symbol '${q}'`, at.file, at.line, at.via);
     if (def.kind === 'value') return def.value;
     if (def.kind === 'label') {
-      if (!basesReady) throw new AsmError(`'${q}' is a label; its address is not known yet here`, at.file, at.line);
+      if (!basesReady) throw new AsmError(`'${q}' is a label; its address is not known yet here`, at.file, at.line, at.via);
       return bases[def.section] + def.offset;
     }
-    if (resolving.has(q)) throw new AsmError(`circular definition of '${q}'`, at.file, at.line);
+    if (resolving.has(q)) throw new AsmError(`circular definition of '${q}'`, at.file, at.line, at.via);
     resolving.add(q);
     try {
       return evalAt(def.expr, def.ctx);
@@ -220,13 +351,15 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
   };
   const evalAt = (expr: string, at: Ctx): number => {
     const f = (m: string): never => {
-      throw new AsmError(m, at.file, at.line);
+      throw new AsmError(m, at.file, at.line, at.via);
     };
     return evaluate(expr, (n) => resolve(n, at.scope, at), f);
   };
 
+  let currentSrc: SrcLine = { text: '', file, line: 0 };
   const emitItem = (sz: number, emit: Item['emit']) => {
     items.push({ section, offset: size[section], size: sz, ctx: { ...ctx }, emit });
+    listingRaw.push({ section, offset: size[section], size: sz, src: currentSrc });
     size[section] += sz;
   };
 
@@ -263,8 +396,9 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
   };
 
   for (let li = 0; li < lines.length; li++) {
-    ctx = { file, line: li + 1, scope };
-    let text = stripComment(lines[li]!).trim();
+    currentSrc = lines[li]!;
+    ctx = { file: currentSrc.file, line: currentSrc.line, scope, via: currentSrc.via };
+    let text = stripComment(currentSrc.text).trim();
     if (!text) continue;
 
     // labels (possibly several) at line start
@@ -277,6 +411,7 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
       }
       define(name, { kind: 'label', section, offset: size[section] });
       text = text.slice(lm[0].length).trim();
+      if (!text) listingRaw.push({ section, offset: size[section], size: 0, src: currentSrc });
     }
     if (!text) continue;
 
@@ -317,7 +452,7 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
           const n = szExpr ? ev(szExpr) : 2;
           if (n < 1) fail('.var size must be >= 1');
           if (ramNext + n > 0x10000) fail('out of RAM');
-          define(name!, { kind: 'value', value: ramNext });
+          define(name!, { kind: 'value', value: ramNext, isVar: true });
           ramNext += n;
           break;
         }
@@ -363,9 +498,9 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
           while (rows.length < 8) {
             li++;
             if (li >= lines.length) fail('.sprite needs 8 rows of 8 pixels');
-            const row = stripComment(lines[li]!).trim();
+            const row = stripComment(lines[li]!.text).trim();
             if (!row) continue;
-            ctx = { file, line: li + 1, scope };
+            ctx = { file: lines[li]!.file, line: lines[li]!.line, scope, via: lines[li]!.via };
             if (!/^[.0-9a-fA-F]{8}$/.test(row)) fail(`sprite row must be 8 chars of '.' or 0-F, got '${row}'`);
             rows.push(row);
           }
@@ -442,18 +577,18 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
   bases.rodata = size.code;
   basesReady = true;
   if (size.code + size.rodata + soundSize > MEMORY.ROM_END) {
-    throw new AsmError(`ROM too large: ${size.code + size.rodata + soundSize} bytes (max ${MEMORY.ROM_END})`, file, lines.length);
+    throw new AsmError(`ROM too large: ${size.code + size.rodata + soundSize} bytes (max ${MEMORY.ROM_END})`, file, lines.length ? lines[lines.length - 1]!.line : 0);
   }
   const out = { code: new Uint8Array(size.code), rodata: new Uint8Array(size.rodata), sound: new Uint8Array(soundSize) };
   for (const it of items) it.emit(out[it.section], it.offset, (e) => evalAt(e, it.ctx));
 
   const entry = (name: string) => (syms.has(name) ? resolve(name, '', { file, line: 0, scope: '' }) : NO_ENTRY);
-  if (!syms.has('update')) throw new AsmError("missing required label 'update' (per-frame entry point)", file, lines.length);
+  if (!syms.has('update')) throw new AsmError("missing required label 'update' (per-frame entry point)", file, lines.length ? lines[lines.length - 1]!.line : 0);
   const init = entry('init');
   const update = entry('update');
   out.code.set([init & 0xff, init >>> 8, update & 0xff, update >>> 8], 0);
 
-  if (sfx.length > 255) throw new AsmError('at most 255 sound effects', file, lines.length);
+  if (sfx.length > 255) throw new AsmError('at most 255 sound effects', file, lines.length ? lines[lines.length - 1]!.line : 0);
   if (soundSize) {
     out.sound[0] = sfx.length;
     sfx.forEach(({ ctx: c, args }, i) => {
@@ -474,14 +609,41 @@ export function assemble(source: string, opts: { file?: string } = {}): AsmResul
   }
 
   const symbols = new Map<string, number>();
+  const symbolKinds = new Map<string, 'label' | 'var' | 'const'>();
   for (const [k, def] of syms) {
     if (builtins.has(k)) continue;
     symbols.set(k, def.kind === 'value' ? def.value : resolve(k, '', { file, line: 0, scope: '' }));
+    symbolKinds.set(k, def.kind === 'label' ? 'label' : def.kind === 'value' && def.isVar ? 'var' : 'const');
   }
-  return { title, sections: out, symbols };
+  const listing: ListingLine[] = listingRaw.map((l) => ({
+    address: bases[l.section] + l.offset,
+    bytes: out[l.section].slice(l.offset, l.offset + l.size),
+    file: l.src.file,
+    line: l.src.line,
+    text: l.src.text,
+  }));
+  return { title, sections: out, symbols, symbolKinds, listing };
 }
 
-export async function buildCartridge(source: string, opts: { file?: string; title?: string; compression?: 'none' | 'deflate-raw' | 'auto' } = {}): Promise<{ bytes: Uint8Array; asm: AsmResult }> {
+/** Symbol file: one `ADDR KIND NAME` line per symbol, sorted by value then name. */
+export function formatSymbols(asm: AsmResult): string {
+  return [...asm.symbols]
+    .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
+    .map(([name, v]) => `${(v & 0xffff).toString(16).padStart(4, '0')} ${asm.symbolKinds.get(name)!.padEnd(5)} ${name}`)
+    .join('\n') + '\n';
+}
+
+/** Listing: address, up to 8 bytes in hex, file:line, source text. */
+export function formatListing(asm: AsmResult): string {
+  return asm.listing
+    .map((l) => {
+      const hex = Array.from(l.bytes.slice(0, 8), (b) => b.toString(16).padStart(2, '0')).join(' ') + (l.bytes.length > 8 ? ' …' : '');
+      return `${l.address.toString(16).padStart(4, '0')}  ${hex.padEnd(25)} ${`${l.file}:${l.line}`.padEnd(22)} ${l.text.trimEnd()}`;
+    })
+    .join('\n') + '\n';
+}
+
+export async function buildCartridge(source: string, opts: AssembleOptions & { title?: string; compression?: 'none' | 'deflate-raw' | 'auto' } = {}): Promise<{ bytes: Uint8Array; asm: AsmResult }> {
   const asm = assemble(source, opts);
   const bytes = await serializeCartridge({
     title: opts.title ?? (asm.title || 'UNTITLED'),

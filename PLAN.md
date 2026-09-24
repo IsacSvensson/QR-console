@@ -168,7 +168,8 @@ and is the **specification** for these milestones:
 
 Rules for M12–M18 (in addition to CLAUDE.md):
 
-- **The runtime does not change.** M12 may change only the assembler and tools. From the M12 commit on,
+- **The runtime does not change.** M12 may change only the assembler and tools (plus one read-only trace
+  hook in the VM for `--trace`, D-013). From the M12 commit on,
   `git diff <M12 commit> -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay
   **empty** through M18, exactly like M8. If a generic runtime change proves unavoidable (e.g. ISA v2 with
   a larger ROM, see `DESIGN.md` §5), it is not made silently: record the measurement in `DECISIONS.md`,
