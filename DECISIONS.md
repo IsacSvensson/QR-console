@@ -50,3 +50,15 @@ Alternatives: `crypto.subtle` (async, needs secure context), a shared `hash` pac
 Node `zlib` for compression (would make the package Node-only).
 Why: keeps pure packages runnable anywhere with zero dependencies.
 Revisit if: hashing speed matters (it does not at ≤ 64 KB).
+
+## D-003 — Default fountain mode: systematic with dense repair packets, GE always on
+Date: 2026-09-24 · Milestone: M2
+Decision: Default mode = systematic. Repair packets (seed ≥ K) draw a robust-soliton degree d and use
+max(d, ⌈K/2⌉). The decoder is peeling + Gaussian elimination on the residual system (always enabled).
+Alternatives: pure LT (robust soliton c=0.1, δ=0.5); systematic with plain soliton repair; repair floors of
+K/8, K/4, fixed 8 (scratch experiment, 60 trials: K/2 best; K/8 and K/4 close at large K but worse at K ≤ 64).
+Why: bench/fountain.md — with plain soliton repair, systematic needed ~79 % overhead at 20 % loss because
+low-degree repair packets rarely touch the ~20 % of blocks that are missing. With the ⌈K/2⌉ floor it is at or
+below pure LT in every cell (K=256, 20 % loss: p99 34 % vs LT 44 %; floor 25 %), and zero-overhead with no loss.
+Cost: dense repair packets cannot be peeled, so GE is required (≤ ~10 ms at K=256 in Node).
+Revisit if: K grows well beyond ~1000 (GE cost O(K³/32)), or a precode (Raptor-style) is wanted.

@@ -14,7 +14,8 @@
     "typecheck": "tsc -p tsconfig.pure.json && tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "bench:fountain": "tsx bench/fountain.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
