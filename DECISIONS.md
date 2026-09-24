@@ -79,3 +79,13 @@ Alternatives: variable-length encoding (smaller code, but compression recovers m
 is simpler this way); memory-mapped framebuffer (more flexible, but more RAM traffic in asm for games).
 Why: simplest thing that makes games pleasant to write in assembly and trivially deterministic.
 Revisit if: cartridge size becomes a bottleneck.
+
+## D-005 — QR generation and GIF libraries
+Date: 2026-09-24 · Milestone: M4
+Decision: `qrcode` (byte-mode segments from a Uint8Array; its capacity table gives block size) for
+generation, `omggif` for GIF write/read (2-colour palette, loop forever, delay in 10 ms units),
+`jsqr` as the initial image decoder (returns `binaryData`, the raw bytes). Decoder choice is revisited by
+measurement in M5.
+Alternatives: own QR encoder (large, error-prone), gifenc (writer only).
+Why: small, dependency-free, well-used libraries; lossless output.
+Revisit if: M5 benchmark shows a better decoder.

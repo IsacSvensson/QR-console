@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M4 — Layer 2 + first vertical slice
+**Current milestone:** M5 — Layer 3 + QR benchmark
 **Status:** in progress
 **Last updated:** 2026-09-24
 
@@ -12,7 +12,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 - [x] M1 Cartridge format
 - [x] M2 Transport layer 1 + fountain benchmark
 - [x] M3 Minimal VM + assembler (HELLO WORLD)
-- [ ] M4 Layer 2 + first vertical slice
+- [x] M4 Layer 2 + first vertical slice
 - [ ] M5 Layer 3 + QR benchmark
 - [ ] M6 Full VM + determinism
 - [ ] M7 Breakout

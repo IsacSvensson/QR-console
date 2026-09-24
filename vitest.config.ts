@@ -15,6 +15,7 @@ export default defineConfig({
       pkg('asm'),
       pkg('qr'),
       pkg('tools'),
+      { test: { name: 'slice', include: ['test/slice/**/*.test.ts'], testTimeout: 120_000 } },
     ],
   },
 });

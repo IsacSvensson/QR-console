@@ -13,11 +13,12 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.pure.json && tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools",
+    "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice",
     "check": "npm run typecheck && npm run lint && npm test",
     "bench:fountain": "tsx bench/fountain.ts",
     "qrc": "tsx packages/tools/src/cli.ts",
-    "refs:hello": "npm run -s qrc -- build games/hello && npm run -s qrc -- run games/hello/hello.qrc --frames 1 --dump-frame games/hello/frame1.png --write-ref games/hello/reference.json"
+    "refs:hello": "npm run -s qrc -- build games/hello && npm run -s qrc -- run games/hello/hello.qrc --frames 1 --dump-frame games/hello/frame1.png --write-ref games/hello/reference.json",
+    "test:slice": "vitest run --project slice"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

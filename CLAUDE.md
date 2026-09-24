@@ -84,3 +84,4 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run qrc -- <cmd>` | CLI: `build <game dir>`, `run <file.qrc> --frames N --dump-frame out.png` |
 | `npm run refs:hello` | rebuild `games/hello/hello.qrc` and its reference frame/hash (from the VM framebuffer) |
 | `npm run bench:fountain` | layer-1 fountain benchmark → `bench/fountain.md` |
+| `npm run test:slice` | layer-2 vertical slice: hello.asm → QR images / GIF → decode → VM → reference frame |
