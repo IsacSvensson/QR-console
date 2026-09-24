@@ -25,7 +25,7 @@ export const ACTORS: Record<string, ActorSpec> = {
   '1.3 3,2': { mode: 't', dir: 2, dir2: 0, period: 180 },
   '1.3 12,2': { mode: 't', dir: 2, dir2: 0, period: 180 },
   '1.4 15,7': { dir: 3 },
-  '2.1 7,5': { mode: 'v', min: 1, max: 13, dir: 2 },
+  '2.1 7,5': { mode: 'v', min: 1, max: 13, dir: 0 }, // starts walking away from the entrance (S door)
   '2.4 5,3': { id: 0 },
   '2.5 3,11': { id: 1 },
   '2.6 2,6': { dir: 1 },

@@ -9,6 +9,8 @@
 .include "room.asm"
 .include "player.asm"
 .include "script.asm"
+.include "actors.asm"
+.include "sounds.asm"
 .include "draw.asm"
 .include "gfx.asm"
 .include "scripts.asm"
@@ -95,6 +97,10 @@ new_game:
     LDI r0, 0
     ST [script_pc], r0
     ST [script_wait], r0
+    ST [caught_t], r0
+    ST [det_count], r0
+    ST [charges], r0
+    ST [emp_uses], r0
     LDI r0, DIR_S
     ST [pdir], r0
     LDI r0, R_0_1
@@ -104,11 +110,40 @@ new_game:
     RET
 
 mode_play:
+    LDI r0, 0
+    ST [act_ran], r0
+    LD r0, [caught_t]
+    CMP r0, 0
+    JEQ @free
+    SUB r0, 1               ; detected: freeze, then restart the room
+    ST [caught_t], r0
+    JNZ @draw
+    CALL restart_room
+    JMP @draw
+@free:
     CALL script_run
     LD r0, [script_pc]
     CMP r0, 0
-    JNE @draw               ; the player waits while a script runs
+    JNE @draw               ; the world waits while a script runs
+    LD r0, [mode]
+    CMP r0, M_PLAY
+    JNE @draw
+    LD r1, [room]
+    PUSH r1
     CALL player_update
+    POP r1
+    LD r0, [room]
+    CMP r0, r1
+    JNE @draw               ; just changed rooms: the new room's actors start next frame
+    LD r0, [pressed]
+    AND r0, BTN_B
+    JZ @actors
+    CALL use_emp
+@actors:
+    LD r0, [script_pc]
+    CMP r0, 0
+    JNE @draw
+    CALL update_actors
 @draw:
     CALL draw_play
     RET

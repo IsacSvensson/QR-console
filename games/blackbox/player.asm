@@ -280,16 +280,66 @@ use_ahead:
     MOV r1, r0
     LDI r0, TK_USE
     CALL fire_trigger
+    POP r2                  ; r1 = cell x, r2 = cell y
     POP r1
-    POP r2
     CMP r0, 0
     JNE @done               ; a script handled it
-    MOV r0, r2
+    PUSH r1
+    PUSH r2
+    CALL actor_at           ; somebody to talk to?
+    POP r2
+    POP r1
+    CMP r0, 0
+    JLT @tile
+    MOV r1, r0
+    LDI r0, TK_TALK
+    LDI r2, 0
+    CALL fire_trigger
+    RET
+@tile:
+    MOV r0, r1
+    MOV r1, r2
     CALL tile_at
     CMP r0, T_LIFT
-    JNE @done
+    JNE @not_lift
     CALL use_warp
+    RET
+@not_lift:
+    CMP r0, T_CHARGER
+    JNE @done
+    CALL recharge
 @done:
+    RET
+
+; r1 = cell x, r2 = cell y -> r0 = index of the NPC or boss standing there, or -1
+actor_at:
+    LDI r6, actors
+    LDI r7, 0
+@loop:
+    LD r0, [n_actors]
+    CMP r7, r0
+    JGE @none
+    LD r0, [r6 + AC_TYPE]
+    CMP r0, O_NPC
+    JNE @next
+    LD r0, [r6 + AC_X]
+    ADD r0, 4
+    SAR r0, 3
+    CMP r0, r1
+    JNE @next
+    LD r0, [r6 + AC_Y]
+    ADD r0, 4
+    SAR r0, 3
+    CMP r0, r2
+    JNE @next
+    MOV r0, r7
+    RET
+@next:
+    ADD r6, ACT_SIZE
+    ADD r7, 1
+    JMP @loop
+@none:
+    LDI r0, -1
     RET
 
 ; STEP triggers: fire once per visit when the player's centre cell matches (255 = any row/column)

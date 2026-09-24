@@ -77,3 +77,68 @@ export function newVm(cart: Awaited<ReturnType<typeof buildBlackbox>>['cart'], s
 }
 
 export const s16 = (v: number) => (v << 16) >> 16;
+
+// ---- replay runner with per-frame oracle checks -------------------------------------------------
+export interface FrameView {
+  f: number;
+  vm: VM;
+  S: (name: string) => number;
+  room: OracleRoom;
+  mode: number;
+  px: number;
+  py: number;
+  flag: (name: string) => boolean;
+  actors: { type: number; x: number; y: number; dir: number; stun: number; state: number; mode: number }[];
+}
+
+const OPAQUE = new Set(['#', 'S', 'C', 'V', 'L']);
+
+/** Is (x, y) opaque in the LAYOUT grid? Locked doors are opaque until their side's flag is set. */
+export function opaqueAt(room: OracleRoom, x: number, y: number, flag: (n: string) => boolean): boolean {
+  const c = tileClass(room.grid[y]![x]!);
+  if (OPAQUE.has(c)) return true;
+  if (c === 'D') {
+    const side = y === 0 ? 'N' : y === H - 1 ? 'S' : x === W - 1 ? 'E' : 'W';
+    const lock = room.locks.get(side);
+    return !(lock && flag(lock));
+  }
+  return false;
+}
+
+/** Reference line of sight (DESIGN.md / LAYOUT.md legend), independent of the engine's code. */
+export function sees(room: OracleRoom, a: { x: number; y: number; dir: number }, range: number, target: [number, number], flag: (n: string) => boolean): boolean {
+  const [dx, dy] = [[0, -1], [1, 0], [0, 1], [-1, 0]][a.dir]!;
+  let x = (a.x + 4) >> 3;
+  let y = (a.y + 4) >> 3;
+  for (let k = 0; k < range; k++) {
+    x += dx!;
+    y += dy!;
+    if (x < 0 || y < 0 || x >= W || y >= H || opaqueAt(room, x, y, flag)) return false;
+    if (x === target[0] && y === target[1]) return true;
+  }
+  return false;
+}
+
+export function runReplay(bb: Awaited<ReturnType<typeof buildBlackbox>>, name: string, onFrame: (v: FrameView) => void) {
+  const rf = loadReplay(name);
+  const inputs = replayInputs(rf);
+  const expected = expectedHashes(name);
+  const vm = newVm(bb.cart, rf.seed);
+  const S = (n: string) => symbol(bb.sym, n);
+  const ids = rooms.map((r) => r.id);
+  let hashMismatch = -1;
+  let maxCycles = 0;
+  const flag = (n: string) => ((vm.read8(S('flags') + (S(`F_${n}`) >> 3)) >> (S(`F_${n}`) & 7)) & 1) === 1;
+  for (let f = 0; f < rf.frames; f++) {
+    vm.step(inputs[f]!);
+    maxCycles = Math.max(maxCycles, vm.cyclesLastFrame);
+    if (hashMismatch < 0 && vm.stateHash() !== expected[f]) hashMismatch = f + 1;
+    const base = S('actors');
+    const actors = Array.from({ length: vm.read16(S('n_actors')) }, (_, i) => {
+      const w = (o: number) => s16(vm.read16(base + i * S('ACT_SIZE') + o));
+      return { type: w(S('AC_TYPE')), x: w(S('AC_X')), y: w(S('AC_Y')), dir: w(S('AC_DIR')), stun: w(S('AC_STUN')), state: w(S('AC_ST')), mode: w(S('AC_MODE')) };
+    });
+    onFrame({ f, vm, S, room: roomById.get(ids[vm.read16(S('room'))]!)!, mode: vm.read16(S('mode')), px: s16(vm.read16(S('px'))), py: s16(vm.read16(S('py'))), flag, actors });
+  }
+  return { vm, rf, hashMismatch, expectedFrames: expected.length, maxCycles };
+}

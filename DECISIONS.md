@@ -200,3 +200,19 @@ assembler stays file-system-free (the caller passes a resolver restricted to the
 cannot reach outside `games/<name>/`. Macros substitute parameters as whole words and rename `@@x` to a local
 label unique per expansion; errors report the body line plus the expansion site.
 Alternatives: macros with typed parameters; `\@`-style counters (less readable).
+
+## D-015 — BLACKBOX engine structure (M13–M14)
+Date: 2026-09-24 · Milestone: M13/M14
+Decision: Data-driven. The RAM room buffer holds one tile *class* code per LAYOUT character; each zone group
+has its own tileset (MAP gets the zone's tile base), and a per-code attribute table gives SOLID / OPAQUE / USE.
+Rooms are RLE in ROM (1 byte per run; 1.7 KB for all 37), generated from LAYOUT.md by
+`games/blackbox/tools/gen.ts`; walls with floor below are auto-tiled to a front face at unpack. Game events are
+bytecode scripts (macros in `script.asm`) run as coroutines by an interpreter, fired by per-room triggers
+(ENTER, USE cell, STEP cell, EXIT side, TALK, TOUCH). Actors live in an 8-slot RAM table spawned from the room's
+object list on entry and on every detection restart. Sight = cell-by-cell ray along the facing direction,
+stopped by OPAQUE tiles. A stunned actor is skipped iff its counter is still > 0 after decrementing, so the RAM
+state after each frame tells tests exactly who acted. Replays are recorded by a stealth-aware bot
+(`tools/bot.ts`, BFS avoiding watched cells, anticipating turns).
+Level fix found by the bot: the 2.1 guard spawned walking towards the entrance in the same column; the entrance
+was a trap (no escape before its line of sight reached the door). It now starts walking away.
+Alternatives: metatile room compression (larger decoder, similar size); per-zone hand-written room code.

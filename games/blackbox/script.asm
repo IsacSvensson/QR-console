@@ -7,7 +7,8 @@ TK_ENTER = 1                ; on entering the room
 TK_USE   = 2                ; A on cell (a, b)
 TK_STEP  = 3                ; player's centre cell = (a, b); 255 = any column/row. Once per visit.
 TK_EXIT  = 4                ; leaving through side a (runs to completion before the room changes)
-TK_TALK  = 5                ; A on object a
+TK_TALK  = 5                ; A on object a (NPC)
+TK_TOUCH = 6                ; pick-up a collected
 TRIG_REC = 5
 
 ; ---- script opcodes ---------------------------------------------------------------------------
@@ -42,6 +43,10 @@ NUM_OPS   = 11
 .endm
 .macro TR_TALK obj, script
     .byte TK_TALK, obj, 0
+    .word script
+.endm
+.macro TR_TOUCH id, script
+    .byte TK_TOUCH, id, 0
     .word script
 .endm
 .macro TR_END

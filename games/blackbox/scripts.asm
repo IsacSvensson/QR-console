@@ -60,7 +60,12 @@ trig_1_4:
 trig_2_1:
     TR_END
 trig_2_2:
+    TR_USE 4, 5, scr_copier
     TR_END
+scr_copier:
+    S_SET F_L1
+    S_EVENT EV_L1
+    S_END
 trig_2_3:
     TR_END
 trig_2_4:
@@ -68,13 +73,36 @@ trig_2_4:
 trig_2_5:
     TR_END
 trig_2_6:
+    TR_ENTER scr_dirdoor
+    TR_USE 5, 3, scr_keyboard
+    TR_USE 10, 3, scr_safe
     TR_END
+scr_dirdoor:
+    S_SET F_DIRDOOR
+    S_END
+scr_keyboard:
+    S_SET F_KEYNOTE
+    S_END
+scr_safe:
+    S_IFNOT F_KEYNOTE, @no
+    S_SET F_CARD
+@no:
+    S_END
 trig_3_1:
+    TR_USE 2, 2, scr_camindex
     TR_END
+scr_camindex:
+    S_SET F_L3
+    S_EVENT EV_L3
+    S_END
 trig_3_3:
     TR_END
 trig_3_2:
+    TR_USE 10, 5, scr_shutter
     TR_END
+scr_shutter:
+    S_SET F_SHUTTER
+    S_END
 trig_3_4:
     TR_END
 trig_3_5:
@@ -82,7 +110,12 @@ trig_3_5:
 trig_4_1:
     TR_END
 trig_4_2:
+    TR_USE 3, 3, scr_test14
     TR_END
+scr_test14:
+    S_SET F_L4
+    S_EVENT EV_L4
+    S_END
 trig_4_4:
     TR_END
 trig_4_3:

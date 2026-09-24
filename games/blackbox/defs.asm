@@ -66,3 +66,53 @@ RR_TRIG  = 18
 .var script_wait            ; frames to wait before the script continues
 .var dbg_room               ; TEST HOOK: room index + 1 to load at its arrival point (0 = none)
 .var room_buf, 240          ; the current room, 16 x 15 tile codes
+
+; ---- stealth (M14) ----------------------------------------------------------------------------
+; actor record (words)
+AC_TYPE = 0
+AC_X    = 2
+AC_Y    = 4
+AC_DIR  = 6
+AC_MODE = 8                 ; object byte a
+AC_P1   = 10                ; object byte b
+AC_P2   = 12                ; object byte c
+AC_T    = 14                ; timer
+AC_STUN = 16                ; frames left stunned
+AC_ST   = 18                ; state
+AC_D0   = 20                ; initial direction
+AC_CNT  = 22                ; distance counter
+ACT_SIZE = 24
+MAX_ACT  = 8
+
+.var enter_x                ; where the player entered the current room (restart point)
+.var enter_y
+.var enter_dir
+.var n_actors
+.var actors, MAX_ACT * ACT_SIZE
+.var ai                     ; actor loop index / pointer
+.var ap
+.var pcx                    ; player centre cell, this frame
+.var pcy
+.var caught_t               ; > 0: detected, counting down to the room restart
+.var det_count              ; detections so far (statistics, tests)
+.var act_ran                ; 1 if the actors were updated this frame (tests)
+.var ray_mode               ; 0 = check for the player, 1 = draw
+.var ray_hit
+.var charges                ; EMP charges
+.var emp_uses               ; ORACLE profile: aggressiveness
+.var room_emp               ; EMP uses in the current room (P2)
+.var emp_fx                 ; EMP pulse animation
+
+GUARD_RANGE = 7             ; cells of sight
+HEAVY_RANGE = 9
+DRONE_RANGE = 5
+CAM_RANGE   = 8
+EMP_STUN    = 240           ; frames a machine stays stunned (4 s)
+EMP_R       = 40            ; EMP reach in pixels (5 tiles)
+MAX_CHARGES = 4
+CAUGHT_FRAMES = 45
+
+; flags defined by the game beyond LAYOUT.md's (rooms.gen.asm: NUM_LAYOUT_FLAGS)
+F_PICK0  = NUM_LAYOUT_FLAGS + 0     ; pick-up 0 (the EMP) taken
+F_PICK1  = NUM_LAYOUT_FLAGS + 1     ; pick-up 1 (spare charge) taken
+F_ANSWER = NUM_LAYOUT_FLAGS + 2     ; last yes/no answer

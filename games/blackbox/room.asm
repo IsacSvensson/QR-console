@@ -34,6 +34,8 @@ load_room:
     ST [tileset], r2
     LDI r0, 0
     ST [trig_fired], r0
+    ST [room_emp], r0
+    CALL spawn_actors
     RET
 
 ; A wall with something other than wall below it shows its front face.
@@ -192,7 +194,7 @@ place_at_arrival:
     SHL r2, 3
     ST [px], r1
     ST [py], r2
-    RET
+    JMP remember_entry
 
 ; r0 = side (SIDE_*): leave through that side's doorway
 leave_room:
@@ -218,23 +220,23 @@ leave_room:
     JNE @not_w
     LDI r0, PX_MAX - 1
     ST [px], r0
-    RET
+    JMP remember_entry
 @not_w:
     CMP r6, SIDE_E
     JNE @not_e
     LDI r0, 1
     ST [px], r0
-    RET
+    JMP remember_entry
 @not_e:
     CMP r6, SIDE_N
     JNE @not_n
     LDI r0, PY_MAX - 1
     ST [py], r0
-    RET
+    JMP remember_entry
 @not_n:
     LDI r0, 1
     ST [py], r0
-    RET
+    JMP remember_entry
 @stay:                      ; no exit this way: step back inside
     LD r0, [px]
     CALL clamp_x
@@ -242,6 +244,16 @@ leave_room:
     LD r0, [py]
     CALL clamp_y
     ST [py], r0
+    RET
+
+; the restart point after a detection
+remember_entry:
+    LD r0, [px]
+    ST [enter_x], r0
+    LD r0, [py]
+    ST [enter_y], r0
+    LD r0, [pdir]
+    ST [enter_dir], r0
     RET
 
 clamp_x:
