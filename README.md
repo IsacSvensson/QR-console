@@ -80,8 +80,10 @@ onto an Android phone running Chrome:
    npm run preview:https                   # creates .tmp/cert once, serves https on :4173 (all interfaces)
    ```
    Open `https://<laptop-ip>:4173` on the phone and accept the certificate warning once.
-3. **One-time static deploy**: upload `apps/web/dist/` to any static HTTPS host (GitHub Pages, Netlify, …).
-   All paths are relative, so any sub-path works.
+3. **GitHub Pages** (automatic): `.github/workflows/pages.yml` builds and publishes on every push to `main`
+   (one-time setup: repo *Settings → Pages → Source: GitHub Actions*). The app is then at
+   `https://<user>.github.io/<repo>/` and the demo GIFs at `https://<user>.github.io/<repo>/demo/breakout.gif`.
+   Any other static HTTPS host works too: upload `apps/web/dist/`; all paths are relative.
 
 Then:
 

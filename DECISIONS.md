@@ -173,3 +173,12 @@ made by the service worker and no failed request; (3) every page request was ans
 Negative controls run once by hand (not committed): without SW registration the test fails; with the wasm
 left out of the precache list the offline scan never completes and the test fails.
 Alternatives: only `page.on('request')` (cannot distinguish cache hits from network).
+
+## D-012 — Hosting on GitHub Pages
+Date: 2026-09-24 · Milestone: post-M11
+Decision: GitHub Actions workflow (`.github/workflows/pages.yml`): `npm ci`, `npm run check`, build, copy
+`demo/*.gif` into `dist/demo/`, deploy with `actions/deploy-pages`. No app changes needed: relative `base`
+makes the build and the service-worker scope work under `/<repo>/`. The demo GIFs are served but not
+precached (they are for the laptop, not the phone).
+Alternatives: `gh-pages` branch committed by hand; running e2e in CI (needs Playwright browsers, slower —
+left out of the deploy path).
