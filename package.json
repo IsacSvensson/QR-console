@@ -15,13 +15,17 @@
     "lint": "eslint .",
     "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools",
     "check": "npm run typecheck && npm run lint && npm test",
-    "bench:fountain": "tsx bench/fountain.ts"
+    "bench:fountain": "tsx bench/fountain.ts",
+    "qrc": "tsx packages/tools/src/cli.ts",
+    "refs:hello": "npm run -s qrc -- build games/hello && npm run -s qrc -- run games/hello/hello.qrc --frames 1 --dump-frame games/hello/frame1.png --write-ref games/hello/reference.json"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
     "@types/node": "^22.20.4",
+    "@types/pngjs": "^6.0.5",
     "eslint": "^10.11.0",
+    "pngjs": "^7.0.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.1",

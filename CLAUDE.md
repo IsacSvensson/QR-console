@@ -81,3 +81,6 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm ci` | install everything (then `npx playwright install --with-deps chromium` once for e2e) |
 | `npm run check` | typecheck (pure packages without DOM/Node types, then everything) + ESLint + unit tests |
 | `npm test -w packages/<name>` | one package's tests (cartridge, transport, vm, asm, qr, tools) |
+| `npm run qrc -- <cmd>` | CLI: `build <game dir>`, `run <file.qrc> --frames N --dump-frame out.png` |
+| `npm run refs:hello` | rebuild `games/hello/hello.qrc` and its reference frame/hash (from the VM framebuffer) |
+| `npm run bench:fountain` | layer-1 fountain benchmark → `bench/fountain.md` |

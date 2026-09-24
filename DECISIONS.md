@@ -62,3 +62,20 @@ low-degree repair packets rarely touch the ~20 % of blocks that are missing. Wit
 below pure LT in every cell (K=256, 20 % loss: p99 34 % vs LT 44 %; floor 25 %), and zero-overhead with no loss.
 Cost: dense repair packets cannot be peeled, so GE is required (≤ ~10 ms at K=256 in Node).
 Revisit if: K grows well beyond ~1000 (GE cost O(K³/32)), or a precode (Raptor-style) is wanted.
+
+## D-004 — VM and assembler design
+Date: 2026-09-24 · Milestone: M3
+Decision: Fixed 4-byte instructions (op, mode, imm16), 33 opcodes, 8 registers; one I-bit selects
+immediate/absolute vs register/base+offset, so every ALU op has both forms without extra opcodes.
+ROM (code|rodata|sound, contiguous from 0x0000, ≤ 32 KB) read-only; RAM 0x8000–0xFFFF; framebuffer not
+memory-mapped (drawn via syscalls). Each entry call starts with zeroed registers and an empty stack; a RET
+on the empty stack ends the call; the cycle budget (50 000) aborts the call and the next frame restarts
+`update`. Budget overruns and illegal opcodes are deterministic. Palette = DawnBringer-16, own 3×5 font.
+Assembler: two-pass with lazy constant resolution, local `@labels`, `.sprite` ASCII art, `.sfx`, `.var`.
+The opcode table is duplicated in `asm` (asm may not import vm, SPEC §3); `test/isa-sync.test.ts` guards it.
+Tests that need a built game in `packages/vm` read the committed `games/<g>/<g>.qrc`; `packages/asm` tests
+assert that a fresh assembly has identical sections, which closes the chain without cross-imports.
+Alternatives: variable-length encoding (smaller code, but compression recovers most of it and decoding
+is simpler this way); memory-mapped framebuffer (more flexible, but more RAM traffic in asm for games).
+Why: simplest thing that makes games pleasant to write in assembly and trivially deterministic.
+Revisit if: cartridge size becomes a bottleneck.
