@@ -2,8 +2,8 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** — (all milestones done; manual phone acceptance pending, human)
-**Status:** complete — all milestone commands pass from a clean clone
+**Current milestone:** M12 — Tools for a large game (Part 2: BLACKBOX)
+**Status:** Part 1 (M0–M11) complete; Part 2 not started
 **Last updated:** 2026-09-24
 
 ## Milestones
@@ -21,9 +21,21 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 - [x] M10 Offline
 - [x] M11 CLI, docs, report
 
+Part 2 — BLACKBOX (design: `games/blackbox/`)
+
+- [ ] M12 Tools for a large game (macros, include, symbols, trace)
+- [ ] M13 Engine: rooms, movement, HUD
+- [ ] M14 Stealth: guards, cameras, drones, EMP
+- [ ] M15 Text and the ORACLE engine
+- [ ] M16 Content, sections 0–3
+- [ ] M17 Content, sections 4–7, bosses and endings
+- [ ] M18 Music, access codes, delivery
+
 ## Current work
 
-None. Waiting for the human's real-device check (PLAN.md *Manual acceptance*, README *Scan on a phone*).
+Part 2 planned (PLAN.md M12–M18); design complete in `games/blackbox/`. Part 1 still awaits the human's
+real-device check (PLAN.md *Manual acceptance*). Record the M12 commit hash here when M12 is done — it is the
+baseline for the "runtime does not change" rule.
 
 ## Key numbers (fill in as measured)
 

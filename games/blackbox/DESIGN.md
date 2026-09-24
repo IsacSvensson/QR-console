@@ -1,7 +1,7 @@
 # BLACKBOX — designdokument
 
-Status: **storydesign pågår, ingen implementation.** Spelet ligger utanför PLAN.md:s nuvarande milstolpar;
-innan kod skrivs behöver PLAN.md få nya milstolpar (verktyg → motor → innehåll → tester).
+Status: **design klar, ingen implementation.** Implementeras enligt PLAN.md Part 2 (M12–M18); detta dokument,
+`LAYOUT.md`, `DIALOGUE.md` och `LOGS.md` är specifikationen och testernas facit.
 
 Allt spelinnehåll är eget. Spelets text är **engelska versaler** (fonten: ASCII 32–95). Två textlägen:
 dialogruta **5 rader × 31 tecken** för tal, helskärmsterminal **32 × 21 tecken** för menyer och loggar (§3.2).
@@ -225,4 +225,4 @@ långt under 1 KB.
 2. ~~De ~20 dialogerna~~ (`DIALOGUE.md`: 20 dialoger + barks + slut, 80 textrutor, 769 ord, ~4.3 KB okomprimerat; formatet kontrolleras av `test/blackbox-text.test.ts`)
 3. ~~De ~10 loggarna~~ (`LOGS.md`: 10 loggar, 15 sidor, 610 ord; 5 frivilliga ger nyfikenhet till P8)
 4. ~~Layout skärm för skärm~~ (`LAYOUT.md`: 37 rum i motorns rumsformat; `test/blackbox-layout.test.ts` kontrollerar rutnät, dörrar åt båda håll, nåbarhet i varje rum, att alla D/L/P är placerade och att spelet går att klara även om spelaren nekar Mira)
-5. Implementation (nya milstolpar i PLAN.md först)
+5. Implementation: PLAN.md M12–M18 (Part 2)

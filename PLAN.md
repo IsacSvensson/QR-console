@@ -154,3 +154,122 @@ All milestone commands pass from a clean clone, `demo/` contains GIFs for both g
 3. Show `demo/breakout.gif` full-screen on a laptop.
 4. Scan in the app until 100 %, press PLAY, play.
 5. Repeat with the second game.
+
+---
+
+# Part 2 — BLACKBOX (added 2026-09-24 at the human's request)
+
+A large original game that proves the console can carry a rich, story-driven adventure. Design is complete
+and is the **specification** for these milestones:
+
+- `games/blackbox/DESIGN.md` — locked design decisions, ORACLE prediction engine, room format, budget
+- `games/blackbox/LAYOUT.md` — all 37 rooms (validated by `test/blackbox-layout.test.ts`)
+- `games/blackbox/DIALOGUE.md`, `games/blackbox/LOGS.md` — all text (validated by `test/blackbox-text.test.ts`)
+
+Rules for M12–M18 (in addition to CLAUDE.md):
+
+- **The runtime does not change.** M12 may change only the assembler and tools. From the M12 commit on,
+  `git diff <M12 commit> -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay
+  **empty** through M18, exactly like M8. If a generic runtime change proves unavoidable (e.g. ISA v2 with
+  a larger ROM, see `DESIGN.md` §5), it is not made silently: record the measurement in `DECISIONS.md`,
+  flag it under *Blocked / needs human* in `PROGRESS.md`; a human decides.
+- **The design documents are the test oracle.** Whatever the engine holds in RAM or ROM (rooms, text,
+  prediction state) is compared against the documents, not against itself.
+- **All game code lives in `games/blackbox/`** (several `.asm` files joined with `.include` are fine).
+- Every milestone has recorded replays (`games/blackbox/replays/*.json`) with committed per-frame hashes,
+  generated from the VM only (`npm run refs:games`), and assertions in `games/blackbox/checks*.ts`.
+- **Budgets, asserted in every replay:** no fault, 0 cycle-budget overruns, max cycles per frame
+  ≤ 25 000 (half the budget); ROM size reported by `test:games` (target ≤ 32 KB, *measure* until M17).
+
+The test command for all BLACKBOX milestones is `npm run test:blackbox` (a Vitest project for
+`test/blackbox/**`); each milestone adds to it and never removes earlier checks.
+
+## M12 — Tools for a large game
+
+- Assembler: `.include "file.asm"` (only files in the same game directory; errors report the included file
+  and line), `.macro NAME p1, p2 … .endm` with parameter substitution and per-expansion local labels.
+- `qrc build` also writes `<game>.sym` (symbol → address) and a listing (address, bytes, source line).
+- `qrc run --ram sym[,sym…]` prints named RAM values per frame; `--trace N` prints PC and registers for the
+  first N instructions of a frame.
+- `docs/PROGRAMMING.md` documents both features with a tested example.
+
+**Accept:** `npm test -w packages/asm -w packages/tools` (new macro/include/symbol/listing/trace tests) and
+`npm run check`; `npm run test:games` unchanged (hello, Breakout and Pong assemble to identical sections).
+
+## M13 — Engine: rooms, movement, HUD
+
+- Room data in ROM in the compact format of `DESIGN.md` §3.1, unpacked into the 16×15 RAM buffer on entry;
+  `SYS MAP` draws from RAM; player movement with tile collision; exits, doors, vents and warps between rooms;
+  HUD row; room flags persist.
+- All 37 rooms encoded, with the locks, flags and warps of `LAYOUT.md`.
+
+**Accept:** `npm run test:blackbox`
+- for **every room**, the RAM buffer after unpacking equals the `LAYOUT.md` grid tile class by tile class
+  (a TypeScript decoder of the ROM room table is also compared against `LAYOUT.md`)
+- a replay walks 0.1 → 1.1 → 1.2 → 1.3 → 1.4 → 2.1 and back; per-frame hashes match; in every frame the player
+  box overlaps no blocking tile of the current room (checked against `LAYOUT.md`, not against the engine)
+- a locked door does not open without its flag and opens with it
+
+## M14 — Stealth: guards, cameras, drones, EMP
+
+- Guards (patrol, turn, line of sight along rows/columns, `=` does not block sight), static cameras, drones,
+  heavy guard, hunter, prototype, ORACLE agent as described in `LAYOUT.md`; detection restarts the room;
+  EMP with charges and charging stations.
+
+**Accept:** `npm run test:blackbox`
+- replays: sneaking through 1.1, 1.3 and 1.4 undetected; being caught (room restarts with the player at the
+  entry and the room state reset); drones stunned by EMP for the documented time; EMP charges and recharge
+- every detection in every replay is confirmed by a **TypeScript reference line-of-sight** computed from the
+  RAM positions and the `LAYOUT.md` grid, and no frame has line of sight without a detection
+
+## M15 — Text and the ORACLE engine
+
+- Dialogue box (1 + 5 × 31) and full-screen terminal (32 × 21), text stored compactly (packing chosen by
+  measurement and recorded in `DECISIONS.md`), barks, yes/no prompt.
+- ORACLE state (`DESIGN.md` §2.1), the accuracy display `974 − misses` in tenths, THIS SUBJECT `hits/resolved`,
+  the P8 forecast rule, the protocol list (D16).
+
+**Accept:** `npm run test:blackbox`
+- a TypeScript decoder of the ROM text reproduces **every box of `DIALOGUE.md` and every page of `LOGS.md`**
+  byte for byte (placeholders excepted)
+- rendered dialogue and terminal frames match committed reference frames (from the VM)
+- a TypeScript reference model of the ORACLE engine, fed the same events, gives the same RAM state after every
+  frame of every replay; accuracy and P8 guess tested for all combinations of misses and profile counters
+
+## M16 — Content, sections 0–3
+
+- Intro, entrance, administration, security: all rooms, enemies, items, dialogues D1–D6, logs L1–L3,
+  predictions P1–P2 (asked), access codes shown at section ends (display only; entry comes in M18).
+
+**Accept:** `npm run test:blackbox` — replays from 0.1 to the lift in 3.5 both ways at P1 (left first; right
+first then left), asserting P1 hit/miss, D5 seen only on the right-hand path, and the flags of `LAYOUT.md`.
+
+## M17 — Content, sections 4–7, bosses and endings
+
+- Labs, underground, servers, core: both bosses, D7–D20, L4–L10, P2–P8, all four endings.
+
+**Accept:** `npm run test:blackbox` — full-game replays from 0.1 to an ending:
+- **R1** obedient: follows every Mira instruction, says yes at P3, takes LEFT at P7 → ending E1, accuracy 97.4 %
+- **R2** refuses Mira at P3 (prototype-hall route), takes RIGHT, pulls the cable → ending E4 with the accuracy
+  before/after and THIS SUBJECT equal to the TypeScript reference model
+- **R3** RIGHT, menu choice equal to the forecast → E2; **R4** a different menu choice → E3
+- together the replays reach every D1–D20, L1–L10 and P1–P8 (event trace in RAM)
+- ROM size ≤ 32 KB, or the measured overrun recorded and flagged for a human (ISA v2 decision)
+
+## M18 — Music, access codes, delivery
+
+- Three music loops and sound effects (`DESIGN.md` §5); access-code entry and resume (`DESIGN.md` §2.4).
+- BLACKBOX delivered like the other games: `npm run demo` also writes `demo/blackbox.gif`.
+
+**Accept:**
+- `npm run test:blackbox`: every access code round-trips (TypeScript reference encoder ⇄ VM decoder) for all
+  sections and for random prediction/profile states; a replay enters a code and resumes with identical
+  ORACLE state; music commands follow the note data; SFX interrupt and music resumes
+- `npm run test:e2e`: the BLACKBOX GIF scanned with the fake camera to 100 %, PLAY, first frame matches
+- `npm run demo` verifies the BLACKBOX GIF round trip; `npm run check` green
+- `REPORT.md` gains a BLACKBOX section (tested / measured / not verified)
+
+## Manual acceptance for Part 2 (human only)
+
+Scan `demo/blackbox.gif` on a phone, play through at least one ending, and judge the one thing tests cannot:
+whether it is any good.
