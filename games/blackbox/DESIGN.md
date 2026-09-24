@@ -201,12 +201,18 @@ spelarens förväntade position). Sprites: Eli, forskare, forskningschef, 6 fien
 | Del | KB |
 |---|---:|
 | 37 rum (8×8 byggblock à 2×2 tiles, 64 B/rum) + blocktabell + objektlistor | ~3 |
-| Text: ~20 dialoger + ~10 loggar (~1200 ord, ordbokskomprimerad) | 4–5 |
+| Text: 20 dialoger + 10 loggar, **uppmätt** 1 382 ord / 8,4 KB rått → ~7 KB med enkel ordbok (se nedan) | ~6–7 |
 | Grafik: ~60 tiles + sprites | ~6 |
 | Musik: 3 slingor (mörk ambient, larm/boss, ORACLE) + ljudeffekter | ~1.5 |
 | Kod: motor, smygande, skripttolk, ORACLE-motor, musik, access codes | 12–15 |
-| **Summa** | **~26–31** |
+| **Summa** | **~29–33** ⚠ |
 
+
+⚠ **Texten är den största budgetrisken.** Uppmätt (`test/blackbox-text.test.ts` + ordboksmätning):
+en ordbok på 128 ord sparar bara ~18 % (8,6 → 7,0 KB). Alternativ, att avgöra när kodstorleken är känd:
+(a) 6-bitarstecken — fontens 64 tecken ryms exakt i 6 bitar — plus ordbok: ~6 KB, kostar ~300 B kod;
+(b) korta de frivilliga loggarna (L2, L5, L7) ~30 %; (c) snålare grafik; (d) ROM-bankning (ISA-ändring).
+Rekommendation: (a) + vid behov (b); ingen ISA-ändring.
 
 RAM (separat 32 KB): rumsbuffert 240 B, rumsflaggor ~40 B, objekt ~100 B, ORACLE-tillstånd ~12 B —
 långt under 1 KB.
@@ -217,6 +223,6 @@ långt under 1 KB.
 
 1. ~~ORACLE:s prediktioner~~ (§2, detta dokument)
 2. ~~De ~20 dialogerna~~ (`DIALOGUE.md`: 20 dialoger + barks + slut, 80 textrutor, 769 ord, ~4.3 KB okomprimerat; formatet kontrolleras av `test/blackbox-text.test.ts`)
-3. De ~10 loggarna: information som dialogerna inte kan bära
+3. ~~De ~10 loggarna~~ (`LOGS.md`: 10 loggar, 15 sidor, 610 ord; 5 frivilliga ger nyfikenhet till P8)
 4. Layout skärm för skärm: terminaler, dörrar, laddstationer, fiender, P-triggers
 5. Implementation (nya milstolpar i PLAN.md först)
