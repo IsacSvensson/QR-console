@@ -92,6 +92,11 @@ export class Player {
     this.vm = null;
   }
 
+  /** Buttons currently held (keyboard | touch), as passed to the VM on the next frame. */
+  get buttons(): number {
+    return this.keys | this.touch;
+  }
+
   get frame(): number {
     return this.vm?.frame ?? 0;
   }

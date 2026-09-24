@@ -2,8 +2,8 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M11 — CLI, docs, report
-**Status:** in progress
+**Current milestone:** — (all milestones done; manual phone acceptance pending, human)
+**Status:** complete — all milestone commands pass from a clean clone
 **Last updated:** 2026-09-24
 
 ## Milestones
@@ -19,11 +19,11 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 - [x] M8 Second game (no runtime changes)
 - [x] M9 PWA: scanner, library, player
 - [x] M10 Offline
-- [ ] M11 CLI, docs, report
+- [x] M11 CLI, docs, report
 
 ## Current work
 
-—
+None. Waiting for the human's real-device check (PLAN.md *Manual acceptance*, README *Scan on a phone*).
 
 ## Key numbers (fill in as measured)
 
@@ -33,7 +33,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 | Overhead for 99 % success (K≈200, 20 % loss) | 38 % (K=128) / 34 % (K=256) transmitted; floor 25 % | bench/fountain.md |
 | QR version / ECC / frame ms | v12 / M / 150 ms; decoder zxing-wasm (+GlobalHistogram fallback) | bench/qr.md, D-007 |
 | Payload bytes per frame | 262 (287 − 25 overhead) | bench/qr.md |
-| 50 KB transfer: frames / seconds / KB/s | K=196, loop 294; p90 259 frames / 38.9 s / 1.29 KB/s (simulated 20 % loss) | bench/qr.md |
+| 50 KB transfer: frames / seconds / KB/s | K=196, loop 294; p90 259 frames / 38.9 s / 1.29 KB/s (simulated 20 % loss); browser fake camera 34.7 s / 1.44 KB/s | bench/qr.md, bench/scan.md |
 | Breakout cartridge size | 877 B (ROM 1551 B, deflate-raw); target ≤ 10 KB met | test:games |
 | Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
 
@@ -48,4 +48,5 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 
 ## Ideas for later
 
-—
+- Calibrate the distortion simulator with real camera captures of the demo GIFs.
+- APNG output; Raptor-style precode for K ≫ 256; a `--scale` auto-choice from screen size.

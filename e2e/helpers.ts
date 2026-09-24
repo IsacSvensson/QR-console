@@ -11,6 +11,7 @@ export interface QrcWindow {
     ready: Promise<void>;
     play(bytes: number[]): Promise<void>;
     frame(): number;
+    buttons(): number;
     canvasRgba(): number[];
     screen(): string;
     swReady(): Promise<boolean>;

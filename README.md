@@ -34,6 +34,7 @@ npm run test:e2e           # Playwright: player vs VM reference, fake-camera sca
 npm run test:e2e:offline   # Playwright: production build + service worker, offline scan & play, zero requests
 npm run bench:fountain     # → bench/fountain.md
 npm run bench:qr           # → bench/qr.md (~5 min)
+npm run bench:scan         # 50 KB cartridge through the browser scanner (fake camera) → bench/scan.md
 ```
 
 ## Develop and build

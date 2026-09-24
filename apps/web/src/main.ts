@@ -180,6 +180,7 @@ if (params.has('test')) {
       /** Load cartridge bytes straight into the player (bypasses scanning). */
       play: (bytes: number[]) => playBytes(new Uint8Array(bytes), 'test'),
       frame: () => player.frame,
+      buttons: () => player.buttons,
       /** Canvas pixels as RGBA, read back from the rendered canvas (not from the VM). */
       canvasRgba: () => Array.from($<HTMLCanvasElement>('play-canvas').getContext('2d')!.getImageData(0, 0, 128, 128).data),
       screen: () => document.body.dataset.screen,

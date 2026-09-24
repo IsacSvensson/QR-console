@@ -21,6 +21,7 @@ export default defineConfig({
   projects: [
     { name: 'app', testMatch: /app\.spec\.ts/, use: fakeCamera('breakout') },
     { name: 'offline', testMatch: /offline\.spec\.ts/, use: fakeCamera('pong') },
+    { name: 'measure', testMatch: /measure\.spec\.ts/, use: fakeCamera('big') },
   ],
   webServer: {
     command: `npm run build -w apps/web && node e2e/static-server.mjs`,

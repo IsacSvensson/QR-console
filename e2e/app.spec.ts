@@ -32,3 +32,34 @@ test('fake camera: scan Breakout to 100 %, press PLAY, first frame matches; pers
   await page.locator('#library-list li button', { hasText: 'Play' }).click();
   await expectCanvasMatches(page, 'breakout');
 });
+
+test.describe('input', () => {
+  test.use({ hasTouch: true });
+  test('keyboard and on-screen touch buttons reach the VM input mask', async ({ page }) => {
+    await page.goto('./?test&seed=1');
+    await page.evaluate(() => (window as unknown as QrcWindow).__qrc.ready);
+    await page.evaluate((bytes) => (window as unknown as QrcWindow).__qrc.play(bytes), cartridgeBytes('pong'));
+    const buttons = () => page.evaluate(() => (window as unknown as QrcWindow).__qrc.buttons());
+    const expected: [string, number][] = [['ArrowLeft', 1], ['ArrowRight', 2], ['ArrowUp', 4], ['ArrowDown', 8], ['z', 16], ['x', 32]];
+    for (const [key, bit] of expected) {
+      await page.keyboard.down(key);
+      expect(await buttons(), key).toBe(bit);
+      await page.keyboard.up(key);
+      expect(await buttons()).toBe(0);
+    }
+    // on-screen A button (pointer events, as a finger would produce)
+    const a = page.locator('.ab .a');
+    await a.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'touch', isPrimary: true });
+    expect(await buttons()).toBe(16);
+    await a.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'touch', isPrimary: true });
+    expect(await buttons()).toBe(0);
+    // and input actually drives the game: pressing A on the title screen starts a match (frame changes)
+    const before = await page.evaluate(() => (window as unknown as QrcWindow).__qrc.canvasRgba());
+    await page.keyboard.down('z');
+    await page.waitForTimeout(300);
+    await page.keyboard.up('z');
+    await page.waitForTimeout(300);
+    const after = await page.evaluate(() => (window as unknown as QrcWindow).__qrc.canvasRgba());
+    expect(after).not.toEqual(before);
+  });
+});

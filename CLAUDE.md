@@ -92,3 +92,6 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run build -w apps/web` | production build → `apps/web/dist` (incl. generated `sw.js`) |
 | `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scan of Breakout, Library persistence |
 | `npm run test:e2e:offline` | production build, SW precache, offline reload, fake-camera scan of Pong, zero network requests |
+| `npm run demo` | build both games → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
+| `npm run preview` / `npm run preview:https` | serve the production build on :4173 (https: self-signed cert in `.tmp/cert`) |
+| `npm run bench:scan` | 50 KB cartridge through the browser scanner with a fake camera → `bench/scan.md` |
