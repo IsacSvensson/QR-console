@@ -3,13 +3,14 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { parseCartridge, toHex } from '@qrc/cartridge';
-import { VM } from '@qrc/vm';
+import { VM, replay, type ReplayFile } from '@qrc/vm';
 import { buildGame } from './games';
 import { writeFramePng } from './png';
 
 const USAGE = `qrc — QR Console tools
 
   qrc build <game dir> [--out file.qrc]
+  qrc replay <file.qrc> <inputs.json> [--frames N] [--seed N]   (prints the state hash of every frame)
   qrc run <file.qrc> [--frames N] [--dump-frame out.png] [--scale S] [--seed N] [--write-ref ref.json]
 `;
 
@@ -47,6 +48,19 @@ async function main(argv: string[]) {
         writeFramePng(values['dump-frame'], vm.fb, Number(values.scale));
         console.log(`wrote ${values['dump-frame']}`);
       }
+      return;
+    }
+    case 'replay': {
+      const { values, positionals } = parseArgs({ args: rest, allowPositionals: true, options: { frames: { type: 'string' }, seed: { type: 'string' } } });
+      const [file, inputsFile] = positionals;
+      if (!file || !inputsFile) fail('replay: usage: qrc replay <file.qrc> <inputs.json> [--frames N]');
+      const script = JSON.parse(readFileSync(inputsFile, 'utf8')) as ReplayFile | ReplayFile['inputs'];
+      const rf: ReplayFile = Array.isArray(script) ? { inputs: script } : script;
+      const cart = await parseCartridge(new Uint8Array(readFileSync(file)));
+      const seed = Number(values.seed ?? rf.seed ?? 1);
+      const frames = Number(values.frames ?? (Array.isArray(rf.inputs[0]) ? (rf.inputs as [number, number][]).reduce((n, [c]) => n + c, 0) : rf.inputs.length));
+      const hashes = replay(VM.fromCartridge(cart, { seed }), rf.inputs, frames);
+      hashes.forEach((h, i) => console.log(`${i + 1} ${h}`));
       return;
     }
     default:

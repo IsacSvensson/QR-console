@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M6 — Full VM + determinism
+**Current milestone:** M7 — Breakout
 **Status:** in progress
 **Last updated:** 2026-09-24
 
@@ -14,7 +14,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 - [x] M3 Minimal VM + assembler (HELLO WORLD)
 - [x] M4 Layer 2 + first vertical slice
 - [x] M5 Layer 3 + QR benchmark
-- [ ] M6 Full VM + determinism
+- [x] M6 Full VM + determinism
 - [ ] M7 Breakout
 - [ ] M8 Second game (no runtime changes)
 - [ ] M9 PWA: scanner, library, player
