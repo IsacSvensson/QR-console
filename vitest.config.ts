@@ -9,7 +9,7 @@ export default defineConfig({
     passWithNoTests: true,
     silent: false,
     projects: [
-      { test: { name: 'unit', include: ['test/**/*.test.ts'] } },
+      { test: { name: 'unit', include: ['test/*.test.ts'] } },
       pkg('cartridge'),
       pkg('transport'),
       pkg('vm'),
