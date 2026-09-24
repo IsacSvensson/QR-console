@@ -1,0 +1,23 @@
+{
+  "name": "@qrc/tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --root ../.. --project tools"
+  },
+  "dependencies": {
+    "@qrc/asm": "*",
+    "@qrc/cartridge": "*",
+    "@qrc/qr": "*",
+    "@qrc/transport": "*",
+    "@qrc/vm": "*",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/pngjs": "^6.0.5"
+  }
+}

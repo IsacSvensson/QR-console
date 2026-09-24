@@ -25,3 +25,16 @@ Alternatives: pure LT only; systematic only; no per-packet CRC (rely on QR Reed�
 Why: small block counts make LT overhead uncertain, so measure instead of assume; CRC costs 2–4 bytes
 per frame and lets the decoder isolate bad packets.
 Revisit if: benchmarks show one mode dominates, or CRC never triggers in layer-3 tests.
+
+## D-001 — Toolchain and monorepo wiring
+Date: 2026-09-24 · Milestone: M0
+Decision: TypeScript 6.0 (typescript-eslint 8 supports < 6.1; TS 7 not yet supported by it), Vitest 5
+projects (one per package, `npm test -w packages/x` runs its project from the root config), ESLint 10 flat
+config, Vite 8, tsx for running TS CLIs. Packages export `src/index.ts` directly (no build step for
+libraries). Two typecheck passes: `tsconfig.pure.json` checks cartridge/transport/vm/asm with only ES libs
+plus a tiny `types/web-globals.d.ts` (TextEncoder/Decoder, (De)CompressionStream) so DOM or Node usage fails
+to compile; `tsconfig.json` checks everything with DOM + Node types.
+Dependency rules (SPEC §3) are enforced twice: ESLint `no-restricted-imports` and `test/architecture.test.ts`.
+Alternatives: project references with emitted builds; TS 7 native compiler.
+Why: least moving parts, no build artefacts to keep in sync.
+Revisit if: package consumers outside this repo need compiled JS.

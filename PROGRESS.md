@@ -2,13 +2,13 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M0 — Scaffold
-**Status:** not started
-**Last updated:** —
+**Current milestone:** M1 — Cartridge format
+**Status:** in progress
+**Last updated:** 2026-09-24
 
 ## Milestones
 
-- [ ] M0 Scaffold
+- [x] M0 Scaffold
 - [ ] M1 Cartridge format
 - [ ] M2 Transport layer 1 + fountain benchmark
 - [ ] M3 Minimal VM + assembler (HELLO WORLD)

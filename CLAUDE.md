@@ -75,3 +75,9 @@ This is a **prototype that proves a concept**, not a console platform.
 ## Commands
 
 <!-- Filled in by the agent in M0 and kept up to date. -->
+
+| Command | What it does |
+|---|---|
+| `npm ci` | install everything (then `npx playwright install --with-deps chromium` once for e2e) |
+| `npm run check` | typecheck (pure packages without DOM/Node types, then everything) + ESLint + unit tests |
+| `npm test -w packages/<name>` | one package's tests (cartridge, transport, vm, asm, qr, tools) |

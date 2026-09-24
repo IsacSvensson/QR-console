@@ -1,0 +1,22 @@
+{
+  "name": "@qrc/qr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --root ../.. --project qr"
+  },
+  "dependencies": {
+    "@qrc/transport": "*",
+    "jsqr": "^1.4.0",
+    "omggif": "^1.0.10",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/omggif": "^1.0.5",
+    "@types/qrcode": "^1.5.6"
+  }
+}

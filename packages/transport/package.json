@@ -1,0 +1,9 @@
+{
+  "name": "@qrc/transport",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "vitest run --root ../.. --project transport" },
+  "dependencies": {  }
+}

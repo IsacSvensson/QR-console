@@ -1,0 +1,12 @@
+{
+  "//": "Pure-logic packages: no DOM lib, no Node types. Only the few web-standard globals in types/web-globals.d.ts.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2023"], "types": [] },
+  "include": [
+    "types/web-globals.d.ts",
+    "packages/cartridge/src",
+    "packages/transport/src",
+    "packages/vm/src",
+    "packages/asm/src"
+  ]
+}
