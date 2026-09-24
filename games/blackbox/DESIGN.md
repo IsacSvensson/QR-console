@@ -164,7 +164,7 @@ spelarens förväntade position). Sprites: Eli, forskare, forskningschef, 6 fien
 ## 5. Nästa steg (i denna ordning)
 
 1. ~~ORACLE:s prediktioner~~ (§2, detta dokument)
-2. De ~20 dialogerna: vad spelaren behöver veta vid varje punkt, sedan text i 31×5-format
+2. ~~De ~20 dialogerna~~ (`DIALOGUE.md`: 20 dialoger + barks + slut, 80 textrutor, 769 ord, ~4.3 KB okomprimerat; formatet kontrolleras av `test/blackbox-text.test.ts`)
 3. De ~10 loggarna: information som dialogerna inte kan bära
 4. Layout skärm för skärm: terminaler, dörrar, laddstationer, fiender, P-triggers
 5. Implementation (nya milstolpar i PLAN.md först)
