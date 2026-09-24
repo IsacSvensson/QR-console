@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M15 — Text and the ORACLE engine (Part 2: BLACKBOX)
+**Current milestone:** M16 — Content, sections 0–3 (Part 2: BLACKBOX)
 **Status:** Part 1 (M0–M11) complete; Part 2 in progress
 **Last updated:** 2026-09-24
 
@@ -26,7 +26,7 @@ Part 2 — BLACKBOX (design: `games/blackbox/`)
 - [x] M12 Tools for a large game (macros, include, symbols, trace)
 - [x] M13 Engine: rooms, movement, HUD
 - [x] M14 Stealth: guards, cameras, drones, EMP
-- [ ] M15 Text and the ORACLE engine
+- [x] M15 Text and the ORACLE engine
 - [ ] M16 Content, sections 0–3
 - [ ] M17 Content, sections 4–7, bosses and endings
 - [ ] M18 Music, access codes, delivery

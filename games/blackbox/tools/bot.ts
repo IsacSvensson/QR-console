@@ -17,7 +17,8 @@ export type Step =
   | { room: string }
   | { until: string; frames?: number }
   | { when: (bot: Bot) => boolean; max?: number; note?: string }
-  | { allowCaught: boolean };
+  | { allowCaught: boolean }
+  | { answer: 'A' | 'B' };
 
 const DIR_BTN: Record<Side, number> = { N: BUTTONS.UP, S: BUTTONS.DOWN, E: BUTTONS.RIGHT, W: BUTTONS.LEFT };
 const DELTA: Record<Side, [number, number]> = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
@@ -126,6 +127,25 @@ export class Bot {
     return out;
   }
 
+  get mode() {
+    return this.ram('mode');
+  }
+  /** Page through dialogue boxes and terminal pages (A edges) until play resumes. Yes/no boxes are left
+   * for the route to answer. */
+  settle() {
+    for (let i = 0; i < 4000; i++) {
+      const m = this.mode;
+      if (m === this.sym.get('M_DIALOG') && this.ram('box_kind') === this.sym.get('BOX_ASK')) return;
+      if (m !== this.sym.get('M_DIALOG') && m !== this.sym.get('M_TERM')) {
+        if (this.ram('script_pc') === 0) return;
+        this.frame(0); // a script is still running (it continues after the box closed)
+        continue;
+      }
+      this.frame(i % 2 ? 0 : BUTTONS.A);
+    }
+    throw new Error('bot: dialogue never ended');
+  }
+
   frame(buttons: number) {
     if (this.inputs.length >= this.maxFrames) throw new Error('bot: frame limit reached');
     const before = this.ram('det_count');
@@ -203,6 +223,10 @@ export class Bot {
     for (let guard = 0; guard < 4000; guard++) {
       if (this.ram('det_count') !== det) return; // caught (allowed): the room has restarted
       if (this.room !== start) throw new Error(`bot: left ${start} while walking to ${tx},${ty}`);
+      if (this.mode !== this.sym.get('M_PLAY')) {
+        this.settle();
+        continue;
+      }
       if (this.ram('px') === tx * 8 && this.ram('py') === ty * 8) return;
       const p = this.path((x, y) => x === tx && y === ty, safe);
       if (!p) {
@@ -221,6 +245,7 @@ export class Bot {
     const [dx, dy] = door[door.length - 1]!;
     this.goTo(dx, dy);
     for (let i = 0; i < 200 && this.room === from; i++) this.frame(DIR_BTN[side]);
+    this.settle();
     if (this.room === from) throw new Error(`bot: could not leave ${from} through ${side}`);
   }
 
@@ -233,10 +258,12 @@ export class Bot {
     this.frame(0);
     this.frame(BUTTONS.A);
     this.frame(0);
+    this.settle();
   }
 
   run(route: Step[]) {
     for (const s of route) {
+      if (!('answer' in s) && !('press' in s)) this.settle();
       if ('press' in s) {
         const b = s.press === 'A' ? BUTTONS.A : s.press === 'B' ? BUTTONS.B : DIR_BTN[s.press];
         for (let i = 0; i < (s.frames ?? 1); i++) this.frame(b);
@@ -254,6 +281,11 @@ export class Bot {
         for (; i < (s.max ?? 3000) && !s.when(this); i++) this.frame(0);
         if (!s.when(this)) throw new Error(`bot: condition never met (${s.note ?? 'when'}) in ${this.room}`);
       } else if ('allowCaught' in s) this.allowCaught = s.allowCaught;
+      else if ('answer' in s) {
+        if (this.mode !== this.sym.get('M_DIALOG') || this.ram('box_kind') !== this.sym.get('BOX_ASK')) throw new Error(`bot: no question to answer in ${this.room}`);
+        for (let i = 0; i < 400 && this.mode === this.sym.get('M_DIALOG'); i++) this.frame(i % 2 ? 0 : s.answer === 'A' ? BUTTONS.A : BUTTONS.B);
+        this.settle();
+      }
     }
   }
 

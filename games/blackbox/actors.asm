@@ -590,9 +590,10 @@ use_emp:
     JEQ @empty
     SUB r0, 1
     ST [charges], r0
-    LD r0, [emp_uses]
-    ADD r0, 1
-    ST [emp_uses], r0
+    LDI r0, emp_uses
+    CALL bump
+    LDI r0, F_ROOM_EMP
+    CALL flag_set
     LD r0, [room_emp]
     ADD r0, 1
     ST [room_emp], r0

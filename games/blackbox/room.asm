@@ -35,6 +35,8 @@ load_room:
     LDI r0, 0
     ST [trig_fired], r0
     ST [room_emp], r0
+    LDI r0, F_ROOM_EMP
+    CALL flag_clr
     CALL spawn_actors
     RET
 

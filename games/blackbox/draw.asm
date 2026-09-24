@@ -15,6 +15,7 @@ draw_play:
     CALL draw_player
     CALL draw_hud
     CALL draw_overlays
+    CALL draw_bark
     RET
 
 ; detection frame and EMP pulse
@@ -94,6 +95,22 @@ draw_hud:
     LDI r2, 1
     LDI r3, 7
     SYS TEXT
+    ; the live ORACLE figure, once ORACLE has spoken (6.1)
+    LDI r0, F_LIVE
+    CALL flag_test
+    CMP r0, 0
+    JEQ @charges
+    CALL accuracy
+    LDI r1, num_buf
+    CALL put_pct
+    LDI r0, 0
+    STB [r1], r0
+    LDI r0, num_buf
+    LDI r1, 64
+    LDI r2, 1
+    LDI r3, 6
+    SYS TEXT
+@charges:
     ; EMP charges
     LD r5, [charges]
     LDI r0, 123

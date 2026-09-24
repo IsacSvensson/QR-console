@@ -10,10 +10,13 @@
 .include "player.asm"
 .include "script.asm"
 .include "actors.asm"
+.include "text.asm"
+.include "oracle.asm"
 .include "sounds.asm"
 .include "draw.asm"
 .include "gfx.asm"
 .include "scripts.asm"
+.include "text.gen.asm"
 
 ; ---- entry points -----------------------------------------------------------------------------
 .code
@@ -37,10 +40,20 @@ update:
     SUB r0, 1
     LDI r1, 0
     ST [dbg_room], r1
+    LDI r1, M_PLAY
+    ST [mode], r1
     CALL enter_room_at_arrival
-    LDI r0, M_PLAY
-    ST [mode], r0
 @dispatch:
+    LD r0, [dbg_oracle]     ; TEST HOOK: ORACLE values and their rendering
+    CMP r0, 0
+    JEQ @go
+    LDI r0, 0
+    ST [dbg_oracle], r0
+    CALL oracle_update
+    LDI r0, dbg_oracle_text
+    LDI r1, text_buf
+    CALL decode_text
+@go:
     LD r1, [mode]
     SHL r1, 1
     LD r1, [r1 + mode_table]
@@ -101,12 +114,23 @@ new_game:
     ST [det_count], r0
     ST [charges], r0
     ST [emp_uses], r0
+    ST [pred_done], r0
+    ST [pred_hit], r0
+    ST [pred_misses], r0
+    ST [logs_read], r0
+    ST [mira_followed], r0
+    ST [bark_t], r0
+    LDI r0, F_TRUE
+    CALL flag_set
+    CALL oracle_update
+    CALL accuracy
+    ST [pct_before], r0
     LDI r0, DIR_S
     ST [pdir], r0
+    LDI r0, M_PLAY          ; before entering: the room's ENTER script may open a dialogue
+    ST [mode], r0
     LDI r0, R_0_1
     CALL enter_room_at_arrival
-    LDI r0, M_PLAY
-    ST [mode], r0
     RET
 
 mode_play:
@@ -148,9 +172,7 @@ mode_play:
     CALL draw_play
     RET
 
-; placeholders until M15 (dialogue box, terminal) and M17 (endings)
-mode_dialog:
-mode_term:
+; placeholder until M17 (endings)
 mode_ending:
     LDI r0, M_PLAY
     ST [mode], r0
@@ -160,3 +182,4 @@ mode_ending:
 mode_table: .word mode_title, mode_play, mode_dialog, mode_term, mode_ending
 s_title:    .string "BLACKBOX"
 s_press:    .string "PRESS A"
+dbg_oracle_text: .byte 2, ' ', 3, '/', 3, ' ', 1, 0

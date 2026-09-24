@@ -43,15 +43,31 @@ EV_P8 = 38
 
 .data
 trig_0_1:
+    TR_ENTER scr_intro
     TR_END
+scr_intro:                  ; D1, once
+    S_IFEV EV_D1, @done
+    S_SAY box_D1_1
+    S_SAY box_D1_2
+    S_SAY box_D1_3
+    S_SAY box_D1_4
+    S_SAY box_D1_5
+    S_SAY box_D1_6
+    S_EVENT EV_D1
+@done:
+    S_END
 trig_1_1:
     TR_END
 trig_1_2:
     TR_USE 4, 3, scr_badge
     TR_END
-scr_badge:
+scr_badge:                  ; D2: the reception terminal prints a badge that already has Eli's name
+    S_IFEV EV_D2, @done
+    S_SAY box_D2_1
+    S_SAY box_D2_2
     S_SET F_BADGE
     S_EVENT EV_D2
+@done:
     S_END
 trig_1_3:
     TR_END
@@ -62,7 +78,8 @@ trig_2_1:
 trig_2_2:
     TR_USE 4, 5, scr_copier
     TR_END
-scr_copier:
+scr_copier:                 ; L1: the memo; reading it releases the grille (N)
+    S_LOG log_L1
     S_SET F_L1
     S_EVENT EV_L1
     S_END

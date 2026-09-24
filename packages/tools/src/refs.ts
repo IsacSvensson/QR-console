@@ -32,11 +32,19 @@ for (const name of readdirSync(GAMES_DIR)) {
   }
   const replayDir = join(dir, 'replays');
   if (existsSync(replayDir)) {
-    const files = readdirSync(replayDir).filter((f) => f.endsWith('.json'));
+    const files = readdirSync(replayDir).filter((f) => f.endsWith('.json') && !f.endsWith('.frames.json'));
     for (const f of files) {
       const rf = JSON.parse(readFileSync(join(replayDir, f), 'utf8')) as ReplayFile & { frames: number };
       const hashes = replay(VM.fromCartridge(cart, { seed: rf.seed ?? 1 }), rf.inputs, rf.frames);
       writeFileSync(join(replayDir, f.replace(/\.json$/, '.hashes.txt')), hashes.join('\n') + '\n');
+      // reference frames: replays/<name>.frames.json lists frame numbers to dump as PNG (from the VM)
+      const framesFile = join(replayDir, f.replace(/\.json$/, '.frames.json'));
+      if (existsSync(framesFile)) {
+        const wanted = new Set(JSON.parse(readFileSync(framesFile, 'utf8')) as number[]);
+        replay(VM.fromCartridge(cart, { seed: rf.seed ?? 1 }), rf.inputs, rf.frames, (frame, vm) => {
+          if (wanted.has(frame + 1)) writeFramePng(join(replayDir, `${f.replace(/\.json$/, '')}.f${frame + 1}.png`), vm.fb);
+        });
+      }
     }
     extra += `, ${files.length} replays in replays/`;
   }

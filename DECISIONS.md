@@ -216,3 +216,21 @@ state after each frame tells tests exactly who acted. Replays are recorded by a 
 Level fix found by the bot: the 2.1 guard spawned walking towards the entrance in the same column; the entrance
 was a trap (no escape before its line of sight reached the door). It now starts walking away.
 Alternatives: metatile room compression (larger decoder, similar size); per-zone hand-written room code.
+
+## D-016 — BLACKBOX text packing, chosen by measurement
+Date: 2026-09-24 · Milestone: M15
+Decision: a 128-entry dictionary (bytes 0x80–0xFF) chosen greedily by byte savings, where an entry may include
+one adjacent space; everything else is plain ASCII 32–95 plus newline and five placeholder bytes. Measured by
+`games/blackbox/tools/text.ts` over all 80 boxes and 15 log pages: raw 8 369 B → words-only dictionary 6 604 B
+→ words+spaces 6 509 B (chosen). The decoder is ~40 instructions and runs into a RAM buffer, so the built-in
+TEXT syscall draws whole boxes/pages in one call; a typewriter effect terminates the buffer temporarily.
+Alternatives: 6-bit packing (~6.3 KB, but needs a bit-stream decoder and still a dictionary to go lower);
+leaving text raw (8.4 KB).
+Revisit if: the ROM overruns 32 KB at M17 (6-bit + dictionary is the next step, `DESIGN.md` §5).
+
+## D-017 — Protocol list on the terminal; ORACLE values kept current
+Date: 2026-09-24 · Milestone: M15
+Decision: a box whose text is exactly `<PROTOCOL>` (D16) is shown on the full-screen terminal (it needs up to
+9 lines; a dialogue box has 5). Every change to a profile counter recomputes the forecast immediately, so the
+RAM state is always consistent (found by the per-frame reference-model test: after the first EMP the forecast
+in RAM was stale until the next prediction).

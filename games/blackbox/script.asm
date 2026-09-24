@@ -23,7 +23,16 @@ OP_IFEV   = 7               ; event, target: jump if it has happened
 OP_WARP   = 8               ; room: move to its arrival point (no ENTER trigger)
 OP_SFX    = 9               ; sound id
 OP_WAIT   = 10              ; frames
-NUM_OPS   = 11
+OP_SAY    = 11              ; box: dialogue box, waits for A
+OP_ASK    = 12              ; box: yes/no box; A sets F_ANSWER, B clears it
+OP_LOG    = 13              ; log: terminal pages, waits until closed
+OP_BARK   = 14              ; box: short box at the top, play continues
+OP_PRED   = 15              ; p, flag: resolve prediction p (hit if flag is set); once only
+OP_PROF   = 16              ; k: profile counter +1 (1 curiosity, 2 compliance)
+OP_IFHIT  = 17              ; p, target: jump if prediction p came true
+OP_IFGUESS = 18             ; choice, target: jump if ORACLE forecasts that final choice
+OP_SNAP   = 19              ; remember the accuracy before the last action
+NUM_OPS   = 20
 
 .macro TR_ENTER script
     .byte TK_ENTER, 0, 0
@@ -90,6 +99,41 @@ NUM_OPS   = 11
 .macro S_WAIT frames
     .byte OP_WAIT, frames
 .endm
+.macro S_SAY bx
+    .byte OP_SAY
+    .word bx
+.endm
+.macro S_ASK bx
+    .byte OP_ASK
+    .word bx
+.endm
+.macro S_LOG lg
+    .byte OP_LOG
+    .word lg
+.endm
+.macro S_BARK bx
+    .byte OP_BARK
+    .word bx
+.endm
+.macro S_PRED p, fl
+    .byte OP_PRED, p, fl
+.endm
+.macro S_PROF k
+    .byte OP_PROF, k
+.endm
+.macro S_IFHIT p, target
+    .byte OP_IFHIT, p
+    .word target
+.endm
+.macro S_IFGUESS ch, target
+    .byte OP_IFGUESS, ch
+    .word target
+.endm
+.macro S_SNAP
+    .byte OP_SNAP
+.endm
+PROF_LOGS = 1
+PROF_MIRA = 2
 
 .code
 ; r0 = kind, r1 = a, r2 = b -> r0 = 1 if a trigger matched (its script has started and run until it waits)
@@ -286,5 +330,100 @@ op_wait:
     LDI r0, 0
     RET
 
+op_say:
+    LDI r2, BOX_SAY
+    JMP box_op
+op_ask:
+    LDI r2, BOX_ASK
+box_op:
+    MOV r1, r0
+    ADD r1, 3
+    ST [script_pc], r1
+    LD r0, [r0 + 1]
+    CALL open_box
+    LDI r0, 0
+    RET
+
+op_log:
+    MOV r1, r0
+    ADD r1, 3
+    ST [script_pc], r1
+    LD r0, [r0 + 1]
+    CALL open_log
+    LDI r0, 0
+    RET
+
+op_bark:
+    PUSH r0
+    LD r0, [r0 + 1]
+    CALL open_bark
+    POP r0
+    ADD r0, 3
+    RET
+
+op_pred:
+    PUSH r0
+    LDB r5, [r0 + 1]
+    LDB r0, [r0 + 2]
+    PUSH r5
+    CALL flag_test
+    POP r5
+    MOV r1, r0
+    MOV r0, r5
+    CALL resolve_pred
+    POP r0
+    ADD r0, 3
+    RET
+
+op_prof:
+    PUSH r0
+    LDB r1, [r0 + 1]
+    SHL r1, 1
+    LD r0, [r1 + prof_vars]
+    CALL bump
+    POP r0
+    ADD r0, 2
+    RET
+
+op_ifhit:
+    LDB r1, [r0 + 1]
+    SUB r1, 1
+    LDI r2, 1
+    SHL r2, r1
+    LD r1, [pred_done]
+    LD r3, [pred_hit]
+    AND r1, r3
+    AND r1, r2
+    JZ @no
+    LD r0, [r0 + 2]
+    RET
+@no:
+    ADD r0, 4
+    RET
+
+op_ifguess:
+    PUSH r0
+    CALL oracle_update
+    POP r0
+    LDB r1, [r0 + 1]
+    LD r2, [final_guess]
+    CMP r1, r2
+    JNE @no
+    LD r0, [r0 + 2]
+    RET
+@no:
+    ADD r0, 4
+    RET
+
+op_snap:
+    PUSH r0
+    CALL accuracy
+    ST [pct_before], r0
+    POP r0
+    ADD r0, 1
+    RET
+
 .data
 op_table: .word op_end, op_set, op_clr, op_if, op_ifnot, op_jmp, op_event, op_ifev, op_warp, op_sfx, op_wait
+          .word op_say, op_ask, op_log, op_bark, op_pred, op_prof, op_ifhit, op_ifguess, op_snap
+prof_vars: .word 0, logs_read, mira_followed

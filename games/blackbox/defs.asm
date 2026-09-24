@@ -116,3 +116,44 @@ CAUGHT_FRAMES = 45
 F_PICK0  = NUM_LAYOUT_FLAGS + 0     ; pick-up 0 (the EMP) taken
 F_PICK1  = NUM_LAYOUT_FLAGS + 1     ; pick-up 1 (spare charge) taken
 F_ANSWER = NUM_LAYOUT_FLAGS + 2     ; last yes/no answer
+F_ENDING = NUM_LAYOUT_FLAGS + 3     ; the final action has happened (<PCT> shows before -> after)
+F_LIVE   = NUM_LAYOUT_FLAGS + 4     ; the HUD shows the live ORACLE figure (from 6.1)
+F_TRUE   = NUM_LAYOUT_FLAGS + 5     ; always set (S_PRED p, F_TRUE = hit)
+F_FALSE  = NUM_LAYOUT_FLAGS + 6     ; never set
+F_ROOM_EMP = NUM_LAYOUT_FLAGS + 7   ; the EMP was used in the current room (P2)
+F_P4OK   = NUM_LAYOUT_FLAGS + 8     ; boss 1: first panel hacked in the first turn window
+F_P5OK   = NUM_LAYOUT_FLAGS + 9     ; 5.4: passed the guard after it turned
+
+; ---- text and the ORACLE engine (M15) ---------------------------------------------------------
+BOX_Y       = 84            ; dialogue box: header row + 5 text rows
+BOX_SAY     = 0
+BOX_ASK     = 1
+BARK_FRAMES = 150
+BASE_ACCURACY = 974         ; ORACLE's historical record: 97.4 % (DESIGN.md §2.2)
+CH_DELETE  = 0
+CH_RELEASE = 1
+CH_LISTEN  = 2
+
+.var text_buf, 720          ; decoded dialogue box / terminal page
+.var bark_buf, 96
+.var num_buf, 8
+.var txt_src
+.var pct_seq
+.var n_seq
+.var box_kind
+.var box_spk
+.var box_len
+.var reveal
+.var bark_t
+.var bark_spk
+.var term_log
+.var term_page
+.var term_pages
+.var pred_done              ; bit p-1: prediction p resolved
+.var pred_hit               ; bit p-1: prediction p came true
+.var pred_misses
+.var logs_read              ; ORACLE profile: curiosity
+.var mira_followed          ; ORACLE profile: compliance
+.var final_guess            ; CH_* forecast of the final choice
+.var pct_before             ; accuracy just before the last action
+.var dbg_oracle             ; TEST HOOK: 1 = recompute the ORACLE values and render "<PCT> <N>/<N> <X>" 
