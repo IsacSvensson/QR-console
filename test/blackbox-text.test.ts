@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 // (1 header row + 5 rows of 31 characters) and use only characters the built-in font has (ASCII 32–95).
 const MAX_COLS = 31;
 const MAX_ROWS = 5;
-const PLACEHOLDERS: Record<string, string> = { '<X>': 'RELEASE', '<PCT>': '97.4%' };
+const PLACEHOLDERS: Record<string, string> = { '<X>': 'RELEASE', '<PCT>': '97.4%', '<N>': '8' };
 
 const doc = readFileSync(join(__dirname, '../games/blackbox/DIALOGUE.md'), 'utf8');
 const blocks = [...doc.matchAll(/```box\n([\s\S]*?)```/g)].map((m) => m[1]!.replace(/\n$/, ''));

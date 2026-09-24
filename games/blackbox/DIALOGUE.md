@@ -1,6 +1,6 @@
 # BLACKBOX — dialogues
 
-Step 2 of `DESIGN.md` §5. For every dialogue: **what the player must know at that point** and which ORACLE
+Step 2 of `DESIGN.md` §6. For every dialogue: **what the player must know at that point** and which ORACLE
 prediction (`DESIGN.md` §2.3) it sets up or resolves, followed by the text itself.
 
 ## Text format (checked by `test/blackbox-text.test.ts`)
@@ -15,8 +15,10 @@ line 1             max 5 lines, max 31 characters each
 
 - Characters: ASCII 32–95 only (uppercase, digits, punctuation) — the built-in font.
 - `<X>` = text filled in at runtime; the test measures it at its longest value (`RELEASE`, 7 characters).
-- `<PCT>` = accuracy such as `97.3%` (5 characters). `<PROTOCOL>` = generated lines (§4).
-- A dialogue box sits at the bottom of the screen: 1 header row + 5 text rows of 6 px.
+- `<PCT>` = accuracy such as `97.3%` (5 characters). `<N>` = a count 0–8 (1 character).
+  `<PROTOCOL>` = generated lines (§4).
+- A dialogue box sits at the bottom of the screen: 1 header row + 5 text rows of 6 px. Terminal screens
+  (menus, logs) use the full-screen 32 × 21 mode instead (`DESIGN.md` §3.2).
 
 Speakers: `ELI` (Eli's thoughts/speech), `MIRA` / `UNKNOWN` (terminal text), `ORACLE` (terminal text),
 `DR. REYES` (researcher), `DIRECTOR HALE`, and system sources (`FILE`, `TERMINAL`, `PA`, `ALARM LOG`, …).
@@ -476,12 +478,13 @@ Per ending, see §4. Every ending closes on the accuracy screen:
 [ORACLE]
 PREDICTION ACCURACY
 
-<PCT>
-...
-<PCT>
+<PCT> ... <PCT>
+
+THIS SUBJECT: <N>/<N>
 ```
 
-Before → after the last action (`DESIGN.md` §2.2).
+Historical accuracy before → after the last action, then the player's own hits / resolved predictions
+(`DESIGN.md` §2.2).
 
 ## 3. Prediction and combat barks
 

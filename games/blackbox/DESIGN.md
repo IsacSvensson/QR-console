@@ -3,8 +3,8 @@
 Status: **storydesign pågår, ingen implementation.** Spelet ligger utanför PLAN.md:s nuvarande milstolpar;
 innan kod skrivs behöver PLAN.md få nya milstolpar (verktyg → motor → innehåll → tester).
 
-Allt spelinnehåll är eget. Spelets text är **engelska versaler** (fonten: ASCII 32–95), dialogrutor
-**5 rader × 31 tecken**.
+Allt spelinnehåll är eget. Spelets text är **engelska versaler** (fonten: ASCII 32–95). Två textlägen:
+dialogruta **5 rader × 31 tecken** för tal, helskärmsterminal **32 × 21 tecken** för menyer och loggar (§3.2).
 
 ---
 
@@ -13,7 +13,8 @@ Allt spelinnehåll är eget. Spelets text är **engelska versaler** (fonten: ASC
 1. **Eli är aldrig en actionhjälte.** Han observerar, hackar, manipulerar och undviker. A = interagera/hacka,
    B = EMP (bedövar maskiner några sekunder, 3 laddningar, laddstationer). EMP:n är ett verktyg, inte ett vapen.
    Vakter kan inte besegras; upptäckt = rummet börjar om. Bossar besegras via miljön (terminaler).
-2. **Mira är en ren textfigur.** Hon finns bara i terminaler. Ingen sprite.
+2. **Mira är en ren textfigur.** Hon finns bara i terminaler och "tar över" samma terminal-UI som resten av
+   spelet använder (§3.2). Ingen sprite.
 3. **Spelarens beteende är ORACLE:s data.** Spelet gör faktiska prediktioner om spelaren och mäter dem (§2).
    Samma motor bär story och mekanik.
 4. **LEFT/RIGHT är ett narrativt test.** LEFT är inte "fel": det är det val ORACLE förväntar sig, och därför kan
@@ -61,8 +62,19 @@ accuracy_tenths = 974 - pred_misses                  →  "97.4%", "97.3%", …
 ```
 
 Varje miss kostar alltså precis 0.1 procentenhet. Alla rätt ger 97.4 % (oförändrat — modellen håller).
-Slutskärmen visar värdet **före och efter sista handlingen**, t.ex. `97.3% … 97.2%`.
-Från skärm 6.1 (efter twisten) visar terminalernas rubrikrad den aktuella siffran live.
+97.4 % är ORACLE:s **historiska** siffra över alla testpersoner (samma som i filen i D1); Elis missar syns som
+små sänkningar av den.
+
+Bredvid visas spelarens **egen** andel, rätt/avgjorda i detta spel, som två `NUM`-anrop:
+
+```
+ORACLE
+PREDICTION ACCURACY   97.3%
+THIS SUBJECT          7/8
+```
+
+Slutskärmen visar den historiska siffran **före och efter sista handlingen**, t.ex. `97.3% … 97.2%`, följt av
+THIS SUBJECT. Från skärm 6.1 (efter twisten) visar HUD-raden och terminalernas rubrik den historiska siffran live.
 
 ### 2.3 De åtta prediktionerna
 
@@ -128,7 +140,43 @@ I D16 läser ORACLE upp spelarens egen protokollista, genererad från `pred_done
 
 ---
 
-## 3. Struktur (37 skärmar)
+## 3. Rum, skärm och terminaler
+
+### 3.1 Rumsformat
+
+- **Ett rum = en skärm**, som i klassiska äventyrsspel uppifrån: **16 × 15 tiles** (128 × 120 px). Översta
+  pixelraderna (8 px) är **HUD**: ORACLE-siffran (från 6.1), EMP-laddningar, avsnitt.
+- **I ROM** lagras rum kompakt: 8 × 8 byggblock (metatiles) om 2 × 2 tiles = **64 byte per rum**, plus en
+  gemensam blocktabell (4 byte per block). Nedre halvraden av sista blockraden används inte (15 tile-rader).
+- **I RAM** packas det aktuella rummet upp vid rumsbyte till en buffert `room[16 × 15]` (240 byte, 1 byte per
+  tile). Allt läser den bufferten:
+  - `SYS MAP` ritar hela rummet i ett anrop direkt från RAM,
+  - kollision: `room[(y >> 3) * 16 + (x >> 3)]`,
+  - siktlinje för vakter och kameror: stega cell för cell tills en vägg-tile,
+  - öppnade dörrar, avstängda kameror m.m. skrivs in i bufferten (och i rumsflaggor i RAM så att de består).
+- **Tile-klasser** via tile-nummer: `0` tom, `1–31` golv/dekor (gångbart), `32–63` vägg (blockerar rörelse och
+  sikt), `64–95` interaktivt (terminal, dörr, laddstation, kabel), `96+` animerade. En jämförelse avgör klassen.
+- **Objekt** i rummet (vakter, drönare, kameror, terminaler med skript) listas per rum i ROM: typ, cell,
+  riktning, parameter — några byte styck.
+
+### 3.2 Två textlägen
+
+| Läge | Storlek | Används för |
+|---|---|---|
+| Dialogruta | nederst, 1 rubrikrad + 5 × 31 tecken | tal: ELI, MIRA, ORACLE, NPC:er, barks |
+| Helskärmsterminal | 32 × 21 tecken | terminalmenyer, loggar, filer, ORACLE:s protokoll, Miras övertaganden |
+
+Terminalmenyer byggs av samma få kommandon överallt (`> SECURITY`, `> ACCESS`, `> CAMERA`, `> ORACLE`, …).
+Mira dyker upp genom att ta över en terminal mitt i en meny: texten avbryts och hennes rader skrivs ut
+tecken för tecken. Samma mekanism används senare av ORACLE — spelaren ser att rösterna delar kanal.
+
+### 3.3 Återanvändning
+
+Rummen byggs av **ett tileset per zon** (kontor, säkerhet, labb, bunker, server, kärna) plus gemensamma
+tiles (dörrar, terminaler, kameror). Inom en zon återanvänds rumstyper, så att anläggningen känns som en
+verklig byggnad snarare än 37 handgjorda banor.
+
+## 4. Struktur (37 skärmar)
 
 `D` = dialog, `L` = logg, `P` = prediktion, 🔒 = lås, 💾 = access code.
 
@@ -148,20 +196,24 @@ spelarens förväntade position). Sprites: Eli, forskare, forskningschef, 6 fien
 
 ---
 
-## 4. Budget (uppskattning, ROM 32 KB)
+## 5. Budget (uppskattning, ROM 32 KB)
 
 | Del | KB |
 |---|---:|
-| 37 rum (2×2-block, ~56 B/rum) | ~2 |
+| 37 rum (8×8 byggblock à 2×2 tiles, 64 B/rum) + blocktabell + objektlistor | ~3 |
 | Text: ~20 dialoger + ~10 loggar (~1200 ord, ordbokskomprimerad) | 4–5 |
 | Grafik: ~60 tiles + sprites | ~6 |
-| Musik: 5 slingor | 2–3 |
+| Musik: 3 slingor (mörk ambient, larm/boss, ORACLE) + ljudeffekter | ~1.5 |
 | Kod: motor, smygande, skripttolk, ORACLE-motor, musik, access codes | 12–15 |
 | **Summa** | **~26–31** |
 
+
+RAM (separat 32 KB): rumsbuffert 240 B, rumsflaggor ~40 B, objekt ~100 B, ORACLE-tillstånd ~12 B —
+långt under 1 KB.
+
 ---
 
-## 5. Nästa steg (i denna ordning)
+## 6. Nästa steg (i denna ordning)
 
 1. ~~ORACLE:s prediktioner~~ (§2, detta dokument)
 2. ~~De ~20 dialogerna~~ (`DIALOGUE.md`: 20 dialoger + barks + slut, 80 textrutor, 769 ord, ~4.3 KB okomprimerat; formatet kontrolleras av `test/blackbox-text.test.ts`)
