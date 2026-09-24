@@ -58,6 +58,10 @@ export default tseslint.config(
       'no-constant-condition': ['error', { checkLoops: false }],
     },
   },
+  {
+    files: ['**/*.mjs', '**/*.js'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
+  },
   ...boundaryRules,
   pureRules,
   // transport and cartridge: nothing internal at all (pureRules would allow @qrc/cartridge)

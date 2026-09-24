@@ -88,3 +88,6 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run test:qr-robust` | layer 3: moderate camera distortion, default params must decode ≥ 95 % |
 | `npm run bench:qr` | QR decoder/version/ECC × distortion benchmark + transfer estimate → `bench/qr.md` (~5 min) |
 | `npm run test:games` | every game with a `replay.json`: assemble, size, per-frame hash replay, `games/<g>/checks.ts` rules |
+| `npm run dev -w apps/web` | Vite dev server (no service worker in dev) |
+| `npm run build -w apps/web` | production build → `apps/web/dist` (incl. generated `sw.js`) |
+| `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scan of Breakout, Library persistence |

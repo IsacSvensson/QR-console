@@ -147,3 +147,20 @@ RECTFILL sprites-free drawing, direct SOUND jingle vs Breakout's MAP tilemap bri
 M8 was done with zero changes under `packages/` and `apps/` relative to the M7 commit bd2e1b8.
 Alternatives: per-game branches in the shared test (would put game knowledge outside games/<name>/).
 Why: PLAN M8 forbids game-specific code outside the game's folder.
+
+## D-010 — PWA architecture
+Date: 2026-09-24 · Milestone: M9
+Decision: Plain TypeScript + DOM (no UI framework), Vite build with relative base. Service worker is generated
+at build time by a 60-line Vite plugin (cache-first, precaches every emitted file incl. the 950 KB zxing wasm)
+instead of vite-plugin-pwa/Workbox. QR decoding runs in a module Web Worker (zxing-wasm, wasm fetched from the
+app's own origin); the fountain decoder runs on the main thread (microseconds per packet). Camera frames are
+downscaled to ≤ 960 px on the long side and a new frame is grabbed only when the worker is idle.
+BarcodeDetector is **not** used, not even as a fast path: it only exposes a text `rawValue`, which would violate
+L9 (raw bytes). The scanner locks onto the first valid cartridge id; the UI shows that id (the title is only
+known after verification, since the transport never parses the cartridge). Library = IndexedDB keyed by
+cartridge id. Test hooks (`window.__qrc`) exist only with `?test`; `?seed` and `?maxFrames` make the player
+deterministic for tests. e2e uses a tiny logging static server over the production build so the offline test
+can assert on server-side requests.
+Alternatives: vite-plugin-pwa (bigger dependency tree), React/Preact (unneeded for three screens), jsQR in
+the worker (0 % at moderate distortion, bench/qr.md).
+Revisit if: the UI grows beyond three screens.

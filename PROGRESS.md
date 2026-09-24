@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M9 — PWA: scanner, library, player
+**Current milestone:** M10 — Offline
 **Status:** in progress
 **Last updated:** 2026-09-24
 
@@ -17,7 +17,7 @@ _Dashboard, not a diary. Keep it short. Update after every milestone and before 
 - [x] M6 Full VM + determinism
 - [x] M7 Breakout
 - [x] M8 Second game (no runtime changes)
-- [ ] M9 PWA: scanner, library, player
+- [x] M9 PWA: scanner, library, player
 - [ ] M10 Offline
 - [ ] M11 CLI, docs, report
 
