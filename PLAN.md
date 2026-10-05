@@ -286,6 +286,8 @@ Breakout, Pong nor BLACKBOX needed. The design is the **specification** for thes
 - `games/bo/DESIGN.md` — locked design decisions, physics constants and derived values (§3), tricks (§4),
   power-ups (§5), enemies (§9), bosses (§10), texts (§11–12), level and graphics formats (§14), budget (§16).
   It is a draft: the open questions in §17 have defaults that apply unless the human changes them before M19.
+- `games/bo/FIRST10.md` — the first ten minutes: title, intro, level 1-1 column by column, the start of 1-2, the
+  rules its tests check (§8) and the observation list for the Bo test (§9).
 - `games/bo/mockup/` — a VM-rendered spike of one screen (drawing approach measured, DECISIONS D-025).
 - `games/bo/levels/*.lvl` — the level sources, written from M19 on (one per level, generator + preview PNG).
 
@@ -297,8 +299,9 @@ Rules for M19–M25 (in addition to CLAUDE.md, same spirit as Part 2):
   other change to `packages/asm` or `packages/tools` must be generic, needs a `DECISIONS.md` entry, and every other
   game must still assemble to identical sections. If something seems to need a runtime change (ROM over 32 KB, a
   save feature), record the measurement, flag it under *Blocked / needs human*, and continue within the limits.
-- **The design documents are the test oracle.** The tests read the tables of `DESIGN.md` (§3.2–3.3, §4, §5, §9,
-  §11–12) and the `.lvl` sources; what the engine holds in RAM or ROM is compared against them, never against itself.
+- **The design documents are the test oracle.** The tests read the tables of `DESIGN.md` (§0.2, §3.2–3.3, §4, §5,
+  §9, §11–12), `FIRST10.md` and the `.lvl` sources; what the engine holds in RAM or ROM is compared against them,
+  never against itself.
 - **All game code and data live in `games/bo/`**; generators and the replay bot in `games/bo/tools/`.
 - Every milestone has recorded replays (`games/bo/replays/*.json`) with committed per-frame hashes from the VM
   (`npm run refs:games`), recorded by the bot from RAM-driven routes (re-recordable when the physics is tuned), and
@@ -334,6 +337,8 @@ milestone adds to it and never removes earlier checks.
   diagonal), tricks and combos (DESIGN §4), sloppy landings, surfaces (sand, ice, bounce), breakable blocks and
   boxes, hazards (pits, water), checkpoints, lives, respawn, game over → level restart. Test level `T3`
   (a small skatepark).
+- Bo's signature (DESIGN §0.2: push kicks, leaning forward and back, the idle pop and balance, looking back after a
+  big landing) and the wheel sound (§15: rolling noise and a click every 16 px), because the feel test needs them.
 - From now on `npm run demo` also writes `demo/bo.gif` (at this stage it starts in the test levels), so the human
   can try the feel on a phone before any content is built.
 
@@ -347,6 +352,9 @@ milestone adds to it and never removes earlier checks.
   RAM buffer (and the reference grid agrees)
 - a fall into a pit or water costs one life and respawns at the last checkpoint; at 0 lives the level restarts
   with 5 lives
+- every signature behaviour of DESIGN §0.2 appears in a replay at its trigger (Bo's pose in RAM) and never changes
+  his position or his box; any button cancels the idle pop and the balance in the same frame
+- the wheel clicks in the audio commands match the distance travelled (one per 16 px)
 - `npm run demo` writes and verifies `demo/bo.gif`; `npm run check` green
 
 ## M21 — Enemies, power-ups, items, HUD, Bo's voice
@@ -356,24 +364,29 @@ milestone adds to it and never removes earlier checks.
   encoded by `games/bo/tools/text.ts` from DESIGN §11–12.
 
 **Accept:** `npm run test:bo`
-- for every enemy of §9, replays show each outcome of its row (landing on it, side contact, contact with pommes);
-  every hit happens on a frame where the boxes in RAM overlap, and no overlap goes unhandled
-- the helmet absorbs exactly one hit and gives 120 frames of invulnerability; pommes lasts 600 frames and the
-  measured top speed is 2.5 px per frame; a seagull takes the pommes without damage; godis gives exactly one extra
-  jump per airtime and doubles trick points; 100 apples give one life
+- for every enemy of §9, replays show each outcome of its row (landing on it and its joke, side contact); every
+  hit happens on a frame where the boxes in RAM overlap, and no overlap goes unhandled
+- the helmet absorbs exactly one hit and gives 120 frames of invulnerability; pommes lasts 600 frames, the measured
+  top speed is 2.5 px per frame and the music's note lengths shrink to 2/3, and pommes changes nothing else
+  (obstacles and enemies behave as without it); a seagull takes the pommes without damage; godis gives exactly one
+  extra jump per airtime; 100 apples give one life
 - a TypeScript decoder of the ROM text reproduces every line of DESIGN §11–12 byte for byte; rendered bubble
   frames match committed reference frames (from the VM)
 
 ## M22 — World 1 and the game around it (budget gate)
 
 - Title, intro, world map, level cards, tally, game over; levels 1-1 to 1-4 and 1-5 (Stora Måsen, DESIGN §10.1);
-  the World 1 tileset, enemies and music.
+  the World 1 tileset, enemies and music. The first play goes straight from the intro into 1-1. 1-1 and 1-2 are
+  built exactly as `FIRST10.md` §5 and §7 describe. Apple arcs are generated from the physics (DESIGN §14.1).
 
 **Accept:** `npm run test:bo`
 - for every World 1 level a replay from its start to the goal; together these replays collect **every star and
   skate part** of World 1 (checked against the `.lvl` sources)
 - boss: one replay wins with exactly three hits in the pattern of §10.1, another loses a life to the dive and retries
 - one replay plays from the title to the World 2 map; the tally on screen equals the RAM counters
+- **the first ten minutes:** every rule of `FIRST10.md` §8 passes (checked against the `.lvl` sources and replays)
+- **apples never lie:** for every apple pattern in World 1 there is a replay route that follows it, collects all of
+  its apples and loses no life (DESIGN §8.4)
 - **budget gate:** code bytes, World 1 data bytes and ROM size are measured and a projection for five worlds is
   recorded in `DECISIONS.md`. If it exceeds 32 KB, apply DESIGN §16.1's cut list in order and flag it for a human
 
@@ -382,20 +395,23 @@ milestone adds to it and never removes earlier checks.
 - Levels 2-1 to 2-5 (Kaninjakten, §10.2) and 3-1 to 3-5 (Bulldozern, §10.3); moving platforms, the chase, the
   World 2 and 3 tilesets, enemies and music.
 
-**Accept:** `npm run test:bo` — as M22 for Worlds 2 and 3, plus: in the winning chase replay the rabbit never
+**Accept:** `npm run test:bo` — as M22 for Worlds 2 and 3 (including "apples never lie", and every godis leads to a
+secret it is needed for, DESIGN §8.5), plus: in the winning chase replay the rabbit never
 overlaps Bo, and a second replay is caught and restarts at the checkpoint; the bulldozer stops after exactly three
 STOP presses; replays from the World 2 map to the World 4 map.
 
 ## M24 — Worlds 4 and 5, the theft and the ending
 
 - Levels 4-1 to 4-5 (Backhoppet and the theft, §10.4) and 5-1 to 5-5 (the final, §10.5); the ending; every board
-  of §7.2 including the golden one.
+  of §7.2 including the golden one; the seagull's food at every tally (§11.1); SUPERBOSSE (§4), unlocked by the
+  final.
 
 **Accept:** `npm run test:bo`
 - as M22 for Worlds 4 and 5; the Backhoppet replay's jump is the longest in the game (measured in RAM); after the
   theft the board flag is set and World 5 uses the licorice board
 - **one replay from the title to the end of the game** (all 25 levels, no code entry); a replay with all 60 stars
   shows the golden board
+- after the final a replay performs SUPERBOSSE (3000 points); before the final the same input gives no SUPERBOSSE
 - ROM ≤ 32 KB, or the overrun measured and flagged for a human
 
 ## M25 — Picture codes, music, delivery
@@ -404,8 +420,8 @@ STOP presses; replays from the World 2 map to the World 4 map.
 - Bo delivered like the other games.
 
 **Accept:**
-- `npm run test:bo`: every code round-trips (TypeScript reference encoder ⇄ VM decoder) for all worlds × board sets ×
-  star sets, and wrong codes are rejected; a replay enters a code and resumes in the right world with the right
+- `npm run test:bo`: every code round-trips (TypeScript reference encoder ⇄ VM decoder) for all worlds (and value 6,
+  game complete, which unlocks SUPERBOSSE) × board sets × star sets, and wrong codes are rejected; a replay enters a code and resumes in the right world with the right
   boards; every world has its own track and every track is heard in the replays; sound effects interrupt the
   music and it resumes
 - `npm run demo` writes and verifies `demo/bo.gif`; `npm run test:e2e` scans it with the fake camera to 100 %,
@@ -417,5 +433,7 @@ STOP presses; replays from the World 2 map to the World 4 map.
 
 1. **After M20 (feel test):** scan `demo/bo.gif` on a phone and ride the test levels. Does rolling, jumping and
    grinding feel right? Change the constants in DESIGN §3.2 if not; the bot re-records the replays.
-2. **After M25 (Bo test):** Bo plays. The tests cannot judge the one thing that matters: whether it is fun for a
+2. **After M22 (first ten minutes):** Bo plays from the title without help, and the human observes with the list in
+   `FIRST10.md` §9. The answers go into `PROGRESS.md`; what they show is tuned before Worlds 2–5 are built.
+3. **After M25 (Bo test):** Bo plays. The tests cannot judge the one thing that matters: whether it is fun for a
    six-year-old, and whether he can read the bubbles and use the touch controls. Notes go into `PROGRESS.md`.

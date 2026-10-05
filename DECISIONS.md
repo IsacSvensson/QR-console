@@ -373,3 +373,45 @@ Measurement: with the new board drawing the mockup scene costs 1 309 cycles per 
 character sheet with two 4× drawings costs 8 100. The mockup cartridge is 1 972 B, and its GIF has 12 frames and
 decodes back to the identical cartridge.
 Revisit if: the human prefers another variant, or the palette ever changes (it is locked).
+
+## D-027 — Bo: an identity pass after the human's review (no new mechanics)
+Date: 2026-10-05 · Milestone: Part 3 planning
+Decision (from the human's eight review points; DESIGN.md §0.2, §1, §5, §8.2–8.5, §9, §11.1, §4):
+- **Bo's signature** (§0.2): push kicks with the back foot on the ground, leaning forward above 2 px/frame, leaning
+  back and dust when braking, an idle pop after 3 s, balancing after 8 s, `WIII!` after a clean grind, looking back
+  after a landing with at least 0.8 s of air. These are visual only: they never move Bo or change his box, and any
+  button cancels the idle ones. Most are offsets and mirrors of existing sprites.
+- **One message per power-up:** 🍎 = protection, 🍟 = speed, 🍬 = one extra jump. Pommes lost its extra rules
+  (breaking weak obstacles, bumping enemies away). Everything now follows from the speed, plus feedback: the music
+  plays 1.5× faster, push kicks speed up and the board vibrates. Godis lost the double trick points. The seagull
+  still takes the pommes (it is the story's running gag).
+- **The apple language** (§8.4): rows, arcs, columns and a "KOLLA" apple sticking out of a hedge, with the rule
+  "apples never lie". The generator computes arcs from the physics, and tests check a route per pattern.
+- **Godis is the discovery mechanic** (§8.5): it always lies near something that looks out of reach, seen first.
+  **Pommes stretches**: ramps with arcs computed for pommes speed and no ground enemies.
+- **A memory per world** (§8.2), and every `POFF` is a joke (§9). **The seagull's journey** (§11.1): it is always
+  hungry and steals one food per world, which the ending pays off. **SUPERBOSSE** (§4): a secret 3000-point trick,
+  unlocked by finishing the game (picture-code world value 6), never needed.
+- Rendering detail for secrets: sparse foreground (hedges and bushes drawn over Bo, with holes).
+Alternatives: keeping pommes' extra rules (more for a six-year-old to learn, and the human asked for one clear
+message); unlocking SUPERBOSSE from the start (it should be a reward to show off); hiding secrets only above the
+screen (that needs 32-row levels, which the first level should not need).
+Measurement (mockup, three screens): scene with push animation 1 356 cycles per frame, character sheet 8 103, and
+the signature sheet 9 379 (one 2× pose per frame via PGET). The cartridge is 2 544 B and the GIF 15 frames; it
+decodes back to the identical cartridge. Estimated ROM cost of the identity details: ~0.7 KB (DESIGN §16.1).
+
+## D-028 — The first ten minutes are specified before any level is built
+Date: 2026-10-05 · Milestone: Part 3 planning (affects M22)
+Decision: `games/bo/FIRST10.md` fixes the title screen, the intro (15 s, skippable), level 1-1 column by column
+(208 columns, a two-minute target), the first three minutes of 1-2, nine rules the tests check, and the observation
+list for the human's Bo test. Choices: the first play goes straight from the intro into 1-1 with no map. Until the
+first checkpoint (about the first minute) nothing can cost a life: there are no pits, water or enemies, and walls only
+stop him. The box with the apple helmet sits in the way before the first enemy, with an apple arc leading onto it, and
+1-1 and 1-2 have no pits or water at all. Every lesson is taught without text (geometry, apples, three pictogram signs), with a
+blinking hint after 2–3 s of standing still. The first secret is a sparse hedge on the garage roof rather than a
+climb above the screen, so 1-1 stays one screen tall. Jump numbers were computed with the §3 physics: kicker with A
+at a 1.8 px/frame lip = 64 px high, 12 tiles long; bin window 11–41 px after takeoff.
+Alternatives: start on the world map (an extra step before the first push); a tree climb to a hidden treehouse
+(needs precise jumps and a vertical camera in the first level); a text tutorial (excludes a child who cannot read
+yet).
+Revisit if: the Bo test (FIRST10.md §9) shows where it does not work.

@@ -449,3 +449,10 @@ line_6: .byte 19, 14, 29, 0, 15, 3, 8, 0, 9, 19, 40, 255   ; SNÖ OCH IS!
 t_bo: .byte 2, 15, 255   ; BO
 t_apple_bo: .byte 28, 16, 16, 5, 12, 45, 2, 15, 255   ; ÄPPEL-BO
 t_in_game: .byte 9, 0, 19, 16, 5, 12, 5, 20, 46, 255   ; I SPELET:
+t_signature: .byte 2, 15, 19, 0, 19, 9, 7, 14, 1, 20, 21, 18, 255   ; BOS SIGNATUR
+t_push: .byte 16, 21, 19, 8, 255   ; PUSH
+t_fast: .byte 6, 1, 18, 20, 255   ; FART
+t_brake: .byte 2, 18, 15, 13, 19, 255   ; BROMS
+t_look: .byte 20, 9, 20, 20, 1, 18, 255   ; TITTAR
+t_balance: .byte 2, 1, 12, 1, 14, 19, 255   ; BALANS
+t_pop: .byte 16, 15, 16, 16, 255   ; POPP

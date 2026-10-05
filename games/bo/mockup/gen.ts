@@ -64,7 +64,18 @@ const ORDER = [' ', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'Å', 'Ä', 'Ö', ...'01234
 /** Bo's bubble lines shown in turn in the scene */
 const LINES = ['SÅG DU?!', 'KOLLA!', 'POMMES!', 'JAG GJORDE DET!', 'MIN BRÄDA!', 'OJ!', 'SNÖ OCH IS!'];
 /** labels on the character sheet: asm label -> text */
-const LABELS: Record<string, string> = { t_bo: 'BO', t_apple_bo: 'ÄPPEL-BO', t_in_game: 'I SPELET:' };
+const LABELS: Record<string, string> = {
+  t_bo: 'BO',
+  t_apple_bo: 'ÄPPEL-BO',
+  t_in_game: 'I SPELET:',
+  t_signature: 'BOS SIGNATUR',
+  t_push: 'PUSH',
+  t_fast: 'FART',
+  t_brake: 'BROMS',
+  t_look: 'TITTAR',
+  t_balance: 'BALANS',
+  t_pop: 'POPP',
+};
 
 const encode = (s: string) =>
   [...s].map((c) => {

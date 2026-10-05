@@ -5,11 +5,17 @@
 ;   - the bubble font is stored 1 bit per pixel (8 bytes per glyph, incl. Å Ä Ö) and unpacked once
 ;     into RAM sprites, one SPR per character;
 ;   - the skateboard is drawn with RECTFILL (deck colour from a table = cheap unlockable boards).
-; Every 5 seconds it switches to a character sheet: Bo 4x (as in the human's photo: pink helmet, light curly
-; hair, purple pads, white T-shirt, khaki trousers, black board with light wheels), Apple-Bo (the helmet becomes
-; a red apple with a leaf), and the poses at game size (riding, pushing, crouching, kickflip, Apple-Bo).
+; Three screens take turns, 5 s each:
+;   1. the scene (Bo pushing and leaning forward at pommes speed);
+;   2. a character sheet: Bo 4x (as in the human's photo: pink helmet, light curly hair, purple pads, white
+;      T-shirt, khaki trousers, black board with light wheels), Apple-Bo (the helmet becomes a red apple with a
+;      leaf), and the poses at game size (riding, pushing, crouching, kickflip, Apple-Bo);
+;   3. "BOS SIGNATUR" (DESIGN.md §0.2): push, speed, brake, looking back, balance, pop. Each pose is drawn at game
+;      size with the same routines as the scene, then copied at 2x with PGET; one pose per frame keeps every
+;      frame inside the cycle budget, and the framebuffer keeps what was drawn.
 ; Build and look:  npm run qrc -- build games/bo/mockup
 ;                  npm run qrc -- run games/bo/mockup/mockup.qrc --frames 2 --dump-frame m.png --scale 4
+;                  (frame 302: the character sheet, frame 620: the signature)
 .title "BO MOCKUP"
 
 .include "font.gen.asm"
@@ -20,6 +26,7 @@ C_PURPLE = 1
 C_NAVY   = 2
 C_DGREY  = 3
 C_BROWN  = 4
+C_KHAKI  = 7                ; Bo's trousers
 C_ORANGE = 9
 C_LGREY  = 10
 C_GREEN  = 11
@@ -38,7 +45,7 @@ BO_X     = 56               ; Bo, world pixels (sprite top-left; 8 x 16 incl. th
 BO_Y     = 80
 TEXT_INK = C_PURPLE
 LINE_FRAMES = 120           ; each bubble line shows for 2 s
-SCENE_FRAMES = 300          ; scene and character sheet take turns, 5 s each
+SCENE_FRAMES = 300          ; scene, character sheet and signature take turns, 5 s each
 
 ; character sheet layout
 ZX1 = 16                    ; Bo at 4x
@@ -53,13 +60,28 @@ P3 = 58
 P4 = 82
 P5 = 106
 
+; signature sheet layout: 6 cells of 40 x 40 (a 20 x 20 area at 2x), the scratch strip at the bottom
+SIG_SX  = 57                ; scratch area: x 57..76, y 106..125; Bo's sprite top-left at (64, 110)
+SIG_SY  = 106
+SIG_W   = 20
+SIG_H   = 20
+SIG_BX  = 64
+SIG_BY  = 110
+SIG_ROW1 = 10
+SIG_ROW2 = 58
+
 ; ---- RAM -------------------------------------------------------------------------------------
 .var level, LV_COLS * LV_ROWS       ; column-major: level[col * 16 + row]
 .var font, FONT_GLYPHS * 32         ; unpacked bubble font: 4bpp sprites
 .var tick
+.var scene_t                        ; frames shown of the scene: picks the bubble line
 .var board                          ; selected board (0 = Bo's own)
 .var zx                             ; zoom_spr: top-left of the 4x drawing
 .var zy
+.var zsx                            ; zoom_rect: source area and target
+.var zsy
+.var ztx
+.var zty
 
 ; ---- init: transpose the ROM map into RAM, unpack the font -------------------------------------
 init:
@@ -112,13 +134,28 @@ init:
 update:
     LD r0, [tick]
     ADD r0, 1
+    CMP r0, SCENE_FRAMES * 3
+    JLT @counted
+    LDI r0, 0
+@counted:
     ST [tick], r0
     DIV r0, SCENE_FRAMES
-    AND r0, 1
     JZ @scene
+    CMP r0, 1
+    JNE @signature
     CALL draw_sheet
     RET
+@signature:
+    CALL draw_signature
+    RET
 @scene:
+    LD r0, [scene_t]
+    ADD r0, 1
+    CMP r0, LINE_FRAMES * NUM_LINES
+    JLT @lines_ok
+    LDI r0, 0
+@lines_ok:
+    ST [scene_t], r0
     LDI r0, C_CYAN
     SYS CLS
     CALL draw_sky
@@ -222,18 +259,25 @@ draw_bo:
     LDI r2, 9
     LDI r4, C_YELLOW
     SYS RECTFILL
-    LDI r0, spr_bo_up
-    LDI r1, BO_X - CAM_X
+    LDI r0, spr_bo_up               ; leaning forward: the upper body 1 px ahead
+    LDI r1, BO_X - CAM_X + 1
     LDI r2, BO_Y
     LDI r3, 0
     SYS SPR
-    LD r0, [tick]                   ; push animation: two leg frames
+    LD r0, [tick]                   ; push animation: riding / back foot on the ground
     SHR r0, 3
     AND r0, 1
-    SHL r0, 5
-    ADD r0, spr_bo_lo
+    JNZ @kick
+    LDI r0, spr_bo_lo
+    LDI r1, BO_X - CAM_X
     LDI r2, BO_Y + 8
     SYS SPR
+    JMP @board
+@kick:
+    LDI r0, BO_X - CAM_X
+    LDI r1, BO_Y
+    CALL push_legs
+@board:
     LD r5, [board]                  ; deck colour = the selected board
     LDB r2, [r5 + board_colors]
     LDI r0, BO_X - CAM_X
@@ -310,7 +354,7 @@ apple_leaf:
 
 ; the current line in a white bubble above Bo, centred on him and kept on screen
 draw_bubble:
-    LD r0, [tick]
+    LD r0, [scene_t]
     DIV r0, LINE_FRAMES
     MOD r0, NUM_LINES
     SHL r0, 1
@@ -596,6 +640,301 @@ zboard:
     SYS RECTFILL
     RET
 
+; legs while pushing: the front leg on the board, the back leg reaching the ground behind it.
+; r0 = x, r1 = y (Bo's sprite top)
+push_legs:
+    MOV r5, r0
+    MOV r6, r1
+    LDI r0, spr_bo_push
+    MOV r1, r5
+    MOV r2, r6
+    ADD r2, 8
+    LDI r3, 0
+    SYS SPR
+    MOV r0, r5                      ; back leg: hip to ankle
+    ADD r0, 2
+    MOV r1, r6
+    ADD r1, 10
+    MOV r2, r5
+    SUB r2, 2
+    MOV r3, r6
+    ADD r3, 14
+    LDI r4, C_KHAKI
+    SYS LINE
+    MOV r0, r5                      ; the shoe on the ground
+    SUB r0, 4
+    MOV r1, r6
+    ADD r1, 15
+    LDI r2, 3
+    LDI r3, 1
+    LDI r4, C_LGREY
+    SYS RECTFILL
+    RET
+
+; the board in a manual (balancing on the back wheels): r0 = x, r1 = y (Bo's sprite top)
+board_manual:
+    MOV r5, r0
+    MOV r6, r1
+    SUB r0, 1
+    ADD r1, 15
+    LDI r2, C_BLACK
+    SYS PSET                        ; back tail scrapes the ground
+    ADD r0, 1
+    SUB r1, 1
+    LDI r2, 4
+    LDI r3, 1
+    LDI r4, C_BLACK
+    SYS RECTFILL                    ; back half of the deck
+    ADD r0, 4
+    SUB r1, 1
+    SYS RECTFILL                    ; front half, one row higher
+    ADD r0, 4
+    SUB r1, 1
+    LDI r2, C_BLACK
+    SYS PSET                        ; front tail up
+    MOV r0, r5
+    ADD r0, 1
+    MOV r1, r6
+    ADD r1, 15
+    LDI r2, 2
+    LDI r3, 1
+    LDI r4, C_CREAM
+    SYS RECTFILL                    ; back wheels on the ground
+    ADD r0, 4
+    SUB r1, 1
+    SYS RECTFILL                    ; front wheels in the air
+    RET
+
+; ---- the signature sheet (DESIGN.md §0.2) -----------------------------------------------------
+draw_signature:
+    LD r0, [tick]
+    MOD r0, SCENE_FRAMES            ; frame within this screen
+    JNZ @poses
+    LDI r0, C_CYAN                  ; frame 0: background, title and labels
+    SYS CLS
+    LDI r0, t_signature
+    LDI r1, 64 - 36
+    LDI r2, 1
+    CALL draw_text
+    LDI r6, 0
+@label:
+    MOV r7, r6
+    SHL r7, 1
+    LD r0, [r7 + sig_labels]
+    LD r1, [r7 + sig_label_x]
+    LD r2, [r7 + sig_cell_y]
+    ADD r2, 40
+    PUSH r6
+    CALL draw_text
+    POP r6
+    ADD r6, 1
+    CMP r6, 6
+    JLT @label
+    RET
+@poses:
+    CMP r0, 7
+    JLT @one
+    JNE @done
+    LDI r0, 0                       ; frame 7: the ground covers the scratch strip
+    LDI r1, SIG_SY
+    LDI r2, 128
+    LDI r3, 128 - SIG_SY
+    LDI r4, C_DGREY
+    SYS RECTFILL
+    LDI r3, 1
+    LDI r4, C_LGREY
+    SYS RECTFILL
+@done:
+    RET
+@one:                               ; frames 1-6: one pose each
+    SUB r0, 1
+    PUSH r0
+    LDI r0, 0
+    LDI r1, SIG_SY
+    LDI r2, 128
+    LDI r3, 128 - SIG_SY
+    LDI r4, C_CYAN
+    SYS RECTFILL                    ; clear the scratch strip
+    POP r7
+    PUSH r7
+    SHL r7, 1
+    LD r7, [r7 + sig_poses]
+    CALL r7                         ; draw the pose at game size in the scratch strip
+    POP r7
+    SHL r7, 1
+    LDI r0, SIG_SX
+    LDI r1, SIG_SY
+    LD r4, [r7 + sig_cell_x]
+    LD r5, [r7 + sig_cell_y]
+    LDI r2, SIG_W
+    LDI r3, SIG_H
+    CALL zoom_rect
+    RET
+
+; r0..r3 = source x, y, w, h on screen; r4, r5 = target x, y. Copies every pixel that is not the sky at 2x.
+zoom_rect:
+    ST [zsx], r0
+    ST [zsy], r1
+    ST [ztx], r4
+    ST [zty], r5
+    ST [zx], r2                     ; width, height
+    ST [zy], r3
+    LDI r7, 0                       ; row
+@row:
+    LDI r6, 0                       ; column
+@col:
+    LD r0, [zsx]
+    ADD r0, r6
+    LD r1, [zsy]
+    ADD r1, r7
+    SYS PGET
+    CMP r0, C_CYAN
+    JEQ @next
+    MOV r4, r0
+    LD r0, [ztx]
+    MOV r1, r6
+    SHL r1, 1
+    ADD r0, r1
+    LD r1, [zty]
+    MOV r2, r7
+    SHL r2, 1
+    ADD r1, r2
+    LDI r2, 2
+    LDI r3, 2
+    SYS RECTFILL
+@next:
+    ADD r6, 1
+    LD r0, [zx]
+    CMP r6, r0
+    JLT @col
+    ADD r7, 1
+    LD r0, [zy]
+    CMP r7, r0
+    JLT @row
+    RET
+
+; the six poses, drawn with Bo's sprite top-left at (SIG_BX, SIG_BY)
+pose_push:
+    LDI r0, spr_bo_up
+    LDI r1, SIG_BX
+    LDI r2, SIG_BY
+    LDI r3, 0
+    SYS SPR
+    LDI r0, SIG_BX
+    LDI r1, SIG_BY
+    CALL push_legs
+    LDI r0, SIG_BX
+    LDI r1, SIG_BY
+    LDI r2, C_BLACK
+    CALL board1
+    RET
+
+pose_fast:
+    LDI r0, SIG_BX - 6              ; speed lines
+    LDI r1, SIG_BY + 5
+    LDI r2, 4
+    LDI r3, 1
+    LDI r4, C_YELLOW
+    SYS RECTFILL
+    LDI r0, SIG_BX - 5
+    LDI r1, SIG_BY + 9
+    LDI r2, 3
+    LDI r4, C_ORANGE
+    SYS RECTFILL
+    LDI r0, SIG_BX - 7
+    LDI r1, SIG_BY + 12
+    LDI r2, 5
+    LDI r4, C_YELLOW
+    SYS RECTFILL
+    LDI r0, spr_bo_up               ; leaning forward
+    LDI r1, SIG_BX + 1
+    LDI r2, SIG_BY
+    LDI r3, 0
+    SYS SPR
+    JMP pose_legs_board
+
+pose_brake:
+    LDI r0, spr_bo_up               ; leaning back
+    LDI r1, SIG_BX - 1
+    LDI r2, SIG_BY
+    LDI r3, 0
+    SYS SPR
+    LDI r0, SIG_BX - 3              ; dust from the back wheel
+    LDI r1, SIG_BY + 14
+    LDI r2, 2
+    LDI r3, 2
+    LDI r4, C_LGREY
+    SYS RECTFILL
+    LDI r0, SIG_BX - 6
+    LDI r1, SIG_BY + 12
+    LDI r2, 2
+    LDI r3, 1
+    SYS RECTFILL
+    LDI r0, SIG_BX - 7
+    LDI r1, SIG_BY + 15
+    LDI r2, C_KHAKI
+    SYS PSET
+    JMP pose_legs_board
+
+pose_look:
+    LDI r0, spr_bo_up               ; looking back: the upper body mirrored
+    LDI r1, SIG_BX
+    LDI r2, SIG_BY
+    LDI r3, 1
+    SYS SPR
+    JMP pose_legs_board
+
+pose_balance:
+    LDI r0, spr_bo_up_bal
+    LDI r1, SIG_BX
+    LDI r2, SIG_BY
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_bo_lo_bal
+    LDI r2, SIG_BY + 8
+    SYS SPR
+    LDI r0, SIG_BX
+    LDI r1, SIG_BY
+    CALL board_manual
+    RET
+
+pose_pop:
+    LDI r0, spr_bo_up               ; a little hop: Bo and the board 3 px up
+    LDI r1, SIG_BX
+    LDI r2, SIG_BY - 3
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_bo_lo
+    LDI r2, SIG_BY + 5
+    SYS SPR
+    LDI r0, SIG_BX
+    LDI r1, SIG_BY - 3
+    LDI r2, C_BLACK
+    CALL board1
+    LDI r0, SIG_BX - 2              ; the pop: a puff where the tail hit the ground
+    LDI r1, SIG_BY + 15
+    LDI r2, C_LGREY
+    SYS PSET
+    LDI r0, SIG_BX
+    SYS PSET
+    LDI r0, SIG_BX - 1
+    LDI r1, SIG_BY + 14
+    SYS PSET
+    RET
+
+; riding legs and the board (shared tail of pose_fast, pose_brake and pose_look)
+pose_legs_board:
+    LDI r0, spr_bo_lo
+    LDI r1, SIG_BX
+    LDI r2, SIG_BY + 8
+    LDI r3, 0
+    SYS SPR
+    LDI r0, SIG_BX
+    LDI r1, SIG_BY
+    LDI r2, C_BLACK
+    CALL board1
+    RET
+
 draw_hud:
     LDI r0, 0
     LDI r1, 0
@@ -662,6 +1001,11 @@ draw_hud:
 ; ---- data ------------------------------------------------------------------------------------
 .data
 board_colors: .byte C_BLACK, 11, 4, 6, 13, 12, 14   ; own (black), Hemma, Skog, Stad, Is, Godis, Guld
+sig_poses:   .word pose_push, pose_fast, pose_brake, pose_look, pose_balance, pose_pop
+sig_labels:  .word t_push, t_fast, t_brake, t_look, t_balance, t_pop
+sig_cell_x:  .word 4, 44, 84, 4, 44, 84
+sig_cell_y:  .word SIG_ROW1, SIG_ROW1, SIG_ROW1, SIG_ROW2, SIG_ROW2, SIG_ROW2
+sig_label_x: .word 4 + 20 - 12, 44 + 20 - 12, 84 + 20 - 15, 4 + 20 - 18, 44 + 20 - 18, 84 + 20 - 12   ; centred: 6 px per character
 s_times: .string "X"
 apple_xy: .word 109, 66, 117, 52, 126, 42
 
@@ -930,6 +1274,36 @@ spr_bo_lo:
     18...18.
     7....7..
     a...aa..
+    ........
+    ........
+spr_bo_push:                        ; legs while pushing: only the front leg (the back leg is drawn by push_legs)
+.sprite
+    ..ffff..
+    ..7777..
+    ....77..
+    ....18..
+    .....7..
+    ....aa..
+    ........
+    ........
+spr_bo_up_bal:                      ; balancing: arms out
+.sprite
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    c1ffff8c
+    ..ffff..
+spr_bo_lo_bal:                      ; balancing: the front foot on the raised nose
+.sprite
+    ..ffff..
+    ..7777..
+    .77..18.
+    .18...7.
+    .7....aa
+    aa......
     ........
     ........
 spr_bo_crouch:                      ; legs, crouching (drawn 8 px below the upper sprite, which is 4 px lower)

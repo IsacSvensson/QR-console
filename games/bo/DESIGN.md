@@ -1,7 +1,8 @@
 # BO'S SKATEÄVENTYR — designdokument
 
 Status: **utkast för granskning (planering, ingen implementation).** Implementeras enligt PLAN.md Part 3
-(M19–M25). Detta dokument och banfilerna (`levels/*.lvl`, skapas från M19) är specifikationen och testernas facit.
+(M19–M25). Detta dokument, `FIRST10.md` (de första tio minuterna) och banfilerna (`levels/*.lvl`, skapas från M19)
+är specifikationen och testernas facit.
 Frågorna i §17 har förslag som gäller om inget annat bestäms innan M19 börjar.
 
 ![Mockup: en skärm ur bana 1-1, ritad av konsolens VM](mockup/mockup.png)
@@ -49,13 +50,37 @@ Varianterna jämfördes i VM:en (D-026).
 Bo är 8 × 16 pixlar inklusive brädan, alltså 2 tiles hög. Brädan ritas med `RECTFILL` och är inte en del av
 spriten (§14.4).
 
+### 0.2 Bos signatur
+
+![Bos signatur i 2 ×: push, fart, broms, tittar bakåt, balans, popp](mockup/signatur.png)
+
+Små beteenden som gör att han känns som Bo och inte som vilken plattformsfigur som helst. De ändrar aldrig var Bo
+är eller hur stor hans träffbox är, så de påverkar inte spelet. Det mesta är förskjutningar och speglingar av
+sprites som redan finns, och kostar nästan inget ROM.
+
+| När | Bo gör | Hur |
+|---|---|---|
+| pushar (håller ←/→ under toppfarten) | sparkar med bakfoten mot marken, i takt med accelerationen (snabbare med pommes) | benbild B och en fot som ritas vid marken bakom brädan |
+| fart över 2 px per bildruta | lutar sig framåt, fartlinjer | överkroppen ritas 1 px framåt |
+| bromsar (↓ eller motsatt pil) | lutar sig bakåt, det dammar från bakhjulet, `skrrr` | överkroppen 1 px bakåt, dammpartiklar |
+| står still i 3 s | ett litet trick på stället: poppar brädan och landar | bara grafik |
+| står still i 8 s | balanserar på bakhjulen med armarna ut och vinglar | en ny överkroppsbild (32 B), lutad bräda |
+| lyckad grind | `WIII!` | bubbla, högst var 5:e sekund |
+| riktigt stor landning (minst 0,8 s i luften) | tittar bakåt i 0,5 s medan han rullar vidare | överkroppen spegelvänd |
+| landar mitt i ett trick | vinglar: `OJ!` | |
+| blir träffad | ramlar av, `AJ!`. Brädan rullar en bit och kommer tillbaka | |
+| i mål | bromsar in, lutar sig bakåt: `JAG GJORDE DET!` | |
+
+Alla knapptryck avbryter det lilla tricket och balansen direkt. Hjulens ljud hör också till signaturen (§15).
+
 ## 1. Låsta designbeslut (förslag)
 
 1. **Bo rullar alltid.** ←/→ pushar, och släpper man knappen rullar han vidare och saktar in långsamt. Det är
    spelets identitet. Det gör också pekskärmen förlåtande: man behöver inte hålla → hela tiden.
 2. **Inget våld.** Fiender besegras genom att Bo hoppar över dem, landar på dem eller kör förbi dem med fart. De
    försvinner med ett `POFF` och blir till ett äpple, eller så springer de hem eller somnar. Bossar *vinns*, de dör
-   inte: pommesen kommer tillbaka, kaninen får morötter, bulldozern stängs av och måsen blir Bos kompis.
+   inte: pommesen kommer tillbaka, kaninen får morötter, bulldozern stängs av och måsen blir Bos kompis. Varje
+   `POFF` är ett litet skämt (§9).
 3. **Fart belönas och straffas aldrig blint.** Skärmen är bara 128 px bred. I 3,5 px per bildruta ser man
    0,4 s framåt. Därför har sträckor med hög fart bara faror som syns i god tid (skyltar), eller sådant som klaras
    av sig självt, till exempel ramper som bär över en lucka.
@@ -70,6 +95,8 @@ spriten (§14.4).
    öppen värld, ingen butik, inget inventory, ingen tidsgräns.
 8. **Sparning = bildkod.** Fyra bilder visas på kartan i varje ny värld (§7.3). Runtime ändras inte.
 9. **Runtime oförändrad** (som i Part 2). Allt spelinnehåll ligger i `games/bo/`.
+10. **Ett budskap per powerup:** 🍎 = skydd, 🍟 = fart, 🍬 = ett extra hopp. Inga dolda bonusregler (§5).
+11. **Äpplen ljuger aldrig.** Äpplena är banornas språk, och den som följer dem råkar aldrig illa ut (§8.4).
 
 ### 1.1 Tolkningar av idén
 
@@ -78,7 +105,7 @@ Idén lämnade några saker öppna eller motsägelsefulla. Så här löser plane
 | Fråga i idén | Förslag |
 |---|---|
 | Äpplet är både powerup (Super-Bo) och vanligt samlarobjekt | Samlarobjekt = små äpplen, överallt. Powerup = **STORA ÄPPLET**: dubbelt så stort, glänser och ligger i lådor. Bo har alltid sin rosa hjälm, och stora äpplet gör den till en **äppelhjälm**: röd, med skaft och blad på toppen (§0.1). |
-| B = trick, men godiset "ger möjlighet att göra ett trick" | Vanliga tricks (B i luften) finns alltid. Godis ger **GODISSNURREN**: ett magiskt trick som ger ett extra hopp i luften, dubbla trickpoäng och glitter (§5). Godiset handlar då om skicklighet och om att nå höga ställen. |
+| B = trick, men godiset "ger möjlighet att göra ett trick" | Vanliga tricks (B i luften) finns alltid. Godis ger **GODISSNURREN**: ett extra hopp i luften (§5). Godis är spelets hemliga upptäckarmekanik och ligger alltid nära något som ser omöjligt ut att nå (§8.5). |
 | ←/→ styr i luften men ska också "rotera" | ←/→ styr. **←/→ + B** gör tricket 360 (Bo snurrar ett varv). Man roterar alltså inte fritt. |
 | 4 bossar men 5 världar; Bulldozern kallas "Boss 2" men hör till staden | V1 Stora Måsen, V2 Jättekaninen (en jakt: "hoppar hela tiden efter Bo"), V3 Bulldozern, V4 **Backhoppet** (storbana utan boss, där brädan blir stulen), V5 finalen. |
 | Vem tar Bos skateboard, och hur åker Bo i sista världen utan den? | **Stora Måsen** kommer tillbaka och tar brädan efter backhoppet. I Godislandet lånar Bo en **lakritsbräda** av gelégubbarna (samma fysik). Finalen ger tillbaka brädan. |
@@ -187,7 +214,7 @@ Testerna i M19–M20 mäter de här värdena i VM:en och jämför med tabellen.
 | Sort | Exempel | Hur |
 |---|---|---|
 | Fast hinder | mur, stubbe, bil, sten | hoppa över eller upp på |
-| Svagt hinder | kartong, snöhög, kexlåda | går sönder om Bo **landar på det** (från ett hopp) eller **kör in i det med pommes** |
+| Svagt hinder | kartong, snöhög, kexlåda | går sönder om Bo **landar på det** (från ett hopp) |
 | Låda | trälåda med `?`-märke | går sönder när Bo landar på den. Släpper en powerup, äpplen eller en skate-del |
 | Lågt hinder | bom, gren, ledstång | huka (↓) och rulla under |
 | Grop, bäck, choklad | | Bo ramlar i: ett liv, tillbaka till senaste flaggan (§6) |
@@ -203,6 +230,7 @@ Testerna i M19–M20 mäter de här värdena i VM:en och jämför med tabellen.
 | 360 | ← eller → + B | 40 | 300 | Bo och brädan snurrar ett helt varv. Kräver ramp |
 | GODISSNURR | B med godis (§5) | 24 | 200 | glittrande snurr och ett nytt hopp mitt i luften |
 | GRIND | landa på räcke | så länge det varar | 10 per 8 bildrutor | gnistor |
+| **SUPERBOSSE** | hemligt (se nedan) | 40 | 3000 | ett löjligt stort trick: Bo snurrar, brädan flippar, glitter och fyrverkeri. `SUPERBOSSE!` |
 
 - **Kombo:** alla tricks i samma luftfärd (och en grind direkt före) räknas ihop och multipliceras med antalet
   tricks. Idéns exempel `OLLIE + KICKFLIP = 100` stämmer. `OLLIE + KICKFLIP + SHOVE-IT` = (100 + 75) × 2 = 350.
@@ -212,20 +240,29 @@ Testerna i M19–M20 mäter de här värdena i VM:en och jämför med tabellen.
   med den lilla inbyggda fonten (`OLLIE + KICKFLIP 100`).
 - **Landning mitt i ett trick:** `OJ!` (§3.5).
 - **Stor kombo** (3 tricks eller fler, eller minst 500 poäng): `SÅG DU?!`
+- **SUPERBOSSE, Bos hemliga supertrick.** Det låses upp när spelet är klart (bildkoden sparar det, §7.3) och behövs
+  aldrig för att klara något. Det finns för att Bo ska kunna visa upp det. Villkor: han lämnar en ramp med minst
+  2,5 px per bildruta (pommes eller en lång backe). Tryck ↑ och ↓ i den ordningen, på rampen eller i luften, och
+  sedan ← eller → tillsammans med B i luften. Luftfärden räcker bara med ollie från rampen (minst 50 bildrutor).
 
 ## 5. Powerups
 
 | Powerup | Var | Effekt | Varar | Syns |
 |---|---|---|---|---|
-| **STORA ÄPPLET** | lådor | Bo tål en träff till | tills Bo blir träffad (följer med mellan banor) | hjälmen blir ett rött äpple med skaft och blad, och HUD-huvudet likaså |
-| **POMMES** | lådor, kiosker | push-toppfart 2,5 i stället för 1,5 px/bildruta, dubbel acceleration, maxfart 4 px/bildruta. Kör sönder svaga hinder och knuffar bort fiender som han krockar med framifrån | 10 s (600 bildrutor) | `POMMES POWER!`, fartspår, orange timerstapel, egen snabb musik |
-| **GODIS** | lådor, godispåsar | B i luften = GODISSNURR: ett extra hopp (`JUMP_V`) **en gång per luftfärd**, glitter, Bo är oskadlig under snurren, alla trickpoäng × 2 | 15 s (900 bildrutor) | glitter, rosa timerstapel |
+Varje powerup har **ett** budskap som en sexåring förstår direkt.
+
+| Powerup | Budskap | Var | Effekt | Varar | Så känns det |
+|---|---|---|---|---|---|
+| **STORA ÄPPLET** | 🍎 = skydd | lådor | Bo tål en träff till | tills Bo blir träffad (följer med mellan banor) | hjälmen blir ett rött äpple med skaft och blad, och HUD-huvudet likaså |
+| **POMMES** | 🍟 = **NU GÅR DET FORT** | lådor, kiosker | push-toppfart 2,5 i stället för 1,5 px per bildruta, dubbel acceleration, maxfart 4 px per bildruta. Allt annat följer av farten: ramperna kastar högre och hoppen blir längre | 10 s (600 bildrutor) | `POMMES POWER!`, **musiken går upp i tempo**, push-sparkarna blir snabbare, brädan vibrerar, fartspår, orange timerstapel |
+| **GODIS** | 🍬 = ett extra hopp | godispåsar nära hemligheter (§8.5) | B i luften = GODISSNURR: ett nytt hopp (`JUMP_V`) **en gång per luftfärd** | 15 s (900 bildrutor) | glitter, rosa timerstapel. Under snurren är Bo oskadlig, utan att det behöver förklaras |
 
 - Pommes och godis gäller inte samtidigt. Den senaste ersätter den förra. Hjälmen gäller tillsammans med båda.
+- Pommes har **inga extraregler**. Den kör inte sönder hinder och knuffar inte bort fiender. Farten gör jobbet, och
+  banan ger Bo större hopp efter en pommeslåda (§8.5).
 - **Måsen och pommesen:** krockar Bo med en mås medan pommes är igång tar måsen pommesen: `NEJ! MINA POMMES!`.
-  Pommes-effekten tar slut, men Bo blir inte skadad. Det är idéns "försöker ta Bos pommes", och måsar blir ett
-  hot man ser komma.
-- Pommes gör alla hopp längre, eftersom farten är högre. Hoppen blir inte högre.
+  Pommes-effekten tar slut, men Bo blir inte skadad. Det är idéns "försöker ta Bos pommes", och måsen är ju alltid
+  hungrig (§11.1).
 
 ## 6. Träffar, liv och flaggor
 
@@ -268,8 +305,10 @@ en **kod med fyra bilder** ur spelets egna sprites (16 sorter: äpple, stora äp
 truck, klistermärke, snigel, mås, igelkott, geting, boll, nalle, blobb, Bo). 4 × 4 bitar = 16 bitar:
 
 ```
-värld (3) + brädor upplåsta (5) + världar med alla 12 stjärnor (5) + kontrollsumma (3)
+värld 1–5, eller 6 = spelet klart (3) + brädor upplåsta (5) + världar med alla 12 stjärnor (5) + kontrollsumma (3)
 ```
+
+Värde 6 betyder att finalen är klar. Då är SUPERBOSSE upplåst (§4).
 
 Koden skrivs in från titelskärmen med B: ↑/↓ byter bild, ←/→ flyttar och A bekräftar. Fel kod ger `FEL KOD`.
 En förälder kan ta en skärmbild av koden. Stjärnor i en värld som inte är helt klar sparas inte.
@@ -284,15 +323,30 @@ En förälder kan ta en skärmbild av koden. Stjärnor i en värld som inte är 
   sist kommer en twist.
 - **Skyltar med bilder** (A-knapp, B-knapp, pil eller ↓) där något nytt börjar. **Äppelbågar** visar hopp.
 - **Höga farter** bara på flytsträckor (§1, punkt 3).
+- **Hemligheter** göms ovanför skärmen (banor med 32 rader) eller bakom **gles förgrund**: en häck eller buske som
+  ritas över Bo men har hål, så att man ser honom inne i den (§14.2). Ett äpple som sticker ut visar var (§8.4).
 - **Mål:** en flagga. Bo bromsar in och säger `JAG GJORDE DET!`, och sedan visas räkningen (äpplen, stjärnor,
   poäng, del).
 
-### 8.2 De 25 banorna
+### 8.2 Varje värld har en minnesbild
+
+Inga nya mekaniker, men varje värld har en sak som barnet kommer ihåg. De fyra banorna bygger upp den, och bossen
+prövar den. Andra mekaniker finns kvar men står inte i centrum.
+
+| Värld | Minnesbild | Efteråt kan Bo säga | I banorna | Bossen prövar |
+|---|---|---|---|---|
+| 1 Hemma | ramper och lekplats | "Jag lärde mig åka skateboard." | rulla, ollie, landa på saker, de första kickerna | Stora Måsen: ramphopp och att landa på den |
+| 2 Skogen | jättelånga hopp | "Jag kan hoppa jättelångt." | långa backar, stora ramphopp, de första godisvägarna | Kaninjakten: att hålla farten |
+| 3 Staden | grindar | "Jag kan grinda." | räcken, trappor, räcke → hopp → ramp | Bulldozern: ramp, grind och trick |
+| 4 Snön | is och extrem fart | "Jag kan kontrollera fart." | is, att bromsa i tid, de längsta backarna | Backhoppet: maxfart och spelets längsta hopp |
+| 5 Godislandet | godissnurr och konstiga banor | "Nu kan jag kombinera allt." | godisvägar överallt, studsgelé, lakritsräcken | finalen: allt på en gång |
+
+### 8.3 De 25 banorna
 
 | Bana | Namn | Nytt | Fiender och inslag |
 |---|---|---|---|
 | **Värld 1** | **HEMMA** | *Solig villagata: röda hus med vita knutar, gröna gräsmattor, grå asfalt* | |
-| 1-1 | UPPFARTEN | rulla, pusha, bromsa, ollie, landa på en låda (STORA ÄPPLET) | snigel. Skate-del bakom garaget |
+| 1-1 | UPPFARTEN | rulla, pusha, bromsa, ollie, landa på en låda (STORA ÄPPLET), första kickern. Kolumn för kolumn i `FIRST10.md` | sniglar. Hemlig gång genom häcken med HJULET |
 | 1-2 | TRÄDGÅRDEN | 22,5°-backar (gräsmatta), första B-tricket, studsmatta | igelkott (går inte att landa på), getingar vid äppelträdet |
 | 1-3 | LEKPLATSEN | envägsplattformar (klätterställning), rutschkana = 45°-backe, sandlåda (trög) | studsande bollar, nallar |
 | 1-4 | CYKELVÄGEN | **pommes** från en kiosk, lång snabb sträcka med kickers, svaga hinder, första gropar | måsar som tar pommes |
@@ -322,29 +376,56 @@ En förälder kan ta en skärmbild av koden. Stjärnor i en värld som inte är 
 | 5-4 | TÅRTBERGET | vertikal klättring (32 rader), sista chansen för stjärnor | godisblobbar |
 | 5-5 | MÅSENS BO | **FINAL: Den stora skateboardstölden** (§10.5) | |
 
-### 8.3 Exempel: 1-1 Uppfarten i grova drag
+### 8.4 Äppelspråket
 
-Teckenförklaring: `S` snigel, `T` soptunna, `?` låda, `F` flagga, `o` äpple, `*` stjärna, `>` och `A` skyltar.
+Äpplena är banornas språk. Ett barn som inte läser ser äpplen och följer dem, och kommer rätt. Bågarna räknas
+fram av generatorn ur fysiken i §3 (§14.1). Att följa äpplena är alltså att göra det hopp som fungerar.
 
 ```
-Första halvan: rulla, hoppa, landa på saker
+o  o  o                            äpplen → äpplen → äpplen → stjärna
+         o
+           o
+             o
+               *
+```
 
-                                         *1 på skjulets tak
-                                            (upp via soptunnan)
- [HUS]                                    [SKJUL]
-      \____>______S______?______A___T______________F
-   uppfart  skylt   snigel  låda med  A-skylt        flagga
-   22,5°    "rulla"         STORA     + soptunna
-                            ÄPPLET
+| Mönster | Betyder |
+|---|---|
+| rad på åkhöjd | åk här |
+| båge | hoppa här: bågen börjar där man trycker A, och formen är det riktiga hoppet |
+| båge från en rampkant | ramp + A vid kanten |
+| båge som slutar på en låda eller en fiende | landa här |
+| pelare (lodrät rad) | upp här: studsmatta, godissnurr, träd |
+| äpplen som leder till en stjärna | följ dem till stjärnan (★1) |
+| ett äpple som sticker ut ur en häck, vägg eller kant | `KOLLA!` här finns en hemlig väg (★3, skate-delar) |
+| långa, höga bågar efter en pommeslåda | pommessträcka: nu går det fort (§8.5) |
 
-Andra halvan: ramp + A, gratis fart i backar
+Stjärnorna följer samma språk. ★1 ligger där äpplena leder. ★2 ligger där en båge kräver lite mer: håll A, A vid
+rampkanten, ett trick eller godis. ★3 ligger bakom ett "KOLLA"-äpple.
 
-                o   o   o  *2                 *3 och HJULET: en hemlig väg
-             o                                   bakom garaget ("KOLLA!")
-            /|                /--\                          [GARAGE]
- F_________/_|_______________/    \______S____S_____________________ MÅL
-         kicker (A vid krönet)    kulle   två sniglar: hoppa över
-                                          eller landa på
+**Äpplen ljuger aldrig.** Följer man ett mönster tar man alla dess äpplen utan att råka illa ut. Det finns inga
+äpplen över gropar som inte går att klara och inga som leder in i fiender. Testerna kontrollerar det med en rutt
+per mönster.
+
+### 8.5 Pommessträckor och godisvägar
+
+- **Pommessträcka:** efter en pommeslåda kommer en flytsträcka med backar och ramper, utan fiender på marken. Där
+  är äppelbågarna räknade för pommesfart. Banan ger Bo större hopp just när han har pommes: 🍟 = NU GÅR DET FORT.
+- **Godisväg:** godis ligger alltid nära något som ser omöjligt ut, till exempel en hög plattform där ett äpple
+  sticker ut. Barnet ser platsen **först** och hittar godiset **sedan**. B → GODISSNURR → extra hopp → det hemliga
+  stället: "Jag hittade hur man kommer dit!" Varje godis i en bana leder till minst ett sådant ställe inom några
+  sekunders åkning.
+
+```
+Vanliga vägen:                       Godisvägen:
+
+       *                                                *  o
+      / \                                             ======   för högt för en ollie
+_____/   \______                            o
+                                         o
+                                      o          B i luften = GODISSNURR
+                             ____G__/‾\____________
+                                 godis
 ```
 
 ## 9. Fiender
@@ -363,21 +444,24 @@ Motorn har **nio beteenden**. Varje fiende är ett beteende plus sprites och par
 | FÖLJER | följer Bo med fördröjning (kaninen, bulldozern) |
 | PLATTFORM | rör sig längs en bana och bär Bo (stock, buss, liftstol, marshmallow) |
 
-| Fiende | Värld | Beteende | Landa på den | Krock med pommes | Annars |
-|---|---|---|---|---|---|
-| Snigel | 1, 2 | GÅR, långsam | `POFF`, blir ett äpple | knuffas bort | träff |
-| Mås | 1, 3 | DYKER | studsar iväg | **tar pommesen** | träff |
-| Igelkott | 1, 2 | GÅR, taggig | **träff** (hoppa över!) | träff | träff |
-| Geting | 1, 2 | FLYGER, små mönster | `POFF` | knuffas bort | träff |
-| Bollmonster | 1, 3 | STUDSAR | plattas till, Bo studsar högt | knuffas bort | träff |
-| Nalle | 1 | GÅR | somnar (`ZZZ`) | knuffas bort | träff |
-| Ekorre *(förslag)* | 2 | KASTAR kottar | `POFF` | – | kotten = träff |
-| Duva *(förslag)* | 3 | GÅR, flyger upp när Bo kommer | `POFF` | knuffas bort | träff |
-| Snögubbe | 4 | KASTAR snöbollar | rasar ihop | rasar ihop | träff |
-| Pulka | 4 | RULLAR | – (hoppa över) | – | träff |
-| Gelégubbe | 5 | GÅR, studsig | Bo studsar extra högt (`BOUNCE_V`) | knuffas bort | träff |
-| Godisblobb | 5 | STUDSAR mot Bo, "vill äta Bo" | `SPLAT`, blir en godisbit | knuffas bort | träff |
-| Popcornkanon | 5 | KASTAR popcorn | – | – | popcorn = träff |
+Ingen fiende dör. Att landa på en fiende är ett litet skämt, och Bo studsar upp lite efteråt. Att nudda en fiende
+från sidan är en träff (§6). Med pommes gäller samma regler.
+
+| Fiende | Värld | Beteende | Landa på den (skämtet) | Att nudda den |
+|---|---|---|---|---|
+| Snigel | 1, 2 | GÅR, långsam | `POFF`, den blir ett äpple | träff |
+| Mås | 1, 3 | DYKER | den studsar iväg och tappar en fjäder som singlar ned | träff, eller **tar pommesen** om Bo har pommes (ingen skada) |
+| Igelkott | 1, 2 | GÅR, taggig | **träff** (hoppa över!). Den rullar ihop sig och fnissar | träff |
+| Geting | 1, 2 | FLYGER, små mönster | `POFF`, den flyger hem yr med små stjärnor runt huvudet | träff |
+| Bollmonster | 1, 3 | STUDSAR | den blir platt som en pannkaka och rullar iväg. Bo studsar högt | träff |
+| Nalle | 1 | GÅR | den somnar: `ZZZ` | träff |
+| Ekorre *(förslag)* | 2 | KASTAR kottar | `POFF`, den tappar kotten och springer upp i trädet | kotten = träff |
+| Duva *(förslag)* | 3 | GÅR, flyger upp när Bo kommer | `POFF`, den flaxar iväg | träff |
+| Snögubbe | 4 | KASTAR snöbollar | den rasar ihop, och hatten landar på Bos hjälm en stund | snöbollen = träff |
+| Pulka | 4 | RULLAR | – (hoppa över) | träff |
+| Gelégubbe | 5 | GÅR, studsig | den darrar som gelé, och Bo studsar extra högt (`BOUNCE_V`) | träff |
+| Godisblobb | 5 | STUDSAR mot Bo, "vill äta Bo" | `SPLAT`, den blir en godisbit | träff |
+| Popcornkanon | 5 | KASTAR popcorn | – | popcorn = träff |
 
 Under GODISSNURREN är Bo oskadlig, och fiender han rör studsar iväg. Fiender spawnas när kameran närmar sig och
 kommer tillbaka efter ett fall (§6).
@@ -452,6 +536,23 @@ Bilder och korta repliker. Inga långa texter. Talaren visas med en liten ansikt
 | Före 5-1 | gelégubbe: `LÅNA MIN!` · Bo: `EN LAKRITSBRÄDA!` |
 | Efter 5-5 | `MIN BRÄDA!` · `VILL DU HA POMMES?` · måsen: `SKRII!` · `SLUT` |
 
+### 11.1 Måsens resa
+
+Stora Måsen är spelets Bowser, fast den är inte ond. Den är **hungrig**. I slutet av varje bana flyger den förbi
+under räkningen med något den har tagit, och den maten byts per värld. Skämtet byggs upp genom hela spelet, och
+slutet förklarar det.
+
+| Värld | Måsen … | Under räkningen |
+|---|---|---|
+| 1 | tar Bos pommes (intro) och förlorar dem i skateparken | flyger förbi med pommespåsen |
+| 2 | tar en smörgås från en picknick | flyger förbi med smörgåsen |
+| 3 | tar en korv från en korvkiosk | flyger förbi med korven |
+| 4 | tar snögubbens morotsnäsa, och sedan Bos bräda (§10.4) | flyger förbi med moroten |
+| 5 | har brädan | flyger förbi med brädan |
+| final | visar sig bara vara hungrig: `VILL DU HA POMMES?` · `SKRII!` | blir Bos kompis och flyger med i sluttexterna |
+
+Det kostar fyra matsprites (128 B) och ingen ny mekanik.
+
 ## 12. Bos repliker
 
 Bubblorna visas ovanför Bo i 1,5 s, högst en i taget, med 3 s paus för repliker som kan komma ofta.
@@ -466,13 +567,14 @@ Bubblorna visas ovanför Bo i 1,5 s, högst en i taget, med 3 s paus för replik
 | tar stora äpplet | `ÄPPELHJÄLM!` |
 | hittar en hemlig väg | `KOLLA!` |
 | stor kombo | `SÅG DU?!` |
-| första grinden på en bana | `WIII!` |
+| lyckad grind (högst var 5:e sekund) | `WIII!` |
 | tar en stjärna | `EN STJÄRNA!` |
 | tar en skate-del | `ETT HJUL!` · `TRUCKAR!` · `EN DESIGN!` · `ETT MÄRKE!` |
 | 100 äpplen | `ETT LIV TILL!` |
 | bana klar | `JAG GJORDE DET!` |
 | ny bräda | `EN NY BRÄDA!` |
 | game over | `FÖRSÖK IGEN!` |
+| SUPERBOSSE | `SUPERBOSSE!` |
 
 *Valfritt:* Bo "pratar" med korta pip, ett per stavelse, på en fyrkantskanal (som i Animal Crossing).
 
@@ -488,6 +590,8 @@ y 8–127   spelplan: 16 × 15 tiles. Vid scroll ritas 17 kolumner. Vid vertikal
 - **Flöde:** titel (`BO'S SKATEÄVENTYR`, A = spela, B = kod) → intro → världskarta (5 platser på en väg,
   stjärnor och delar per bana, bildkoden, B = välj bräda) → titelkort (`1-1 UPPFARTEN`, 1 s) → bana → räkning →
   karta. Efter en boss kommer en mellanscen och sedan nästa världs karta.
+- **Första gången** går introt direkt in i 1-1, utan karta och utan väntan. Banans namn visas som en banderoll
+  medan Bo redan kan åka (`FIRST10.md`).
 - Man kan spela om klarade banor på kartan för att samla det man missade.
 
 ## 14. Teknik
@@ -496,7 +600,9 @@ y 8–127   spelplan: 16 × 15 tiles. Vid scroll ritas 17 kolumner. Vid vertikal
 
 - **Källa:** en textfil per bana, `games/bo/levels/1-1.lvl`, med huvud, terrängprofil och objektlista. Exakt
   syntax bestäms i M19. Generatorn `games/bo/tools/levels.ts` skriver `levels.gen.asm` och en förhandsbild
-  `levels/1-1.png`, så att banorna kan granskas utan att spelas. Filen är testernas facit.
+  `levels/1-1.png`, så att banorna kan granskas utan att spelas. Filen är testernas facit. **Äppelbågar** skrivs
+  som "båge från kolumn k, fart v, ollie/ramp", och generatorn räknar ut var äpplena ska ligga med samma fysik som
+  motorn (§3.3). Därför stämmer bågen alltid med hoppet.
 - **ROM (kompakt):** terrängen som en profil, ett byte per segment (typ + längd: plan, 22,5° upp/ned, 45° upp/ned,
   grop, steg). Ovanpå kommer objekt sorterade efter x, ungefär 3 byte per objekt (plattform, räcke, ramp, låda,
   äppelrad/-båge, stjärna, del, flagga, skylt, dekor, fiende). Uppskattning: **150–300 B per bana**.
@@ -509,9 +615,12 @@ y 8–127   spelplan: 16 × 15 tiles. Vid scroll ritas 17 kolumner. Vid vertikal
 
 `MAP` läser `map + rad × kolumner + kolumn`. Med `kolumner = 1` blir en kolumn i bufferten en sammanhängande rad
 byte. Därför ritas varje synlig kolumn med **ett** `MAP`-anrop (17 per bildruta), och vilken scroll som helst
-fungerar. En ringbuffert går inte, eftersom `MAP` inte har någon radlängd. Bakgrunden är en parallaxremsa per värld
+fungerar. En ringbuffert går inte, eftersom `MAP` inte har någon radlängd. **Förgrund** (glesa häckar och buskar
+som döljer hemligheter) ritas efter Bo med ett `SPR` per förgrundstile i bild. Varje bana har en kort lista med
+sådana tiles. Bakgrunden är en parallaxremsa per värld
 (ett `MAP`-anrop som scrollar i halv fart). **Uppmätt i mockupen:** hela skärmen med himmel, parallax, 17
-kolumner, 8 sprites, Bo, bubbla med 15 tecken och HUD tar **1 309 cykler per bildruta, 2,6 % av budgeten.**
+kolumner, 8 sprites, Bo som pushar, bubbla med 15 tecken och HUD tar **1 356 cykler per bildruta, 2,7 % av
+budgeten.**
 Fysik och fiender har alltså nästan hela budgeten för sig.
 
 ### 14.3 Kollision
@@ -547,18 +656,27 @@ och två kantsensorer. Väggar kontrolleras med kroppsboxen (6 × 14, hukande 6 
 
 ### 14.6 Mockupen (`mockup/`)
 
-En spik, inte spelet: en statisk skärm ur 1-1 som ritas precis som motorn är tänkt (kolumnvis RAM-buffert och
-`MAP` per kolumn med 5 px scroll, 1-bitsfont uppackad till RAM, bräda med `RECTFILL`). Repliken byts varannan
-sekund (`SÅG DU?!`, `KOLLA!`, `POMMES!`, `JAG GJORDE DET!`, `MIN BRÄDA!`, `OJ!`, `SNÖ OCH IS!`). Var femte sekund
-växlar den till karaktärsskärmen i §0.1 (`mockup/bo.png`). Fonten och texterna skrivs av `mockup/gen.ts`.
+En spik, inte spelet. Tre skärmar visas i tur och ordning, 5 s var:
+
+1. **Banskärmen:** en statisk skärm ur 1-1 som ritas precis som motorn är tänkt (kolumnvis RAM-buffert och `MAP`
+   per kolumn med 5 px scroll, 1-bitsfont uppackad till RAM, bräda med `RECTFILL`). Bo lutar sig framåt och
+   pushar. Repliken byts varannan sekund (`SÅG DU?!`, `KOLLA!`, `POMMES!`, `JAG GJORDE DET!`, `MIN BRÄDA!`, `OJ!`,
+   `SNÖ OCH IS!`).
+2. **Karaktärsskärmen** i §0.1 (`mockup/bo.png`).
+3. **Signaturen** i §0.2 (`mockup/signatur.png`). Varje pose ritas i spelstorlek med samma rutiner som
+   banskärmen och kopieras sedan i 2 × med `PGET`, en pose per bildruta. Bilden är alltså exakt det spelet ritar.
+
+Fonten och texterna skrivs av `mockup/gen.ts`.
 
 ```
 npm run qrc -- build games/bo/mockup
 npm run qrc -- run games/bo/mockup/mockup.qrc --frames 2 --dump-frame m.png --scale 4      # banskärmen
 npm run qrc -- run games/bo/mockup/mockup.qrc --frames 302 --dump-frame bo.png --scale 4   # karaktärsskärmen
+npm run qrc -- run games/bo/mockup/mockup.qrc --frames 620 --dump-frame sig.png --scale 4  # signaturen
 ```
 
-Kassett 2 KB, `mockup.gif` 12 bildrutor (1,8 s per varv). Skanna den med appen för att se storleken på en
+Kassett 2,5 KB, `mockup.gif` 15 bildrutor (2,3 s per varv). Cykler per bildruta, högst: banskärmen 1 356,
+karaktärsskärmen 8 103, signaturen 9 379. Skanna den med appen för att se storleken på en
 riktig telefon. Det är inte verifierat på telefon (det kan bara du göra).
 
 ## 15. Ljud och musik
@@ -566,9 +684,12 @@ riktig telefon. Det är inte verifierat på telefon (det kan bara du göra).
 Två fyrkantskanaler och en brus-kanal (SPEC L5). Sekvenseraren byggs som i BLACKBOX (`sounds.asm`): effekter tar
 tillfälligt över en kanal, och musiken fortsätter efteråt.
 
+- **Hjulen (signatur):** ett mjukt rullande brus på brus-kanalen som följer farten, och ett klick vid varje skarv i
+  trottoaren (var 16:e px). Farten hörs: klick, klick, klick-klick-klick. På is: inga klick, bara ett tunt sus.
 - **Musik (~10 slingor):** titel, en per värld (Hemma: glad och enkel. Skogen: studsig. Staden: funkig bas.
-  Snö: klockspel. Godislandet: snabb och fånig), boss, POMMES POWER (snabb, medan pommes varar), bana klar
-  (kort fanfar), game over (kort) och slut.
+  Snö: klockspel. Godislandet: snabb och fånig), boss, bana klar (kort fanfar), game over (kort) och slut. Med
+  **pommes spelas världens slinga 1,5 gånger snabbare**. Sekvenseraren får en tempovariabel, och det behövs ingen
+  egen pommesslinga.
 - **Effekter (~25):** ollie (`pop`: brus + svep uppåt), landning, push, broms (brus), grind (brus som håller),
   trick (`wosch`), äpple, stjärna (arpeggio), powerup, `AJ` (svep nedåt), `POFF`, studs (`boing`), plask, flagga,
   låda som går sönder, måsens `SKRIII`, kaninens landning (dovt brus) och Bos pratpip.
@@ -590,6 +711,9 @@ sprites 0,9 och musik 0,6 KB. Bo har nästan ingen text men mer grafik och mer f
 | Text och font | 0,8–1,1 KB | ~45 repliker och namn + fonten (mätt: 376 B) |
 | Tabeller | ~0,5 KB | fysik, höjdkartor, attribut, fiendetyper, brädor |
 | **Summa** | **23,5–29 KB** | marginal 3–8,5 KB |
+
+Identitetsdetaljerna har också uppskattats: signaturen (§0.2), måsens mat (§11.1), SUPERBOSSE, förgrund, hjulljud
+och tempo tar tillsammans ~0,7 KB och ryms i marginalen.
 
 Kassetten blir ungefär 13–17 KB komprimerad, alltså 50–65 QR-block och ett varv på 11–15 s (som BLACKBOX).
 
@@ -640,7 +764,7 @@ Förslaget gäller om inget annat bestäms.
 
 ## 18. Nästa steg
 
-1. Granska §1.1 och §17, och fråga Bo om fråga 10 i §17.
+1. Granska `FIRST10.md` (de första tio minuterna), och fråga Bo om fråga 10 i §17.
 2. M19–M25 enligt PLAN.md Part 3: först motorn och känslan (M19–M20), sedan fiender och powerups (M21), värld 1
-   och budgetgrinden (M22), sedan resten av världarna och leveransen.
+   med de första tio minuterna och budgetgrinden (M22), sedan resten av världarna och leveransen.
 3. Bo-test 1 efter M20 (prototypen på telefonen) och Bo-test 2 när spelet är klart.
