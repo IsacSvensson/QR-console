@@ -46,6 +46,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 
 Part 3 planned (PLAN.md Part 3, DECISIONS D-024/D-025): `games/bo/DESIGN.md` (draft) and a VM-rendered mockup
 (`games/bo/mockup/`). Before M19, check DESIGN.md §17 for the human's answers; unanswered questions use the defaults.
+Answered so far: question 1, Bo's look (from a photo, DESIGN §0.1, D-026).
 M19 sets the Part 3 baseline commit for the runtime-freeze diff.
 
 Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.md *Manual acceptance*). **M12 baseline commit: 5a7ca7d** — from here on
@@ -64,7 +65,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | BLACKBOX ROM / cartridge | 26.1 KB of 32 KB ROM (80 %) / 15.0 KB cartridge; 4 endings replayed (7.7k–8.2k frames each) | test:blackbox |
 | BLACKBOX as QR | 58 blocks, 87-frame loop (13.1 s), 1.2 MB GIF; fake-camera scan 11 s in e2e | npm run demo, test:e2e |
 | Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
-| Bo mockup: full-screen draw cost | 1 278 cycles/frame (17 MAP columns + sprites + bubble + HUD); font 47 glyphs = 376 B | D-025 |
+| Bo mockup: full-screen draw cost | 1 309 cycles/frame (17 MAP columns + sprites + bubble + HUD); font 47 glyphs = 376 B | D-025, D-026 |
 | Bo ROM estimate | 23.5–29 KB of 32 KB (code 11–13 KB); measured at the M22 budget gate | DESIGN §16 |
 
 ## Known issues

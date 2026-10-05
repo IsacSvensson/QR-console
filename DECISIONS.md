@@ -356,3 +356,20 @@ Alternatives: a ring buffer (impossible, `MAP` has no stride); a row-major buffe
 cost, but vertical scrolling and column-wise decoding are simpler column-major); the big font as 4bpp sprites in
 ROM (1.5 KB instead of 376 B).
 Revisit if: real level data or code size differ from the estimate at the M22 budget gate.
+
+## D-026 — Bo's look from the human's photo; the apple power-up recolours the helmet
+Date: 2026-10-05 · Milestone: Part 3 planning (DESIGN.md §17 question 1)
+Decision: Bo is drawn after a photo the human shared (it is not in the repository): he always wears his pink
+helmet, has light curly hair, purple knee and elbow pads, a white T-shirt, khaki trousers, grey shoes, and rides a
+black board with light wheels. Palette mapping (DawnBringer 16, SPEC L3): the helmet dome is 12 with a white rim (15),
+curls 14 + 9 at the back of the neck, pads 1 + 8 (two pixels: plum + blue-violet), trousers 7, shoes 10, deck 0 with
+raised tails, wheels 15. Because Bo already wears a helmet, STORA ÄPPLET now turns the helmet into a red apple
+(dome 6, stem and leaf drawn above it) instead of giving him one; a hit turns it pink again. Bubble line `ÄPPELHJÄLM!`.
+Alternatives (rendered side by side in the VM before choosing): an all-pink helmet (12, the skin colour: it merges
+with the face and reads as a bald head); a white helmet with a pink tip (reads as white); a dark brim line (reads as
+sunglasses); curls across the forehead (read as a headband); pads 8 (reads blue), 2 (navy), 1 (brown); beige
+trousers 12 (read as bare legs).
+Measurement: with the new board drawing the mockup scene costs 1 309 cycles per frame (D-025: 1 278); the new
+character sheet with two 4× drawings costs 8 100. The mockup cartridge is 1 972 B, and its GIF has 12 frames and
+decodes back to the identical cartridge.
+Revisit if: the human prefers another variant, or the palette ever changes (it is locked).

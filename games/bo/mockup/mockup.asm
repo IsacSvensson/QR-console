@@ -5,6 +5,9 @@
 ;   - the bubble font is stored 1 bit per pixel (8 bytes per glyph, incl. Å Ä Ö) and unpacked once
 ;     into RAM sprites, one SPR per character;
 ;   - the skateboard is drawn with RECTFILL (deck colour from a table = cheap unlockable boards).
+; Every 5 seconds it switches to a character sheet: Bo 4x (as in the human's photo: pink helmet, light curly
+; hair, purple pads, white T-shirt, khaki trousers, black board with light wheels), Apple-Bo (the helmet becomes
+; a red apple with a leaf), and the poses at game size (riding, pushing, crouching, kickflip, Apple-Bo).
 ; Build and look:  npm run qrc -- build games/bo/mockup
 ;                  npm run qrc -- run games/bo/mockup/mockup.qrc --frames 2 --dump-frame m.png --scale 4
 .title "BO MOCKUP"
@@ -12,13 +15,18 @@
 .include "font.gen.asm"
 
 ; ---- colours (DawnBringer 16) ----------------------------------------------------------------
+C_BLACK  = 0
 C_PURPLE = 1
 C_NAVY   = 2
 C_DGREY  = 3
+C_BROWN  = 4
 C_ORANGE = 9
+C_LGREY  = 10
+C_GREEN  = 11
 C_CYAN   = 13
 C_YELLOW = 14
 C_WHITE  = 15
+C_CREAM  = 15               ; skateboard wheels
 
 ; ---- layout ----------------------------------------------------------------------------------
 LV_COLS  = 18               ; columns in the mock level (the real ones are up to ~384)
@@ -30,12 +38,28 @@ BO_X     = 56               ; Bo, world pixels (sprite top-left; 8 x 16 incl. th
 BO_Y     = 80
 TEXT_INK = C_PURPLE
 LINE_FRAMES = 120           ; each bubble line shows for 2 s
+SCENE_FRAMES = 300          ; scene and character sheet take turns, 5 s each
+
+; character sheet layout
+ZX1 = 16                    ; Bo at 4x
+ZX2 = 80                    ; Apple-Bo at 4x
+ZY  = 14
+LABEL_Y   = 79
+CAPTION_Y = 88
+POSE_Y    = 98              ; the poses at game size stand on the ground at y 114
+P1 = 10
+P2 = 34
+P3 = 58
+P4 = 82
+P5 = 106
 
 ; ---- RAM -------------------------------------------------------------------------------------
 .var level, LV_COLS * LV_ROWS       ; column-major: level[col * 16 + row]
 .var font, FONT_GLYPHS * 32         ; unpacked bubble font: 4bpp sprites
 .var tick
 .var board                          ; selected board (0 = Bo's own)
+.var zx                             ; zoom_spr: top-left of the 4x drawing
+.var zy
 
 ; ---- init: transpose the ROM map into RAM, unpack the font -------------------------------------
 init:
@@ -89,6 +113,12 @@ update:
     LD r0, [tick]
     ADD r0, 1
     ST [tick], r0
+    DIV r0, SCENE_FRAMES
+    AND r0, 1
+    JZ @scene
+    CALL draw_sheet
+    RET
+@scene:
     LDI r0, C_CYAN
     SYS CLS
     CALL draw_sky
@@ -205,19 +235,77 @@ draw_bo:
     LDI r2, BO_Y + 8
     SYS SPR
     LD r5, [board]                  ; deck colour = the selected board
-    LDB r4, [r5 + board_colors]
-    LDI r0, BO_X - CAM_X - 1
-    LDI r1, BO_Y + 14
-    LDI r2, 10
+    LDB r2, [r5 + board_colors]
+    LDI r0, BO_X - CAM_X
+    LDI r1, BO_Y
+    CALL board1
+    RET
+
+; r0 = x, r1 = y (Bo's sprite top), r2 = deck colour: the deck on row 14 with raised tails on row 13,
+; light wheels on row 15
+board1:
+    MOV r5, r0
+    MOV r6, r1
+    MOV r4, r2
+    ADD r1, 14
+    LDI r2, 8
     LDI r3, 1
-    SYS RECTFILL
-    LDI r0, BO_X - CAM_X + 1
-    LDI r1, BO_Y + 15
+    SYS RECTFILL                    ; deck
+    MOV r2, r4
+    SUB r0, 1
+    SUB r1, 1
+    SYS PSET                        ; back tail
+    ADD r0, 9
+    SYS PSET                        ; front tail
+    MOV r0, r5
+    ADD r0, 1
+    MOV r1, r6
+    ADD r1, 15
     LDI r2, 2
-    LDI r4, C_DGREY
+    LDI r4, C_CREAM
+    SYS RECTFILL                    ; wheels
+    ADD r0, 4
     SYS RECTFILL
-    LDI r0, BO_X - CAM_X + 5
+    RET
+
+; the board half-way through a kickflip (upside down): wheels on top, the wooden underside, tails down
+board1_flip:
+    MOV r5, r0
+    MOV r6, r1
+    ADD r0, 1
+    ADD r1, 14
+    LDI r2, 2
+    LDI r3, 1
+    LDI r4, C_CREAM
     SYS RECTFILL
+    ADD r0, 4
+    SYS RECTFILL
+    MOV r0, r5
+    MOV r1, r6
+    ADD r1, 15
+    LDI r2, 8
+    LDI r4, C_BROWN
+    SYS RECTFILL
+    LDI r2, C_BROWN
+    SUB r0, 1
+    ADD r1, 1
+    SYS PSET
+    ADD r0, 9
+    SYS PSET
+    RET
+
+; Apple-Bo's stem and leaf on top of the helmet: r0 = x, r1 = y (Bo's sprite top)
+apple_leaf:
+    ADD r0, 3
+    SUB r1, 1
+    LDI r2, C_BROWN
+    SYS PSET
+    ADD r0, 1
+    LDI r2, C_GREEN
+    SYS PSET
+    ADD r0, 1
+    SUB r1, 1
+    SYS PSET
     RET
 
 ; the current line in a white bubble above Bo, centred on him and kept on screen
@@ -309,6 +397,205 @@ draw_text:
 @done:
     RET
 
+; ---- the character sheet ---------------------------------------------------------------------
+draw_sheet:
+    LDI r0, C_CYAN
+    SYS CLS
+    LDI r0, 0                       ; ground
+    LDI r1, POSE_Y + 16
+    LDI r2, 128
+    LDI r3, 14
+    LDI r4, C_DGREY
+    SYS RECTFILL
+    LDI r3, 1
+    LDI r4, C_LGREY
+    SYS RECTFILL
+    ; Bo, 4x
+    LDI r0, spr_bo_up
+    LDI r1, ZX1
+    LDI r2, ZY
+    CALL zoom_spr
+    LDI r0, spr_bo_lo
+    LDI r1, ZX1
+    LDI r2, ZY + 32
+    CALL zoom_spr
+    LDI r0, ZX1
+    LDI r1, ZY
+    CALL zboard
+    ; Apple-Bo, 4x
+    LDI r0, spr_bo_up_apple
+    LDI r1, ZX2
+    LDI r2, ZY
+    CALL zoom_spr
+    LDI r0, spr_bo_lo
+    LDI r1, ZX2
+    LDI r2, ZY + 32
+    CALL zoom_spr
+    LDI r0, ZX2
+    LDI r1, ZY
+    CALL zboard
+    LDI r0, ZX2 + 12                ; stem and leaf, 4x
+    LDI r1, ZY - 4
+    LDI r2, 4
+    LDI r3, 4
+    LDI r4, C_BROWN
+    SYS RECTFILL
+    ADD r0, 4
+    LDI r4, C_GREEN
+    SYS RECTFILL
+    ADD r0, 4
+    SUB r1, 4
+    SYS RECTFILL
+    ; labels (6 px per character, centred under the drawings)
+    LDI r0, t_bo
+    LDI r1, ZX1 + 16 - 6
+    LDI r2, LABEL_Y
+    CALL draw_text
+    LDI r0, t_apple_bo
+    LDI r1, ZX2 + 16 - 24
+    LDI r2, LABEL_Y
+    CALL draw_text
+    LDI r0, t_in_game
+    LDI r1, 4
+    LDI r2, CAPTION_Y
+    CALL draw_text
+    ; the poses at game size: riding, pushing, crouching, kickflip, Apple-Bo
+    LDI r0, spr_bo_up
+    LDI r1, P1
+    LDI r2, POSE_Y
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_bo_lo
+    LDI r2, POSE_Y + 8
+    SYS SPR
+    LDI r0, P1
+    LDI r1, POSE_Y
+    LDI r2, C_BLACK
+    CALL board1
+    LDI r0, spr_bo_up
+    LDI r1, P2
+    LDI r2, POSE_Y
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_bo_lo + 32
+    LDI r2, POSE_Y + 8
+    SYS SPR
+    LDI r0, P2
+    LDI r1, POSE_Y
+    LDI r2, C_BLACK
+    CALL board1
+    LDI r0, spr_bo_up               ; crouching: the head 4 px lower, legs bent
+    LDI r1, P3
+    LDI r2, POSE_Y + 4
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_bo_crouch
+    LDI r2, POSE_Y + 8
+    SYS SPR
+    LDI r0, P3
+    LDI r1, POSE_Y
+    LDI r2, C_BLACK
+    CALL board1
+    LDI r0, spr_bo_up               ; kickflip, 10 px up in the air
+    LDI r1, P4
+    LDI r2, POSE_Y - 10
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_bo_lo
+    LDI r2, POSE_Y - 2
+    SYS SPR
+    LDI r0, P4
+    LDI r1, POSE_Y - 9
+    CALL board1_flip
+    LDI r0, spr_bo_up_apple
+    LDI r1, P5
+    LDI r2, POSE_Y
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_bo_lo
+    LDI r2, POSE_Y + 8
+    SYS SPR
+    LDI r0, P5
+    LDI r1, POSE_Y
+    LDI r2, C_BLACK
+    CALL board1
+    LDI r0, P5
+    LDI r1, POSE_Y
+    CALL apple_leaf
+    RET
+
+; r0 = sprite, r1 = x, r2 = y: draws the 8x8 sprite at 4x, one RECTFILL per opaque pixel
+zoom_spr:
+    MOV r7, r0
+    ST [zx], r1
+    ST [zy], r2
+    LDI r5, 0                       ; pixel row
+@row:
+    LDI r6, 0                       ; pixel column
+@px:
+    MOV r0, r5
+    SHL r0, 2
+    MOV r1, r6
+    SHR r1, 1
+    ADD r0, r1
+    ADD r0, r7
+    LDB r4, [r0]
+    MOV r0, r6
+    AND r0, 1
+    JNZ @low
+    SHR r4, 4                       ; even column: high nibble
+    JMP @have
+@low:
+    AND r4, 15
+@have:
+    CMP r4, 0
+    JEQ @next                       ; colour 0 is transparent
+    LD r0, [zx]
+    MOV r1, r6
+    SHL r1, 2
+    ADD r0, r1
+    LD r1, [zy]
+    MOV r2, r5
+    SHL r2, 2
+    ADD r1, r2
+    LDI r2, 4
+    LDI r3, 4
+    SYS RECTFILL
+@next:
+    ADD r6, 1
+    CMP r6, 8
+    JLT @px
+    ADD r5, 1
+    CMP r5, 8
+    JLT @row
+    RET
+
+; Bo's own board at 4x under a 4x Bo at r0 = x, r1 = y
+zboard:
+    MOV r5, r0
+    MOV r6, r1
+    ADD r1, 56
+    LDI r2, 32
+    LDI r3, 4
+    LDI r4, C_BLACK
+    SYS RECTFILL                    ; deck
+    SUB r0, 4
+    SUB r1, 4
+    LDI r2, 4
+    SYS RECTFILL                    ; back tail
+    ADD r0, 36
+    SYS RECTFILL                    ; front tail
+    MOV r0, r5
+    ADD r0, 4
+    MOV r1, r6
+    ADD r1, 60
+    LDI r2, 8
+    LDI r4, C_CREAM
+    SYS RECTFILL                    ; wheels
+    ADD r0, 16
+    SYS RECTFILL
+    RET
+
 draw_hud:
     LDI r0, 0
     LDI r1, 0
@@ -374,7 +661,7 @@ draw_hud:
 
 ; ---- data ------------------------------------------------------------------------------------
 .data
-board_colors: .byte C_ORANGE, 6, 11, 8, 14, 15   ; own, then the five unlockable boards
+board_colors: .byte C_BLACK, 11, 4, 6, 13, 12, 14   ; own (black), Hemma, Skog, Stad, Is, Godis, Guld
 s_times: .string "X"
 apple_xy: .word 109, 66, 117, 52, 126, 42
 
@@ -604,43 +891,65 @@ tile_data:
     55555555
     55555555
 
+; Bo (DESIGN.md §0.1): pink helmet with a white rim, light curly hair, purple pads (plum + blue-violet:
+; the palette has no lavender), white T-shirt, khaki trousers, grey shoes. Facing right.
 spr_bo_up:
 .sprite
-    ..4444..
-    .444444.
-    .44cccc.
-    .4c1cc1c
-    ..cccc6.
-    ...cc...
-    .c8888c.
-    ..8888..
-spr_bo_lo:
-.sprite                             ; legs, frame A
-    ..8888..
-    ..2222..
-    .22..22.
-    .2....2.
-    .2....2.
-    ff....ff
-    ........
-    ........
-.sprite                             ; legs, frame B
-    ..8888..
-    ..2222..
-    .22..2..
-    22...2..
-    2....2..
-    f....ff.
-    ........
-    ........
-spr_bo_head:
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    .1ffff8.
+    .cffffc.
+spr_bo_up_apple:                    ; Apple-Bo: the helmet becomes a red apple (stem and leaf drawn on top)
 .sprite
-    ..4444..
-    .444444.
-    .44cccc.
-    .4c1cc1c
-    ..cccc6.
-    ...cc...
+    ..6666..
+    .6f6666.
+    effffff6
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    .1ffff8.
+    .cffffc.
+spr_bo_lo:
+.sprite                             ; legs, frame A (riding)
+    ..ffff..
+    ..7777..
+    .77..77.
+    .18..18.
+    .7....7.
+    aa....aa
+    ........
+    ........
+.sprite                             ; legs, frame B (pushing)
+    ..ffff..
+    ..7777..
+    .77..7..
+    18...18.
+    7....7..
+    a...aa..
+    ........
+    ........
+spr_bo_crouch:                      ; legs, crouching (drawn 8 px below the upper sprite, which is 4 px lower)
+.sprite
+    ........
+    ........
+    ........
+    ........
+    ..77718.
+    .aa..aa.
+    ........
+    ........
+spr_bo_head:                        ; HUD icon
+.sprite
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
     ........
     ........
 spr_apple:

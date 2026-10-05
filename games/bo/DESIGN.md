@@ -25,6 +25,30 @@ Tre saker gör det till **Bos** spel och inte en Mario-kopia:
 3. **Bos värld.** Uppfarten, trädgården, lekplatsen, cykelvägen och skateparken. Fienderna är måsar, sniglar och
    igelkottar, inte monster. Ingen dör. Fienderna blir yra och springer hem.
 
+### 0.1 Bo
+
+![Bo i 4 × och i spelstorlek: åker, pushar, hukar, kickflip, Äppel-Bo](mockup/bo.png)
+
+Bo ritas efter ett foto av honom på skateboard (fotot ligger inte i repot):
+
+| Del | Som på fotot | I spelet (DawnBringer-16, färgnummer) |
+|---|---|---|
+| Hjälm | ljusrosa | dovt rosa kupa (12) med vit kant (15). Han har den **alltid** på sig |
+| Hår | ljust och lockigt | lockar i gult och orange (14, 9) som sticker ut under hjälmen i nacken |
+| Knä- och armbågsskydd | lila med regnbågsband | plommon + blålila (1 + 8) |
+| Tröja | vit t-shirt | vit (15) |
+| Byxor | beige | khaki (7) |
+| Skor | grå | ljusgrå (10) |
+| Bräda | svart däck, ljusa hjul | svart däck med uppvikta ändar (0), ljusa hjul (15) |
+
+**Paletten har ingen riktig rosa och ingen lila.** Konsolens 16 färger är fasta (SPEC L3, ett låst beslut för alla
+spel). Det närmaste som går är det i tabellen. En ren rosa (12) på hela hjälmen flyter ihop med ansiktet, som har
+samma färg. Därför har hjälmen en vit kant. Beige byxor (12) ser ut som bara ben, och därför blev byxorna khaki.
+Varianterna jämfördes i VM:en (D-026).
+
+Bo är 8 × 16 pixlar inklusive brädan, alltså 2 tiles hög. Brädan ritas med `RECTFILL` och är inte en del av
+spriten (§14.4).
+
 ## 1. Låsta designbeslut (förslag)
 
 1. **Bo rullar alltid.** ←/→ pushar, och släpper man knappen rullar han vidare och saktar in långsamt. Det är
@@ -53,13 +77,13 @@ Idén lämnade några saker öppna eller motsägelsefulla. Så här löser plane
 
 | Fråga i idén | Förslag |
 |---|---|
-| Äpplet är både powerup (Super-Bo) och vanligt samlarobjekt | Samlarobjekt = små äpplen, överallt. Powerup = **STORA ÄPPLET**: dubbelt så stort, glänser och ligger i lådor. Det ger röd hjälm. |
+| Äpplet är både powerup (Super-Bo) och vanligt samlarobjekt | Samlarobjekt = små äpplen, överallt. Powerup = **STORA ÄPPLET**: dubbelt så stort, glänser och ligger i lådor. Bo har alltid sin rosa hjälm, och stora äpplet gör den till en **äppelhjälm**: röd, med skaft och blad på toppen (§0.1). |
 | B = trick, men godiset "ger möjlighet att göra ett trick" | Vanliga tricks (B i luften) finns alltid. Godis ger **GODISSNURREN**: ett magiskt trick som ger ett extra hopp i luften, dubbla trickpoäng och glitter (§5). Godiset handlar då om skicklighet och om att nå höga ställen. |
 | ←/→ styr i luften men ska också "rotera" | ←/→ styr. **←/→ + B** gör tricket 360 (Bo snurrar ett varv). Man roterar alltså inte fritt. |
 | 4 bossar men 5 världar; Bulldozern kallas "Boss 2" men hör till staden | V1 Stora Måsen, V2 Jättekaninen (en jakt: "hoppar hela tiden efter Bo"), V3 Bulldozern, V4 **Backhoppet** (storbana utan boss, där brädan blir stulen), V5 finalen. |
 | Vem tar Bos skateboard, och hur åker Bo i sista världen utan den? | **Stora Måsen** kommer tillbaka och tar brädan efter backhoppet. I Godislandet lånar Bo en **lakritsbräda** av gelégubbarna (samma fysik). Finalen ger tillbaka brädan. |
 | Vad är Bos mål mellan bossarna? | Att åka hela vägen till **Godislandet**. En skylt i skateparken visar `GODISLANDET →`, och kartan visar vägen dit. |
-| Normala Bo "tål en träff" | Som Mario: normala Bo ramlar av en träff och förlorar ett liv. Äppel-Bo tappar hjälmen och åker vidare. |
+| Normala Bo "tål en träff" | Som Mario: normala Bo ramlar av en träff och förlorar ett liv. Äppel-Bo tappar äpplet (hjälmen blir rosa igen) och åker vidare. |
 
 ## 2. Kontroller
 
@@ -193,7 +217,7 @@ Testerna i M19–M20 mäter de här värdena i VM:en och jämför med tabellen.
 
 | Powerup | Var | Effekt | Varar | Syns |
 |---|---|---|---|---|
-| **STORA ÄPPLET** | lådor | Bo tål en träff till | tills Bo blir träffad (följer med mellan banor) | röd hjälm, hjälm på HUD-huvudet |
+| **STORA ÄPPLET** | lådor | Bo tål en träff till | tills Bo blir träffad (följer med mellan banor) | hjälmen blir ett rött äpple med skaft och blad, och HUD-huvudet likaså |
 | **POMMES** | lådor, kiosker | push-toppfart 2,5 i stället för 1,5 px/bildruta, dubbel acceleration, maxfart 4 px/bildruta. Kör sönder svaga hinder och knuffar bort fiender som han krockar med framifrån | 10 s (600 bildrutor) | `POMMES POWER!`, fartspår, orange timerstapel, egen snabb musik |
 | **GODIS** | lådor, godispåsar | B i luften = GODISSNURR: ett extra hopp (`JUMP_V`) **en gång per luftfärd**, glitter, Bo är oskadlig under snurren, alla trickpoäng × 2 | 15 s (900 bildrutor) | glitter, rosa timerstapel |
 
@@ -206,8 +230,9 @@ Testerna i M19–M20 mäter de här värdena i VM:en och jämför med tabellen.
 ## 6. Träffar, liv och flaggor
 
 - **Normala Bo** som blir träffad: `AJ!`. Han ramlar av brädan, förlorar ett liv och börjar om vid senaste flaggan.
-- **Äppel-Bo** som blir träffad: hjälmen flyger av (`AJ!`), och han blinkar och är oskadlig i 2 s (120 bildrutor).
-- **Gropar, vatten och choklad** kostar alltid ett liv, även med hjälm. Regeln är enkel och tydlig.
+- **Äppel-Bo** som blir träffad: äpplet trillar av (`AJ!`) och hjälmen blir rosa igen. Han blinkar och är oskadlig
+  i 2 s (120 bildrutor).
+- **Gropar, vatten och choklad** kostar alltid ett liv, även med äppelhjälm. Regeln är enkel och tydlig.
 - **Liv:** 5 från början, +1 per 100 äpplen, högst 9 (en siffra på HUD:en).
 - **Game over:** `FÖRSÖK IGEN!` Banan börjar om från början med 5 liv. Inget annat går förlorat (äpplen,
   stjärnor och delar finns kvar).
@@ -228,7 +253,7 @@ Testerna i M19–M20 mäter de här värdena i VM:en och jämför med tabellen.
 
 | Bräda | Hur | Utseende (förslag) |
 |---|---|---|
-| Bos bräda | från början | orange (tas av måsen i V4 och kommer tillbaka i finalen) |
+| Bos bräda | från början | som den riktiga: svart däck och ljusa hjul (tas av måsen i V4 och kommer tillbaka i finalen) |
 | Hemmabrädan, Skogsbrädan, Stadsbrädan, Isbrädan, Godisbrädan | världens fyra skate-delar | grön med hus, träådring, graffiti, isblå, rosa randig |
 | Lakritsbrädan | lånas i V5 | svart |
 | **Guldbrädan** | alla 60 stjärnor | guld |
@@ -367,7 +392,8 @@ somnar eller blir vän.
 
 - **Före:** i introt sitter Bo på trappan med pommes. Stora Måsen dyker ned och tar dem: `NEJ! MINA POMMES!`.
   Under värld 1 syns måsen flyga iväg i slutet av varje bana.
-- **Arena:** en skärm bred skatepark med en 45°-ramp i varje ände, en bänk och en lyktstolpe.
+- **Arena:** en skärm bred skatepark med en 45°-ramp i varje ände, en låda att grinda på och en lyktstolpe.
+  Förslag: bakgrunden är en lagerhall av korrugerad plåt med en färgglad fiskmålning, som skateparken på fotot.
 - **Mönster:** (1) måsen flyger fram och tillbaka högt upp. (2) `SKRIII!` och blinkning i 1 s. (3) den dyker
   snett mot platsen där Bo *var*. Man undviker den genom att åka därifrån eller huka. (4) den landar och är yr
   i 2 s. Då landar Bo på den: den tappar en pommesask och flyger upp igen.
@@ -437,7 +463,7 @@ Bubblorna visas ovanför Bo i 1,5 s, högst en i taget, med 3 s paus för replik
 | tar pommes | `POMMES!` (och `POMMES POWER!` som stor banner) |
 | en mås tar pommesen | `NEJ! MINA POMMES!` |
 | tar godis | `GODIS!` |
-| tar stora äpplet | `HJÄLMEN PÅ!` |
+| tar stora äpplet | `ÄPPELHJÄLM!` |
 | hittar en hemlig väg | `KOLLA!` |
 | stor kombo | `SÅG DU?!` |
 | första grinden på en bana | `WIII!` |
@@ -485,7 +511,7 @@ y 8–127   spelplan: 16 × 15 tiles. Vid scroll ritas 17 kolumner. Vid vertikal
 byte. Därför ritas varje synlig kolumn med **ett** `MAP`-anrop (17 per bildruta), och vilken scroll som helst
 fungerar. En ringbuffert går inte, eftersom `MAP` inte har någon radlängd. Bakgrunden är en parallaxremsa per värld
 (ett `MAP`-anrop som scrollar i halv fart). **Uppmätt i mockupen:** hela skärmen med himmel, parallax, 17
-kolumner, 8 sprites, Bo, bubbla med 15 tecken och HUD tar **1 278 cykler per bildruta, 2,6 % av budgeten.**
+kolumner, 8 sprites, Bo, bubbla med 15 tecken och HUD tar **1 309 cykler per bildruta, 2,6 % av budgeten.**
 Fysik och fiender har alltså nästan hela budgeten för sig.
 
 ### 14.3 Kollision
@@ -499,8 +525,9 @@ och två kantsensorer. Väggar kontrolleras med kroppsboxen (6 × 14, hukande 6 
 - **Världens tiles** (cirka 30 per värld) lagras med **2 bitar per pixel** och en fyrfärgspalett per tile
   (18 B i stället för 32). De packas upp till RAM när världen byts. `SPR` och `MAP` läser vilken adress som helst.
   Sprites (Bo, fiender, föremål) ligger i ROM med 4 bitar per pixel.
-- **Brädan** ritas med `RECTFILL` (däck i brädans färg, hjul i mörkgrått). Kickflip och shove-it är bara olika
-  rektanglar. Nya brädor kostar en färg i en tabell.
+- **Brädan** ritas med `RECTFILL` och `PSET`: däck i brädans färg, två uppvikta ändar och ljusa hjul. Mitt i en
+  kickflip ritas den upp och ned med hjulen överst och träundersidan synlig. Shove-it är andra rektanglar. Nya
+  brädor kostar en färg i en tabell.
 - **Bubbelfonten:** 5 × 6 pixlar med plats för ÅÄÖ ovanför, i 8 × 8-celler med 6 px steg. Den lagras med
   1 bit per pixel och packas upp till RAM-sprites en gång. Ett `SPR` per tecken. **Mätt:** 47 tecken (A–Ö, 0–9,
   `!?.,'-:`) = 376 B ROM och 1 504 B RAM. 15 tecken ryms på 90 px. Den inbyggda 3 × 5-fonten används bara för
@@ -522,14 +549,16 @@ och två kantsensorer. Väggar kontrolleras med kroppsboxen (6 × 14, hukande 6 
 
 En spik, inte spelet: en statisk skärm ur 1-1 som ritas precis som motorn är tänkt (kolumnvis RAM-buffert och
 `MAP` per kolumn med 5 px scroll, 1-bitsfont uppackad till RAM, bräda med `RECTFILL`). Repliken byts varannan
-sekund (`SÅG DU?!`, `KOLLA!`, `POMMES!`, `JAG GJORDE DET!`, `MIN BRÄDA!`, `OJ!`, `SNÖ OCH IS!`).
+sekund (`SÅG DU?!`, `KOLLA!`, `POMMES!`, `JAG GJORDE DET!`, `MIN BRÄDA!`, `OJ!`, `SNÖ OCH IS!`). Var femte sekund
+växlar den till karaktärsskärmen i §0.1 (`mockup/bo.png`). Fonten och texterna skrivs av `mockup/gen.ts`.
 
 ```
 npm run qrc -- build games/bo/mockup
-npm run qrc -- run games/bo/mockup/mockup.qrc --frames 2 --dump-frame m.png --scale 4
+npm run qrc -- run games/bo/mockup/mockup.qrc --frames 2 --dump-frame m.png --scale 4      # banskärmen
+npm run qrc -- run games/bo/mockup/mockup.qrc --frames 302 --dump-frame bo.png --scale 4   # karaktärsskärmen
 ```
 
-Kassett 1,5 KB, `mockup.gif` 10 bildrutor (1,5 s per varv). Skanna den med appen för att se storleken på en
+Kassett 2 KB, `mockup.gif` 12 bildrutor (1,8 s per varv). Skanna den med appen för att se storleken på en
 riktig telefon. Det är inte verifierat på telefon (det kan bara du göra).
 
 ## 15. Ljud och musik
@@ -597,7 +626,7 @@ Förslaget gäller om inget annat bestäms.
 
 | # | Fråga | Förslag |
 |---|---|---|
-| 1 | **Hur ser Bo ut?** Hårfärg, tröjans färg, keps? Vilken färg har hans riktiga bräda? | brunt hår, blå tröja, mörkblå byxor, vita skor, orange bräda (som i mockupen) |
+| 1 | ~~Hur ser Bo ut?~~ **Besvarad 2026-10-05** med ett foto | som på fotot (§0.1): ljust lockigt hår, rosa hjälm, lila skydd. Stora äpplet gör hjälmen till en äppelhjälm |
 | 2 | Vem är skateboardtjuven? | Stora Måsen igen. Den blir vän i slutet |
 | 3 | Bossar och världar (§1.1) | Måsen V1, Kaninen V2 (jakt), Bulldozern V3, Backhoppet V4, finalen V5 |
 | 4 | 25 banor (5 per värld)? | ja, med budgetgrind i M22 (först stryks till 4 per värld) |
@@ -611,7 +640,7 @@ Förslaget gäller om inget annat bestäms.
 
 ## 18. Nästa steg
 
-1. Granska §1.1 och §17, och fråga Bo om fråga 1 och 10 i §17.
+1. Granska §1.1 och §17, och fråga Bo om fråga 10 i §17.
 2. M19–M25 enligt PLAN.md Part 3: först motorn och känslan (M19–M20), sedan fiender och powerups (M21), värld 1
    och budgetgrinden (M22), sedan resten av världarna och leveransen.
 3. Bo-test 1 efter M20 (prototypen på telefonen) och Bo-test 2 när spelet är klart.
