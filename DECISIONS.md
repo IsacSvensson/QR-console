@@ -316,3 +316,43 @@ almost silent; server complex: fast arpeggios shifting by ORACLE's semitone). Co
 unchanged. The M18 music test now reads every track (MUS_COUNT) from ROM, requires every track to be heard in the
 replays, and a new test requires distinct tracks for sections 1-7. PLAN.md's "three music loops" is a minimum
 already met; DESIGN.md §5 updated.
+
+## D-024 — Part 3 planned: Bo's Skateäventyr, scope and the main design choices (proposed)
+Date: 2026-10-05 · Milestone: Part 3 planning (before M19)
+Decision: a side-scrolling skateboard platformer, `games/bo/DESIGN.md`. 5 worlds × (4 levels + 1 boss or set-piece
+level) = 25 levels; bosses Stora Måsen (W1), Jättekaninen as a chase level (W2), Bulldozern (W3), the Backhoppet
+set piece where the seagull steals the board (W4), and the final (W5). Where the human's pitch was open or
+contradictory: the power-up is a big apple, distinct from the collectible apples; B tricks are always available
+and candy adds the "godissnurr" (one extra jump per airtime, double trick points); the seagull is the recurring
+antagonist and the board thief, and it is befriended at the end. In-game text is Swedish uppercase in the game's
+own 5×6 bubble font with ÅÄÖ; everything important is also shown with pictures. Saving uses a 4-picture code
+(16 bits). The engine has about ten tile/object kinds and nine enemy behaviours, which the worlds re-skin. Each
+world adds at most two mechanics.
+Alternatives: 5 levels + boss per world (30 levels, over the ROM estimate); Jättekaninen as a snow hare in W4 with
+no boss in W2; English text as in BLACKBOX (a six-year-old Swedish player); diacritics drawn over the built-in
+3×5 font (only a single line, and too small for an early reader); persistent save RAM (a runtime change, human
+decision); 8-character text codes as in BLACKBOX (too hard for a six-year-old).
+Why: the ROM estimate (DESIGN §16, calibrated on BLACKBOX, D-025), a six-year-old's reading and motor skills,
+and no runtime change.
+Revisit if: the human answers DESIGN §17 differently (defaults apply otherwise), or the M22 budget gate projects
+more than 32 KB (cut list in DESIGN §16.1).
+
+## D-025 — Bo: drawing approach and ROM estimate, measured with a mockup and the BLACKBOX listing
+Date: 2026-10-05 · Milestone: Part 3 planning (before M19)
+Decision: the level lives in RAM column-major (32 rows per column) and each visible column is drawn with one
+`MAP` call (columns = 1 makes a column contiguous, because `MAP` reads `map + row × columns + column`). The bubble
+font is stored at 1 bit per pixel and unpacked once into RAM sprites (`SPR` reads any address). The skateboard is
+drawn with `RECTFILL`, so a new board costs only a colour. World tiles are planned at 2 bits per pixel, unpacked
+to RAM when the world changes.
+Measurement (`games/bo/mockup/`, a static screen of level 1-1 rendered by the VM): the full screen (sky, parallax
+strip, 17 columns with a 5 px scroll offset, 8 sprites, Bo, a 15-character bubble, HUD) costs **1 278 cycles per
+frame** (2.6 % of the budget). The font has 47 glyphs including ÅÄÖ: **376 B ROM, 1 504 B RAM**. The mockup
+cartridge is 1.5 KB, and `mockup.gif` has 10 frames.
+BLACKBOX calibration (address differences in `blackbox.lst`): code 10 884 B = 2 721 instructions (actors 2.7 KB,
+text engine 1.6, script interpreter 1.3, player 1.2, rooms 1.0, bosses 1.0); data 15 536 B (text 7.2 KB, rooms 2.7,
+tiles 1.6, sprites 0.9, music 0.6). Bo's estimate is 23.5–29 KB of 32 KB (DESIGN §16.1): little text, more
+graphics and physics.
+Alternatives: a ring buffer (impossible, `MAP` has no stride); a row-major buffer drawn one row per call (same
+cost, but vertical scrolling and column-wise decoding are simpler column-major); the big font as 4bpp sprites in
+ROM (1.5 KB instead of 376 B).
+Revisit if: real level data or code size differ from the estimate at the M22 budget gate.

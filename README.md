@@ -108,7 +108,8 @@ packages/asm        assembler                                (pure)
 packages/qr         QR frames, GIF, distortion simulator, decoders
 packages/tools      qrc CLI, reference generation, demo, y4m
 apps/web            PWA: scanner (worker), library (IndexedDB), player (canvas + WebAudio)
-games/              hello, breakout, pong (source, cartridge, references, replay, checks)
+games/              hello, breakout, pong (source, cartridge, references, replay, checks), blackbox;
+                    bo = Bo's Skateäventyr, planned (DESIGN.md + a VM-rendered mockup, PLAN.md Part 3)
 bench/              benchmark scripts and results
 e2e/                Playwright tests and fixtures
 ```
