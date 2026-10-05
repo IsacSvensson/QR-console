@@ -1,0 +1,132 @@
+; Sprites at 4 bits per pixel (Bo after the human photo, DESIGN.md 0.1; HUD icons).
+.data
+spr_bo_up:
+.sprite
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    .1ffff8.
+    .cffffc.
+spr_bo_up_apple:                    ; Apple-Bo: the helmet becomes a red apple (stem and leaf drawn on top)
+.sprite
+    ..6666..
+    .6f6666.
+    effffff6
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    .1ffff8.
+    .cffffc.
+spr_bo_lo:
+.sprite                             ; legs, frame A (riding)
+    ..ffff..
+    ..7777..
+    .77..77.
+    .18..18.
+    .7....7.
+    aa....aa
+    ........
+    ........
+.sprite                             ; legs, frame B (pushing)
+    ..ffff..
+    ..7777..
+    .77..7..
+    18...18.
+    7....7..
+    a...aa..
+    ........
+    ........
+spr_bo_push:                        ; legs while pushing: only the front leg (the back leg is drawn by push_legs)
+.sprite
+    ..ffff..
+    ..7777..
+    ....77..
+    ....18..
+    .....7..
+    ....aa..
+    ........
+    ........
+spr_bo_up_bal:                      ; balancing: arms out
+.sprite
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    c1ffff8c
+    ..ffff..
+spr_bo_lo_bal:                      ; balancing: the front foot on the raised nose
+.sprite
+    ..ffff..
+    ..7777..
+    .77..18.
+    .18...7.
+    .7....aa
+    aa......
+    ........
+    ........
+spr_bo_crouch:                      ; legs, crouching (drawn 8 px below the upper sprite, which is 4 px lower)
+.sprite
+    ........
+    ........
+    ........
+    ........
+    ..77718.
+    .aa..aa.
+    ........
+    ........
+spr_bo_head:                        ; HUD icon
+.sprite
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    ........
+    ........
+spr_apple:
+.sprite
+    ....4b..
+    ...4bb..
+    .66466..
+    6f66666.
+    6f66666.
+    6666666.
+    .66666..
+    ..6.66..
+spr_star:
+.sprite
+    ...ee...
+    ...ee...
+    eeeeeeee
+    .eeeeee.
+    ..eeee..
+    .eeeeee.
+    .ee..ee.
+    .e....e.
+spr_star_off:
+.sprite
+    ...77...
+    ...77...
+    77777777
+    .777777.
+    ..7777..
+    .777777.
+    .77..77.
+    .7....7.
+spr_snail:
+.sprite
+    a.a.....
+    .a.a999.
+    .a.94449
+    .aa94949
+    .aa94449
+    aaaa9999
+    aaaaaaaa
+    ........
+.code

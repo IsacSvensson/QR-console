@@ -13,7 +13,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.pure.json && tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice --project blackbox",
+    "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice --project blackbox --project bo",
     "check": "npm run typecheck && npm run lint && npm test",
     "bench:fountain": "tsx bench/fountain.ts",
     "qrc": "tsx packages/tools/src/cli.ts",
@@ -30,7 +30,10 @@
     "bench:scan": "QRC_BIG_FIXTURE=1 playwright test --project measure",
     "test:blackbox": "vitest run --project blackbox --reporter=verbose",
     "blackbox:gen": "tsx games/blackbox/tools/gen.ts && tsx games/blackbox/tools/tiles.ts && tsx games/blackbox/tools/text.ts",
-    "blackbox:record": "tsx games/blackbox/tools/record.ts && tsx games/blackbox/tools/pick-frames.ts"
+    "blackbox:record": "tsx games/blackbox/tools/record.ts && tsx games/blackbox/tools/pick-frames.ts",
+    "test:bo": "vitest run --project bo --reporter=verbose",
+    "bo:gen": "tsx games/bo/tools/tiles.ts && tsx games/bo/tools/levels.ts",
+    "bo:record": "tsx games/bo/tools/record.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

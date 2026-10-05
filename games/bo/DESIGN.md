@@ -146,7 +146,7 @@ hög inklusive brädan. Han är alltså 2 tiles hög, ungefär som Super Mario p
 | `PUSH_ACC` | 1 | push-acceleration per bildruta |
 | `PUSH_MAX` | 24 | toppfart med push, 1,5 px/bildruta (≈ 11 tiles/s) |
 | `ROLL_FRIC` | 1 per 4 bildrutor | rullmotstånd när man inte pushar |
-| `BRAKE` | 3 | broms (↓ eller motsatt pil) |
+| `BRAKE` | 3 | broms (motsatt pil). Bromsar Bo till stopp står han kvar, även i en backe |
 | `SLOPE_22` | 1 | acceleration nedför 22,5°-backe (lika mycket inbromsning uppför) |
 | `SLOPE_45` | 2 | samma för 45° |
 | `SPEED_CAP` | 56 | absolut maxfart, 3,5 px/bildruta (nedför, efter tricks) |
@@ -159,6 +159,8 @@ hög inklusive brädan. Han är alltså 2 tiles hög, ungefär som Super Mario p
 | `LAUNCH_MAX` | 80 | högsta uppfart från en ramp, 5 px/bildruta |
 | `TRICK_BOOST` | 8 | +0,5 px/bildruta per trick vid ren landning (upp till maxfarten) |
 | `BOUNCE_V` | 72 | studsmatta och gelé: 4,5 px/bildruta uppåt |
+| `CROUCH_FRIC` | 1 per 2 bildrutor | hukad (↓): bromsar lite, så att Bo kan rulla under en bom (D-029) |
+| `AIR_ACC` | 1 per 2 bildrutor | styrning i luften med ←/→, aldrig över push-toppfarten (D-029) |
 
 ### 3.3 Härledda värden (räknade med motorns ordning: `vy += G; y += vy; x += vx` per bildruta)
 

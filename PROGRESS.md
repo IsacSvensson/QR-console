@@ -2,9 +2,9 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** — (Part 3 planned; M19 is next)
+**Current milestone:** M20 (Skate mechanics and the feel prototype)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
-Part 3 (Bo's Skateäventyr) is designed and planned, not started.
+Part 3 (Bo's Skateäventyr) in progress: M19 done.
 **Last updated:** 2026-10-05
 
 ## Milestones
@@ -34,7 +34,7 @@ Part 2 — BLACKBOX (design: `games/blackbox/`)
 
 Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 
-- [ ] M19 Engine: levels, scrolling, rolling
+- [x] M19 Engine: levels, scrolling, rolling
 - [ ] M20 Skate mechanics and the feel prototype
 - [ ] M21 Enemies, power-ups, items, HUD, Bo's voice
 - [ ] M22 World 1 and the game around it (budget gate)
@@ -44,11 +44,12 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 
 ## Current work
 
-Part 3 planned (PLAN.md Part 3, DECISIONS D-024/D-025): `games/bo/DESIGN.md` (draft) and a VM-rendered mockup
-(`games/bo/mockup/`). Before M19, check DESIGN.md §17 for the human's answers; unanswered questions use the defaults.
-Answered so far: question 1, Bo's look (from a photo, DESIGN §0.1, D-026). After the human's review: an identity
-pass (D-027) and the first ten minutes, specified in `games/bo/FIRST10.md` (D-028).
-M19 sets the Part 3 baseline commit for the runtime-freeze diff.
+Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
+buffer, camera, parallax, HUD frame, Bo's rolling physics on flat ground, hills, blocks and one-way platforms; test
+levels T1/T2; bot-recorded replays; `npm run test:bo` checks the ROM table and every level's RAM against an
+independent reader of the `.lvl` sources and measures DESIGN §3.3 from the replays (all within rounding, D-029).
+DESIGN §17 defaults apply (only question 1 answered). **Part 3 runtime baseline = the M19 commit** — from it on
+`git diff <M19> -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
 
 Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.md *Manual acceptance*). **M12 baseline commit: 5a7ca7d** — from here on
 `git diff 5a7ca7d -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
@@ -68,6 +69,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
 | Bo mockup: full-screen draw cost | 1 356 cycles/frame (17 MAP columns + sprites + bubble + HUD); font 47 glyphs = 376 B | D-025–D-027 |
 | Bo ROM estimate | 23.5–29 KB of 32 KB (code 11–13 KB); measured at the M22 budget gate | DESIGN §16 |
+| Bo ROM after M19 | 8.2 KB (code 5.8 KB, data 2.4 KB); cartridge 4.7 KB; play frames ~1.4k cycles, loading ≤ 15.1k | test:bo |
 
 ## Known issues
 

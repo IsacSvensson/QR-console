@@ -415,3 +415,40 @@ Alternatives: start on the world map (an extra step before the first push); a tr
 (needs precise jumps and a vertical camera in the first level); a text tutorial (excludes a child who cannot read
 yet).
 Revisit if: the Bo test (FIRST10.md §9) shows where it does not work.
+
+## D-029 - Bo engine (M19): level format, physics details the design left open
+Date: 2026-10-05 - Milestone: M19
+Decision:
+- **Level sources** (`games/bo/levels/FORMAT.md`): a terrain profile (flat, 22.5/45 degree hills, gaps, liquid
+  pits, steps, materials) plus an object list sorted by column. Heights count tiles from the bottom of the
+  32-row buffer; a 16-row level uses rows 16-31. In ROM: one byte per terrain segment and 4 bytes per object
+  (+ extras); apple arcs are expanded by the generator from the physics into cells (one apple per 16 px).
+- **Tiles**: fixed codes with fixed meaning in every world (1-26 structure, 27-50 common items, 64-95 per world),
+  2 bits per pixel with a 4-colour palette per tile and *shared* pixel patterns (a slope drawn once is recoloured
+  per world: a tile costs 3 bytes per world plus its pattern once). 96 codes = 3 KB RAM.
+- **Kickers are their own class (RAMP)**: a height-mapped surface without slope deceleration. Otherwise the
+  speed "at the lip" could never be 3.5 px per frame (a 45 degree ramp costs 2 per frame on the way up), and the
+  ramp rows of DESIGN 3.3 would be unreachable. Terrain hills (SLOPE) decelerate up and accelerate down.
+- **Down = crouch, not brake.** DESIGN 2 says "huka ... bromsar lite. Hall ned for att stanna"; 3.2 said BRAKE
+  applies to down or the opposite arrow. Braking at 3 per frame would stop Bo before he is under a bar, so down
+  crouches with a gentle `CROUCH_FRIC` (1 per 2 frames) and the opposite arrow brakes. Added to 3.2.
+- **The brake holds Bo still on a slope** once he has stopped. This also lets the tests measure "from
+  standstill" on a slope (DESIGN 3.3).
+- **Air steering** `AIR_ACC` (1 per 2 frames), never beyond the push speed; added to 3.2.
+- **Pushing at exactly the push speed holds it** (no friction tick); above it (after a hill) Bo rolls out.
+- **Ollie on an up-slope or a ramp** adds the launch (speed x slope) to JUMP_V, capped at LAUNCH_MAX: "A at
+  the lip" works anywhere on the ramp, which is forgiving for a six-year-old and gives the same numbers.
+- **Collision model**: feet sensor in the middle (steps up at most 6 px, follows down |dx| + 1 px), two edge
+  sensors (flat tops exactly at the feet), body box 6 x 14 (crouching 6 x 9) above the board for walls and
+  heads. One-way surfaces only from above.
+- **Physics constants live in a ROM table** (`phys`, `PH_*`) that the engine reads, so the test can compare
+  the ROM against DESIGN 3.2 directly.
+- **Test levels are reached by input** (replays are pure input): until M22 the cartridge starts in a test
+  menu; from M22 it will be reached from the title screen.
+Measurement (M19 replays, from RAM): ollie 26.56 px / 34 frames; tap 5.25 px / 14 frames; jump length at
+1.5/2.5/3.5 px per frame 51/85/119 px; push 0-24 24 frames 18.75 px; coasting 96 frames 73.5 px; brake from
+24 8 frames 5.25 px, from 40 14 frames 15.44 px; downhill 22.5/45 degrees 56 frames 99.75 px / 28 frames
+50.75 px. All within DESIGN 3.3's rounding. Play frames ~1.4k cycles; loading frames up to 15k (terrain 64
+columns per frame; tile unpacking split over two frames after a 25.6k-cycle first try).
+Alternatives: down brakes at BRAKE (no way under bars); kickers as terrain slopes (3.5 px per frame at the
+lip impossible); a ring buffer for the level (impossible with MAP, D-025).
