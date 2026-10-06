@@ -664,3 +664,39 @@ m23-worlds (title to the World 4 map, all 15 levels) 26 195 frames; max 4 004 cy
 loading. 154 apple patterns in Worlds 2-3, all followed. Projection for M24: code +2-3 KB (lift, ice, Backhoppet,
 theft, final boss, ending, SUPERBOSSE, golden board), world assets and levels in xdata: about 31 KB of 32 KB, so a
 code-size pass comes first in M24.
+
+## D-037 - Bo Worlds 4 and 5, the theft, the final and the ending (M24)
+Date: 2026-10-06 - Milestone: M24
+Decision:
+- **Snö and Godislandet** get their own world blocks like Worlds 2-3 (D-036): Snö a clear blue sky, snowy mountains,
+  white snow with grey specks, icy blue ramps, snowy spruces, a cabin, the ski lift; Godislandet a purple dusk (the
+  palette has no pink), red candy castle walls, white frosting on peach cake with red sprinkles, biscuit ramps,
+  lollipops, licorice rails, marshmallow rafts, the seagull's nest. The world map's ground has a colour per world.
+- **Ski-lift chair**: a moving platform that waits 2 s at its bottom station (so a child can board it), rides up at
+  45 degrees three tiles above the slope, and returns to the bottom at the end of its range (leaving Bo). Platforms
+  that move up carry Bo vertically too. Marshmallow rafts drift like the logs.
+- **Backhoppet (4-5)** is a big level like the boss levels: no stars and no part. DESIGN 10.4 gives it three stars,
+  but DESIGN 7.1, the ending (x/60) and the M24 acceptance all say 60 stars, and 21 levels with three stars would be
+  63; the majority wins. Its inrun is ice (full speed, 56); the takeoff table launches the longest jump in the game:
+  measured 269 px (34 tiles) in 77 frames (1.3 s). DESIGN 10.4's "over 2 s" is not reachable inside 32 rows with
+  these physics (the fall height runs out); recorded, not forced.
+- **The theft**: the scene after 4-5 (JAG GJORDE DET!, SKRIII!, NEJ! MIN BRÄDA!, then the jelly man's LÅNA MIN!
+  and EN LAKRITSBRÄDA!) sets `stolen`, unlocks the licorice board and selects it; World 5 is played on it. After the
+  final Bo gets his own board back, SUPERBOSSE is unlocked, and the ending starts.
+- **The final (5-5)** reuses Stora Måsen's behaviour with three changes: phase 1 drops popcorn when it is right
+  above Bo (every 64 frames; 32 frames within 24 px rained on a child who waits by the wall); phase 2 ends the dive
+  dizzy high above the kicker (kicker + A reaches it); phase 3 sits in its nest at the end of the licorice rail and
+  only a landing with a trick (a combo of two or a trick in progress) takes the board. Arena bosses (F_BOSS) come
+  on at once and are never freed for being off-screen.
+- **Boards**: a bitmask (own, five world boards from the four parts of a world, golden from all 60 stars, licorice);
+  B on the map cycles through the boards Bo has (not his own while the seagull has it); the map shows the board.
+- **SUPERBOSSE**: unlocked by the final (`super_ok`; the picture code will restore it in M25). Every launch from a
+  crest or a kicker records its speed and surface; up then down on a kicker or in the air, then <- or -> with B in the
+  air, after leaving a kicker at 2.5 px per frame or more: 3000 points and a banner; otherwise the same input is a 360.
+- **The seagull's food**: the first sprite of every world's asset block (pommes, sandwich, sausage, carrot, Bo's
+  board), drawn at the tally and on the map.
+- **The ending**: Bo rides home through the five worlds (their skies and grounds, 2.5 s each) with the seagull, then
+  JAG GJORDE DET!, stars x/60, apples (a new total counted at every tally) and points, with the golden board under
+  Bo if he has all 60 stars; A goes back to the title.
+Measurement: ROM 30 301 B of 32 768 (code 24 588, data 5 713), cartridge 22.3 KB; the whole game from the title to the ending
+in one replay (m24-game, about 43 500 frames = 12 minutes of play, then SUPERBOSSE at Backhoppet).

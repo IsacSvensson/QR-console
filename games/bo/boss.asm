@@ -6,7 +6,16 @@ BS_WARN  = 1
 BS_DIVE  = 2
 BS_DIZZY = 3
 BS_RISE  = 4
+BS_NEST  = 5                        ; the final, phase 3: in its nest with the board
 BOSS_HITS = 3
+; the final (5-5 Måsens bo, DESIGN 10.5) uses the same pattern with three changes: (1) it drops popcorn when it
+; flies over Bo; (2) its dive ends dizzy high in the air above the kicker's arc (ramp + ollie to reach it);
+; (3) it sits in its nest at the end of the licorice rail: only a landing with a trick takes the board.
+B5_HX = 14 * 8 + 4                  ; phase 2: where it hovers dizzy (x px, feet y px)
+B5_HY = 184
+B5_NX = 31 * 8 + 4                  ; phase 3: the nest
+B5_NY = 200
+B5_POP_T = 64                       ; popcorn every 64 frames (phase 1) while it is right above Bo
 
 b_boss1:
     LD r0, [r7 + AC_SUB]
@@ -14,8 +23,18 @@ b_boss1:
     LD r0, [r0 + @states]
     JMP r0
 @states:
-    .word @fly, @warn, @dive, @dizzy, @rise
+    .word @fly, @warn, @dive, @dizzy, @rise, @nest
 @fly:                               ; to and fro between the ramps, a bit faster after every hit
+    LD r0, [r7 + AC_TYPE]           ; the final, phase 3: to the nest
+    CMP r0, EN_BOSS5
+    JNE @flying
+    LD r0, [boss_hits]
+    CMP r0, 2
+    JLT @flying
+    LDI r0, BS_NEST
+    ST [r7 + AC_SUB], r0
+    RET
+@flying:
     LD r1, [r7 + AC_VX]
     CMP r1, 0
     JNE @moving
@@ -44,6 +63,8 @@ b_boss1:
     LD r0, [r7 + AC_T]
     ADD r0, 1
     ST [r7 + AC_T], r0
+    CALL boss5_popcorn
+    LD r0, [r7 + AC_T]
     CMP r0, 100
     JLT @done
     LD r0, [bo_state]               ; warn only when Bo is on the ground (he can see it coming)
@@ -53,7 +74,16 @@ b_boss1:
     ST [r7 + AC_SUB], r0
     LDI r0, 0
     ST [r7 + AC_T], r0
-    CALL feet                       ; the target: where Bo is now
+    CALL feet                       ; the target: where Bo is now (the final, phase 2: high above the kicker)
+    LD r0, [r7 + AC_TYPE]
+    CMP r0, EN_BOSS5
+    JNE @target
+    LD r0, [boss_hits]
+    CMP r0, 1
+    JNE @target
+    LDI r1, B5_HX
+    LDI r2, B5_HY
+@target:
     ST [boss_tx], r1
     ST [boss_ty], r2
     LDI r0, SFX_SKRII
@@ -112,6 +142,13 @@ b_boss1:
     SUB r0, 1
     ST [r7 + AC_T], r0
     JGT @done
+    LD r0, [r7 + AC_TYPE]           ; the final, phase 2: dizzy up there, in the air
+    CMP r0, EN_BOSS5
+    JNE @land
+    LD r0, [boss_hits]
+    CMP r0, 1
+    JEQ @nofloor
+@land:
     CALL act_pos                    ; landed: on the ground, dizzy
     MOV r3, r2
     ADD r3, 24
@@ -143,6 +180,31 @@ b_boss1:
     LDI r0, BS_RISE
     ST [r7 + AC_SUB], r0
     RET
+@nest:                              ; flies to its nest and sits there with the board
+    LDI r0, 0
+    ST [r7 + AC_VX], r0
+    LD r0, [r7 + AC_X]
+    LDI r1, B5_NX * 16
+    CALL @toward
+    ST [r7 + AC_X], r0
+    LD r0, [r7 + AC_Y]
+    LDI r1, B5_NY * 16
+    CALL @toward
+    ST [r7 + AC_Y], r0
+    RET
+@toward:                            ; r0 -> r1 by at most 32 (2 px)
+    MOV r2, r1
+    SUB r2, r0
+    CMP r2, 32
+    JLE @tl
+    LDI r2, 32
+@tl:
+    CMP r2, -32
+    JGE @tg
+    LDI r2, -32
+@tg:
+    ADD r0, r2
+    RET
 @rise:
     LD r0, [r7 + AC_Y]
     SUB r0, 24
@@ -166,6 +228,8 @@ boss1_contact:
     LD r0, [r7 + AC_SUB]
     CMP r0, BS_DIVE
     JEQ @dive
+    CMP r0, BS_NEST
+    JEQ @nest
     CMP r0, BS_DIZZY
     JNE @none
     LD r0, [bo_state]               ; dizzy: landing on it counts, touching it does nothing
@@ -191,6 +255,9 @@ boss1_contact:
     ST [boss_hits], r0
     CMP r0, BOSS_HITS
     JGE @won
+    LD r0, [r7 + AC_TYPE]           ; (the final drops no pommes)
+    CMP r0, EN_BOSS5
+    JEQ @rises
     CALL act_pos                    ; it drops a box of pommes
     SUB r2, 4
     MOV r6, r1
@@ -208,6 +275,7 @@ boss1_contact:
     CALL set_cell
 @full:
     POP r7
+@rises:
     LDI r0, BS_RISE
     ST [r7 + AC_SUB], r0
 @none:
@@ -216,6 +284,48 @@ boss1_contact:
     LDI r0, EV_HIT
     CALL event
     JMP bo_hit
+@nest:                              ; in the nest: a landing with a trick (the grind + one more, or one going on)
+    LD r0, [bo_state]
+    CMP r0, ST_AIR
+    JNE @none
+    LD r0, [bo_vy]
+    CMP r0, 0
+    JLE @none
+    LD r0, [bo_pfoot]
+    LD r1, [t_atop]
+    ADD r1, 4
+    CMP r0, r1
+    JGT @none
+    LD r0, [trick]
+    CMP r0, TR_NONE
+    JNE @took
+    LD r0, [combo_n]
+    CMP r0, 2
+    JGE @took
+    LDI r0, EV_BOUNCE               ; no trick: it keeps the board, Bo bounces off
+    CALL event
+    LDI r0, STOMP_V
+    NEG r0
+    ST [bo_vy], r0
+    LDI r0, -24
+    ST [bo_vx], r0
+    LDI r0, TX_OJ
+    JMP say
+@took:
+    LDI r0, EV_STOMP
+    CALL event
+    LDI r0, STOMP_V
+    NEG r0
+    ST [bo_vy], r0
+    LDI r0, BOSS_HITS
+    ST [boss_hits], r0
+    LDI r0, TX_MIN_BRADA
+    CALL say
+    LDI r0, 150
+    ST [boss_win_t], r0
+    LDI r0, BS_RISE                 ; it lets go of the board and flies up
+    ST [r7 + AC_SUB], r0
+    RET
 @won:                               ; the whole bag: MINA POMMES! -> POMMES POWER! -> (at the goal) JAG GJORDE DET!
     LDI r0, AS_JOKE
     ST [r7 + AC_ST], r0
@@ -439,6 +549,40 @@ chase_step:
     LDI r0, 20
     ST [r7 + AC_T], r0
 @done:
+    RET
+
+; boss5_popcorn: r7 = the boss: the final in phase 1 drops popcorn when it flies over Bo
+boss5_popcorn:
+    LD r0, [r7 + AC_TYPE]
+    CMP r0, EN_BOSS5
+    JNE @no
+    LD r0, [boss_hits]
+    CMP r0, 0
+    JNE @no
+    LD r0, [tick]
+    AND r0, B5_POP_T - 1
+    JNZ @no
+    CALL dir_to_bo
+    CMP r3, 16
+    JGT @no
+    PUSH r7
+    CALL act_pos
+    PUSH r1
+    PUSH r2
+    CALL act_free_slot
+    POP r2
+    POP r1
+    CMP r7, 0
+    JEQ @none
+    LDI r0, EN_POPCORN
+    CALL act_init
+    LDI r0, 255
+    ST [r7 + AC_EN], r0
+    LDI r0, 0
+    ST [r7 + AC_VX], r0
+@none:
+    POP r7
+@no:
     RET
 
 ; boss_step: every frame: after the boss is won, the level ends like at a goal

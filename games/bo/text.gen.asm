@@ -2,7 +2,7 @@
 ; text as glyph indices (index = position in the font table); 255 ends a text, 254 starts its second row.
 
 FONT_GLYPHS = 48
-NUM_TEXTS = 67
+NUM_TEXTS = 77
 TX_SKRIII = 0   ; SKRIII!
 TX_NEJ_MINA_POMMES = 1   ; NEJ! MINA POMMES!
 TX_VANTA_MASEN = 2   ; VÄNTA, MÅSEN!
@@ -70,6 +70,16 @@ TX_TRAPPORNA = 63   ; TRAPPORNA
 TX_BUSSEN = 64   ; BUSSEN
 TX_TORGET = 65   ; TORGET
 TX_BYGGARBETSPLATSEN = 66   ; BYGGARBETSPLATSEN
+TX_SNOGATAN = 67   ; SNÖGATAN
+TX_PULKABACKEN = 68   ; PULKABACKEN
+TX_ISSJON = 69   ; ISSJÖN
+TX_LIFTEN = 70   ; LIFTEN
+TX_BACKHOPPET = 71   ; BACKHOPPET
+TX_KLUBBSKOGEN = 72   ; KLUBBSKOGEN
+TX_CHOKLADFLODEN = 73   ; CHOKLADFLODEN
+TX_LAKRITSFABRIKEN = 74   ; LAKRITSFABRIKEN
+TX_TARTBERGET = 75   ; TÅRTBERGET
+TX_MASENS_BO = 76   ; MÅSENS BO
 
 .data
 font1:
@@ -130,7 +140,8 @@ text_table:
     .word tx_40, tx_41, tx_42, tx_43, tx_44, tx_45, tx_46, tx_47
     .word tx_48, tx_49, tx_50, tx_51, tx_52, tx_53, tx_54, tx_55
     .word tx_56, tx_57, tx_58, tx_59, tx_60, tx_61, tx_62, tx_63
-    .word tx_64, tx_65, tx_66
+    .word tx_64, tx_65, tx_66, tx_67, tx_68, tx_69, tx_70, tx_71
+    .word tx_72, tx_73, tx_74, tx_75, tx_76
 tx_0: .byte 19, 11, 18, 9, 9, 9, 40, 255   ; SKRIII!
 tx_1: .byte 14, 5, 10, 40, 0, 13, 9, 14, 1, 0, 16, 15, 13, 13, 5, 19, 40, 255   ; NEJ! MINA POMMES!
 tx_2: .byte 22, 28, 14, 20, 1, 43, 0, 13, 27, 19, 5, 14, 40, 255   ; VÄNTA, MÅSEN!
@@ -198,5 +209,15 @@ tx_63: .byte 20, 18, 1, 16, 16, 15, 18, 14, 1, 255   ; TRAPPORNA
 tx_64: .byte 2, 21, 19, 19, 5, 14, 255   ; BUSSEN
 tx_65: .byte 20, 15, 18, 7, 5, 20, 255   ; TORGET
 tx_66: .byte 2, 25, 7, 7, 1, 18, 2, 5, 20, 19, 16, 12, 1, 20, 19, 5, 14, 255   ; BYGGARBETSPLATSEN
+tx_67: .byte 19, 14, 29, 7, 1, 20, 1, 14, 255   ; SNÖGATAN
+tx_68: .byte 16, 21, 12, 11, 1, 2, 1, 3, 11, 5, 14, 255   ; PULKABACKEN
+tx_69: .byte 9, 19, 19, 10, 29, 14, 255   ; ISSJÖN
+tx_70: .byte 12, 9, 6, 20, 5, 14, 255   ; LIFTEN
+tx_71: .byte 2, 1, 3, 11, 8, 15, 16, 16, 5, 20, 255   ; BACKHOPPET
+tx_72: .byte 11, 12, 21, 2, 2, 19, 11, 15, 7, 5, 14, 255   ; KLUBBSKOGEN
+tx_73: .byte 3, 8, 15, 11, 12, 1, 4, 6, 12, 15, 4, 5, 14, 255   ; CHOKLADFLODEN
+tx_74: .byte 12, 1, 11, 18, 9, 20, 19, 6, 1, 2, 18, 9, 11, 5, 14, 255   ; LAKRITSFABRIKEN
+tx_75: .byte 20, 27, 18, 20, 2, 5, 18, 7, 5, 20, 255   ; TÅRTBERGET
+tx_76: .byte 13, 27, 19, 5, 14, 19, 0, 2, 15, 255   ; MÅSENS BO
 level_names:   ; text id of every level, in the level table order
-    .byte 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66
+    .byte 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76

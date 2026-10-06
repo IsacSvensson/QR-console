@@ -142,6 +142,8 @@ MUS_NONE  = 0
 MUS_HEMMA = 1
 MUS_SKOGEN = 2
 MUS_STADEN = 3
+MUS_SNO = 4
+MUS_GODIS = 5
 MUSIC_VOL = 4
 
 .macro N hz, frames
@@ -159,6 +161,8 @@ tracks:                     ; per track: melody, bass
     .word RA_HEM_MEL, RA_HEM_BASS   ; in the world's assets (wassets.asm)
     .word RA_SKO_MEL, RA_SKO_BASS
     .word RA_STA_MEL, RA_STA_BASS
+    .word RA_SNO_MEL, RA_SNO_BASS
+    .word RA_GOD_MEL, RA_GOD_BASS
 
 
 .code

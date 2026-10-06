@@ -430,6 +430,13 @@ on_map:
     ADD r1, 1
 @sel:
     ST [map_sel], r1
+    MOV r2, r0                      ; B: the next board
+    AND r2, BTN_B
+    JZ @noboard
+    PUSH r0
+    CALL board_next
+    POP r0
+@noboard:
     AND r0, BTN_A
     JZ @draw
     LD r0, [scene_t]
@@ -445,11 +452,12 @@ on_map:
     LD r1, [map_world]
     LDB r0, [r1 + world_sky]
     SYS CLS
-    LDI r0, 0                       ; ground and the road
+    LD r1, [map_world]              ; the world's ground and the road
+    LDB r4, [r1 + world_ground]
+    LDI r0, 0
     LDI r1, 72
     LDI r2, 128
     LDI r3, 56
-    LDI r4, C_GREEN
     SYS RECTFILL
     LDI r0, 12
     LDI r1, 82
@@ -537,6 +545,15 @@ on_map:
 @hop:
     LDI r3, 0
     SYS SPR
+    ADD r1, 0                       ; the board he rides, under his head
+    ADD r2, 9
+    MOV r0, r1
+    MOV r1, r2
+    LDI r2, 8
+    LDI r3, 2
+    LD r4, [board_sel]
+    LDB r4, [r4 + board_colors]
+    SYS RECTFILL
     ; the seagull with the world's food flies over to the boss's stop
     LD r1, [scene_t]
     CMP r1, 120
@@ -550,9 +567,84 @@ on_map:
     SYS SPR
     SUB r1, 4
     ADD r2, 7
-    LDI r0, spr_fries
+    LDI r0, RA_FOOD                 ; the world food (wassets.asm)
     SYS SPR
 @done:
+    RET
+
+; boards_update: a world's board when all four of its parts are found; the golden board with all 60 stars (7.2)
+boards_update:
+    LDI r6, 0                       ; world
+    LDI r5, 0                       ; stars counted
+@world:
+    MOV r4, r6
+    MUL r4, 5
+    LDI r3, 0                       ; parts of this world
+    LDI r2, 0
+@level:
+    LDB r1, [r4 + progress]
+    MOV r0, r1
+    AND r0, PR_PART
+    JZ @np
+    ADD r3, 1
+@np:
+    LDI r0, 0                       ; its stars
+@bit:
+    MOV r7, r1
+    SHR r7, r0
+    AND r7, 1
+    ADD r5, r7
+    ADD r0, 1
+    CMP r0, 3
+    JLT @bit
+    ADD r4, 1
+    ADD r2, 1
+    CMP r2, 5
+    JLT @level
+    CMP r3, 4
+    JLT @next
+    MOV r1, r6                      ; board 1 + world
+    ADD r1, 1
+    LDI r0, 1
+    SHL r0, r1
+    LD r1, [boards]
+    OR r1, r0
+    ST [boards], r1
+@next:
+    ADD r6, 1
+    CMP r6, 5
+    JLT @world
+    ST [stars_total], r5
+    CMP r5, 60
+    JLT @done
+    LD r1, [boards]
+    OR r1, 1 << BD_GOLD
+    ST [boards], r1
+@done:
+    RET
+
+; board_next: B on the map: the next board Bo has (his own only while the seagull does not have it)
+board_next:
+    LD r1, [board_sel]
+    LDI r2, 8
+@try:
+    ADD r1, 1
+    AND r1, 7
+    LD r0, [boards]
+    SHR r0, r1
+    AND r0, 1
+    JZ @skip
+    CMP r1, BD_OWN
+    JNE @take
+    LD r0, [stolen]
+    CMP r0, 0
+    JEQ @take
+@skip:
+    SUB r2, 1
+    JNZ @try
+    RET
+@take:
+    ST [board_sel], r1
     RET
 
 ; ---- the end of a level: tally (DESIGN §8.1, §11.1) ----------------------------------------------------
@@ -576,6 +668,13 @@ level_done:
 @np:
     OR r1, PR_DONE
     STB [r0 + progress], r1
+    PUSH r0
+    CALL boards_update
+    LD r0, [apples_total]
+    LD r1, [lv_apples]
+    ADD r0, r1
+    ST [apples_total], r0
+    POP r0
     ADD r0, 1                       ; the next level opens
     LD r1, [unlocked]
     CMP r0, r1
@@ -722,7 +821,7 @@ on_tally:
     SYS SPR
     SUB r1, 4
     ADD r2, 7
-    LDI r0, spr_fries
+    LDI r0, RA_FOOD                 ; the world food (wassets.asm)
     SYS SPR
 @nogull:
     RET
@@ -771,6 +870,28 @@ on_cut:
     JMP draw_bubble
 @end:
     LD r0, [map_world]
+    CMP r0, 3
+    JNE @notheft
+    LDI r1, 1                       ; after Backhoppet: the seagull has Bo's board; the jelly man lends his
+    ST [stolen], r1
+    LD r1, [boards]
+    OR r1, 1 << BD_LIQ
+    ST [boards], r1
+    LDI r1, BD_LIQ
+    ST [board_sel], r1
+@notheft:
+    CMP r0, 4
+    JNE @next
+    LDI r1, 0                       ; after the final: his own board back, SUPERBOSSE unlocked, the ending
+    ST [stolen], r1
+    ST [board_sel], r1
+    ST [scene_t], r1
+    LDI r1, 1
+    ST [super_ok], r1
+    LDI r1, M_END
+    ST [mode], r1
+    RET
+@next:
     ADD r0, 1
     ST [map_world], r0
     MUL r0, 5
@@ -784,8 +905,140 @@ s_zero: .string "0"
 ; snail, seagull, hedgehog, wasp, ball, teddy, blob, Bo
 code_pics: .word spr_apple, spr_bigapple, spr_fries, spr_candy, spr_star, spr_part_small, spr_truck, spr_sticker
            .word spr_en_snail, spr_en_gull + 32, spr_en_hedgehog, spr_en_wasp, spr_en_ball, spr_en_teddy, spr_en_blob, spr_bo_head
-cut_lines:  .word cut_w1, cut_w2, cut_w3
+cut_lines:  .word cut_w1, cut_w2, cut_w3, cut_w4, cut_w5
 cut_w1:     .byte TX_MINA_POMMES, TX_MUMS, TX_GODISLANDET, TX_JAG_SKA_TILL_GODISLANDET, 255
 cut_w2:     .byte TX_DEN_VILLE_BARA_HA_MOROTTER, 255
 cut_w3:     .byte TX_DEN_AR_AVSTANGD, 255
+cut_w4:     .byte TX_JAG_GJORDE_DET, TX_SKRIII, TX_NEJ_MIN_BRADA, TX_LANA_MIN, TX_EN_LAKRITSBRADA, 255
+cut_w5:     .byte TX_MIN_BRADA, TX_VILL_DU_HA_POMMES, TX_SKRII, TX_SLUT, 255
+.code
+
+; ---- the ending (DESIGN 10.5): Bo rides home through all five worlds with the seagull, then JAG GJORDE DET!,
+; the statistics (stars x/60, apples, points) and, with all 60 stars, the golden board. A: the title.
+END_WORLD_T = 150                   ; frames per world on the way home
+on_end:
+    LD r0, [scene_t]
+    ADD r0, 1
+    ST [scene_t], r0
+    CMP r0, END_WORLD_T * 5
+    JGE @stats
+    DIV r0, END_WORLD_T             ; the world he rides through
+    LDB r1, [r0 + world_sky]
+    PUSH r0
+    MOV r0, r1
+    SYS CLS
+    POP r1
+    LDB r4, [r1 + world_ground]
+    LDI r0, 0
+    LDI r1, 96
+    LDI r2, 128
+    LDI r3, 32
+    SYS RECTFILL
+    LD r1, [scene_t]                ; the seagull, his friend now, flies along
+    AND r1, 63
+    ADD r1, 40
+    LDI r0, spr_en_gull
+    LDI r2, 40
+    LDI r3, 0
+    SYS SPR
+    ADD r1, 8
+    ADD r0, 32
+    SYS SPR
+    LDI r0, P_RIDE
+    JMP end_bo
+@stats:
+    LDI r0, C_NAVY
+    SYS CLS
+    LDI r0, TX_JAG_GJORDE_DET
+    LDI r1, 14
+    LDI r2, 12
+    CALL draw_text_id
+    LDI r0, TX_STJARNOR
+    LDI r1, 10
+    LDI r2, 34
+    CALL draw_text_id
+    LD r0, [stars_total]
+    LDI r1, END_X
+    LDI r2, 36
+    LDI r3, C_WHITE
+    SYS NUM
+    MOV r1, r0
+    LDI r0, s_of60
+    SYS TEXT
+    LDI r0, TX_APPLEN
+    LDI r1, 10
+    LDI r2, 48
+    CALL draw_text_id
+    LD r0, [apples_total]
+    LDI r1, END_X
+    LDI r2, 50
+    LDI r3, C_WHITE
+    SYS NUM
+    LDI r0, TX_POANG
+    LDI r1, 10
+    LDI r2, 62
+    CALL draw_text_id
+    LD r0, [score_hi]
+    CMP r0, 0
+    JEQ @lo
+    LDI r1, END_X
+    LDI r2, 64
+    LDI r3, C_WHITE
+    SYS NUM
+    MOV r1, r0
+    LD r0, [score_lo]               ; the low four digits, with zeros in front
+    LDI r4, 1000
+@zero:
+    CMP r0, r4
+    JAE @num
+    PUSH r0
+    LDI r0, s_zero
+    SYS TEXT
+    MOV r1, r0
+    POP r0
+    DIV r4, 10
+    CMP r4, 1
+    JGT @zero
+@num:
+    SYS NUM
+    JMP @board
+@lo:
+    LD r0, [score_lo]
+    LDI r1, END_X
+    LDI r2, 64
+    LDI r3, C_WHITE
+    SYS NUM
+@board:
+    LD r0, [boards]                 ; all 60 stars: the golden board under him
+    AND r0, 1 << BD_GOLD
+    JZ @own
+    LDI r0, BD_GOLD
+    ST [board_sel], r0
+@own:
+    LD r0, [btnp]                   ; A: back to the title
+    AND r0, BTN_A
+    JZ @still
+    LD r0, [scene_t]
+    CMP r0, END_WORLD_T * 5 + 60
+    JLT @still
+    JMP to_title
+@still:
+    LDI r0, P_RIDE
+end_bo:                             ; r0 = pose: Bo in the middle of the screen, on the ground line
+    ST [bo_pose], r0
+    LDI r1, 60 * 16
+    LD r0, [cam_x]
+    SHL r0, 4
+    ADD r1, r0
+    ST [bo_x], r1
+    LDI r0, 96 * 16
+    LD r1, [cam_y]
+    SHL r1, 4
+    ADD r0, r1
+    ST [bo_y], r0
+    JMP draw_bo
+END_X = 70
+
+.data
+s_of60: .string " / 60"
 .code

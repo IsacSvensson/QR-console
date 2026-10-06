@@ -214,18 +214,27 @@ const finish = (b: Bot) => {
 };
 
 /** The boss of 1-5: keep away from the dive, land on it while it is dizzy, three times. */
-const BS = { FLY: 0, WARN: 1, DIVE: 2, DIZZY: 3, RISE: 4 };
+const BS = { FLY: 0, WARN: 1, DIVE: 2, DIZZY: 3, RISE: 4, NEST: 5 };
+const BOSS_TYPES = [17, 25]; // Stora Måsen in 1-5, and in the final
 const bossSub = (b: Bot) => {
   const base = b.S('actors');
-  for (let i = 0; i < 12; i++) if (b.vm.read16(base + i * 22) === 17 && b.vm.read16(base + i * 22 + 10) === 0) return b.vm.read16(base + i * 22 + 20);
+  for (let i = 0; i < 12; i++) if (BOSS_TYPES.includes(b.vm.read16(base + i * 22)) && b.vm.read16(base + i * 22 + 10) === 0) return b.vm.read16(base + i * 22 + 20);
   return -1;
+};
+const bossX = (b: Bot) => b.actorX(17) ?? b.actorX(25);
+/** Away from popcorn falling towards Bo (the final, phase 1), or undefined if none is near. */
+const dodgePopcorn = (b: Bot) => {
+  const p = actorsOf(b, 16).find((px2) => Math.abs(px2 - b.x) < 26);
+  if (p === undefined) return undefined;
+  const away = p < b.x ? B.R : B.L;
+  return b.x < px(2) ? B.R : b.x > b.u('lv_wpx') - px(2) ? B.L : away;
 };
 const fightBoss1 = (b: Bot, hits = 3) => {
   for (let h = 0; h < hits; h++) {
-    // wait for the warning, then roll away from where Bo stands (the dive goes there)
-    b.until((x) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => bossSub(x) === BS.WARN, 900, 'the warning');
+    // wait for the warning (out of the way of falling popcorn in the final), then roll away from where Bo stands
+    b.until((x) => dodgePopcorn(x) ?? (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => bossSub(x) === BS.WARN, 900, 'the warning');
     // along the dive, past where it aims; with no room for that (by a ramp), right under it to the other side
-    const left = (b.actorX(17) ?? 0) > b.x;
+    const left = (bossX(b) ?? 0) > b.x;
     const room = left ? b.x - 40 : b.u('lv_wpx') - 40 - b.x;
     const away = room >= 32 ? (left ? B.L : B.R) : left ? B.R : B.L;
     b.until(away, (x) => bossSub(x) === BS.DIVE || (room >= 32 && Math.abs(x.vx) >= 24), 90);
@@ -248,7 +257,7 @@ const fightBoss1 = (b: Bot, hits = 3) => {
         const d = 10 + 4 * (k % 8);
         const left = Math.floor(k / 8) % 2 === 0;
         const steer = 4 * Math.floor(k / 16);
-        const bx = b.actorX(17)!;
+        const bx = bossX(b)!;
         const goal = left ? bx - d : bx + d;
         b.until((x) => (x.x < goal - 2 ? B.R : x.x > goal + 2 ? B.L : x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => Math.abs(x.x - goal) <= 2 && x.vx === 0, 120);
         const toward = left ? B.R : B.L;
@@ -256,7 +265,7 @@ const fightBoss1 = (b: Bot, hits = 3) => {
         for (let i = 0; i < 60 && b.u('ev_n') === n0; i++) b.step(B.A | (i < steer ? toward : 0));
         b.land();
       },
-      (x) => x.u('ev_n') === n0 + 1 && x.u('ev_kind') === 1 && x.u('ev_type') === 17,
+      (x) => x.u('ev_n') === n0 + 1 && x.u('ev_kind') === 1 && BOSS_TYPES.includes(x.u('ev_type')),
       160,
       `boss hit ${h + 1}`,
     );
@@ -311,11 +320,11 @@ const actorsOf = (b: Bot, type: number) => {
 };
 /** A river from column `river`, 13 columns wide, with a log (3 wide, drifting 10 columns): wait on the bank for the
  *  log, roll onto it, stand still while it carries Bo across, roll off onto the far bank. */
-const rideLog = (b: Bot, river: number) => {
+const rideLog = (b: Bot, river: number, type = 18) => {
   const home = px(river + 1) + 4;
-  const log = (x: Bot) => actorsOf(x, 18).find((lx) => lx >= home - 4 && lx <= home + 84);
+  const log = (x: Bot) => actorsOf(x, type).find((lx) => lx >= home - 4 && lx <= home + 84);
   standBefore(b, river);
-  b.until((x) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => Math.abs((log(x) ?? -99) - home) <= 2 && x.actorVX(18) >= 0, 900, `the log at ${river} comes home`);
+  b.until((x) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => Math.abs((log(x) ?? -99) - home) <= 2 && x.actorVX(type) >= 0, 900, `the log at ${river} comes home`);
   b.until(B.R, (x) => x.x >= px(river) + 6 && x.grounded, 60, 'onto the log');
   b.until((x) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => (log(x) ?? 0) >= home + 78, 400, 'carried across');
   b.until(B.R, (x) => x.x >= px(river + 13) + 4 && x.grounded, 120, 'off onto the far bank');
@@ -411,6 +420,87 @@ const fightDozer = (b: Bot) => {
     100,
     'press 3: off the crane arm with a trick',
   );
+};
+
+const backhoppet = (b: Bot, withA: boolean) => {
+  b.rideTo(px(2), -1);
+  b.brakeToStop();
+  followArc(b, 14, 56); // the hop on the icy inrun: star 1
+  if (withA) kickA(b, 'the takeoff table: A at the lip', () => B.R);
+  else {
+    b.until(B.R, (x) => x.onRamp, 900, 'the takeoff table');
+    b.until(B.R, (x) => !x.grounded, 60, 'off the lip without A');
+    b.land(B.R);
+  }
+  b.brakeToStop();
+  standBefore(b, 92);
+  hopOnto(b, (x) => x.cell(92, 27 + 3) === 0 && x.grounded, 'the box with apples');
+  b.until(B.R, (x) => x.x >= px(97), 300);
+  b.brakeToStop();
+  ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 1 - 3), 'onto the plank in the bush (its apples)');
+  b.land(B.R);
+};
+
+/** The final (5-5): (1) as Stora Måsen (dodging its popcorn), (2) kicker + A onto it, dizzy high above the kicker,
+ *  (3) up the plank, grind the licorice rail and roll off it with a kickflip onto it in its nest. */
+const fightBoss5 = (b: Bot) => {
+  b.until((x) => dodgePopcorn(x) ?? (x.x < px(18) ? B.R : stop(x)), (x) => x.x >= px(18) && x.vx === 0, 600, 'to the middle of the arena');
+  fightBoss1(b, 1);
+  b.land();
+  // (2) by the left wall until it warns; then it dives to its place above the kicker and hangs there dizzy
+  b.until((x) => (x.x > px(1) ? B.L : stop(x)), (x) => x.x <= px(1) + 2 && x.vx === 0, 600, 'to the left wall');
+  b.until(stop, (x) => bossSub(x) === BS.DIZZY, 1500, 'it hangs dizzy above the kicker');
+  const n0 = b.u('ev_n');
+  b.search(
+    (k) => {
+      b.hold(0, k);
+      b.until(B.R, (x) => x.onRamp, 200);
+      b.until(B.R, (x) => !x.grounded, 30);
+      b.step(B.A);
+      b.until(B.A, (x) => x.grounded || x.u('ev_n') !== n0, 200);
+    },
+    (x) => x.u('ev_n') === n0 + 1 && x.u('ev_kind') === 1 && x.u('boss_hits') === 2,
+    90,
+    'hit 2: kicker + A',
+  );
+  b.land();
+  // (3) up the biscuit plank, onto the licorice rail, roll off its end with a kickflip onto the nest
+  b.until(stop, (x) => bossSub(x) === BS.NEST && (bossX(x) ?? 0) >= 31 * 8 + 3, 900, 'it flies to its nest');
+  b.until((x) => (x.x < px(16) ? B.R : x.x > px(16) + 4 ? B.L : stop(x)), (x) => Math.abs(x.x - px(16) - 2) <= 2 && x.vx === 0, 600, 'to the plank');
+  ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 3), 'onto the biscuit plank');
+  b.brakeToStop();
+  b.until((x) => (x.x < px(21) + 2 ? (x.vx < 4 ? B.R : 0) : stop(x)), (x) => x.x >= px(21) + 2 && x.vx === 0, 200, 'to the end of the plank');
+  b.search(
+    (k) => {
+      b.step(B.A | B.R);
+      b.until(B.A | B.R, (x) => x.state === 2 || x.grounded, 120);
+      if (b.state !== 2) throw new Error('not on the rail');
+      b.until(k % 2 ? B.R : 0, (x) => x.state !== 2, 300); // to its end
+      b.hold(0, k >> 1);
+      b.step(B.B); // a kickflip
+      b.until(0, (x) => x.grounded || x.u('boss_win_t') > 0, 200);
+    },
+    (x) => x.u('boss_win_t') > 0,
+    30,
+    'hit 3: off the licorice rail with a kickflip onto the nest',
+  );
+};
+
+/** SUPERBOSSE at Backhoppet's takeoff table (DESIGN 4): up, then down on the kicker; off the lip at full speed with
+ *  an ollie; <- or -> with B in the air. Before the final the same input is a 360. */
+const superbosse = (b: Bot) => {
+  b.rideTo(px(2), -1);
+  b.brakeToStop();
+  b.until(B.R, (x) => x.onRamp, 900, 'down the inrun to the takeoff table');
+  b.step(B.U);
+  b.step(0);
+  b.step(B.D);
+  b.until(B.R, (x) => !x.grounded, 30, 'off the lip');
+  b.step(B.A);
+  b.hold(B.A, 4);
+  b.step(B.R | B.B);
+  b.until(0, (x) => x.grounded, 300, 'the flight');
+  b.hold(0, 120);
 };
 
 const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
@@ -777,6 +867,211 @@ const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
     b.land(B.R);
   },
   '3-5': (b) => fightDozer(b),
+  // ---- World 4 (M24) ----
+  '4-1': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    followArc(b, 51); // over the snow heap: star 1 (the next heap breaks under Bo)
+    stompEnemy(b, 9, [EV.STOMP], 'the first snowman');
+    followArc(b, 120, 24, true); // over the gap at the end of the ice (brake to the arc's speed: the ice keeps any)
+    kickA(b, 'the kicker: star 2', () => 0, 24);
+    stompEnemy(b, 9, [EV.STOMP], 'the second snowman');
+    standBefore(b, 160);
+    hopOnto(b, (x) => x.cell(160, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(171), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the bush');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '4-2': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    kickA(b, 'the small kicker: star 1');
+    followArc(b, 53, 40, true); // over the sled
+    kickA(b, 'the big kicker at the bottom: star 2', () => B.R);
+    b.brakeToStop();
+    standBefore(b, 128);
+    hopOnto(b, (x) => x.cell(128, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(137), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the bush');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '4-3': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    followArc(b, 33); // the holes in the ice (nothing slows Bo down: push speed is the arcs' speed)
+    followArc(b, 52);
+    followArc(b, 64); // over the ice block: star 1
+    kickA(b, 'the kicker on the ice: star 2', () => 0, 24);
+    stompEnemy(b, 9, [EV.STOMP], 'the snowman');
+    standBefore(b, 136);
+    hopOnto(b, (x) => x.cell(136, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(143), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the bush');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '4-4': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    standBefore(b, 27);
+    // the chair comes back to the bottom station now and then: wait for it there, hop on
+    const chair = () => actorsOf(b, 23)[0];
+    b.until(stop, (x) => { const c = chair(); return c !== undefined && c === px(28) + 4 && x.actorVX(23) === 0; }, 900, 'the chair waits at the bottom');
+    hopOnto(b, (x) => x.grounded && x.u('bo_plat') !== 0 && Math.abs(x.x - (chair() ?? 0)) <= 3, 'onto the middle of the chair');
+    b.until(stop, (x) => x.x >= px(50), 900, 'up the cable');
+    b.until(B.R, (x) => x.grounded && x.foot === px(32 - 24), 120, 'off the chair onto the top');
+    followArc(b, 57); // over the cabin: star 1
+    stompEnemy(b, 9, [EV.STOMP], 'the snowman at the top');
+    kickA(b, 'the kicker on the way down: star 2', () => 0, 24);
+    b.brakeToStop();
+    standBefore(b, 128);
+    hopOnto(b, (x) => x.cell(128, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(135), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the bush');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  // Backhoppet: down the icy inrun, A at the lip of the takeoff table: the longest jump (star 2); `noA`: the low
+  // arc (star 1)
+  '4-5': (b) => backhoppet(b, true),
+  // ---- World 5 (M24) ----
+  '5-1': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    b.until(B.R, (x) => x.x >= px(18), 300, 'the apples');
+    b.jumpPast((b.actorX(11) ?? px(28)) + 12); // over the jelly man
+    standBefore(b, 32);
+    hopOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 3), 'onto the first lollipop');
+    b.brakeToStop();
+    for (const col of [36, 40]) {
+      ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 3) && x.x >= px(col) - 3 && x.x <= px(col) + 10, `onto the lollipop at ${col}`);
+      b.brakeToStop();
+    }
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(32 - 4 - 3), 'straight up from the lollipop: star 1');
+    b.until(B.R, (x) => x.u('pw_kind') === 2, 900, 'godis');
+    standBefore(b, 64);
+    b.search(
+      (k) => {
+        b.hold(B.R, k % 12);
+        b.step(B.R | B.A);
+        b.hold(B.R | B.A, 14 + Math.floor(k / 12) * 2);
+        b.step(B.B); // the godissnurr
+        b.until(B.R, (x) => x.grounded || x.state > 1, 200);
+      },
+      (x) => x.grounded && x.foot === px(32 - 4 - 6),
+      120,
+      'up onto the biscuit plank with the godissnurr',
+    );
+    b.until(B.R, (x) => (x.u('lv_stars') & 4) === 4, 200, 'star 3');
+    b.until(B.R, (x) => x.grounded && x.foot === px(28), 300, 'down again');
+    kickA(b, 'the kicker: star 2', () => 0, 24);
+    b.brakeToStop();
+    b.jumpPast((b.actorX(11) ?? px(100)) + 12); // over the second jelly man
+    standBefore(b, 110);
+    hopOnto(b, (x) => x.cell(110, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(119), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the cotton candy');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'the part');
+    b.land(B.R);
+  },
+  '5-2': (b) => {
+    const RAFT = 24;
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    rideLog(b, 22, RAFT);
+    stompEnemy(b, 13, [EV.BOUNCE], 'the popcorn cannon');
+    rideLog(b, 55, RAFT);
+    standBefore(b, 70);
+    hopOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 3), 'onto the first lollipop');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 3) && x.x >= px(74) - 3, 'onto the second lollipop');
+    b.brakeToStop();
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(32 - 4 - 3), 'straight up: star 1');
+    rideLog(b, 84, RAFT);
+    kickA(b, 'the kicker: star 2', () => 0, 24);
+    stompEnemy(b, 12, [EV.STOMP], 'the candy blob');
+    standBefore(b, 134);
+    hopOnto(b, (x) => x.cell(134, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(141), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the cotton candy');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '5-3': (b) => {
+    const grind = (note: string, stop = true) => {
+      if (stop) b.brakeToStop();
+      ollieOnto(b, (x) => x.state === 2, note);
+      b.until(B.R, (x) => x.grounded, 300, `${note}: off the end`);
+      b.brakeToStop();
+    };
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    b.until(B.R, (x) => x.x >= px(12), 300);
+    grind('the first licorice rail');
+    b.until(B.R, (x) => x.x >= px(39), 300, 'the apples after the slope');
+    b.brakeToStop();
+    b.jumpPast((b.actorX(11) ?? px(44)) + 12); // over the jelly man
+    kickA(b, 'the kicker: star 2', () => 0, 24);
+    b.until(B.R, (x) => x.x >= px(62), 300);
+    grind('the second licorice rail');
+    b.until(B.R, (x) => x.x >= px(85), 300, 'past flag 2');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.state === 2, 'onto the long licorice rail');
+    b.until(B.R, (x) => x.x >= px(99), 300, 'along the long rail');
+    b.step(B.R | B.A); // off its end with an ollie: star 1
+    b.land(B.R | B.A);
+    if (!(b.u('lv_stars') & 1)) throw new Error('no star 1');
+    b.until(B.R, (x) => x.x >= px(115), 400, 'towards the high part');
+    grind('the third licorice rail', false);
+    standBefore(b, 156);
+    hopOnto(b, (x) => x.cell(156, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(159), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the cotton candy');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '5-4': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    kickA(b, 'the kicker at the bottom: star 2', () => 0, 24);
+    b.until(B.R, (x) => x.x >= px(24), 300, 'the apples before the cake');
+    // up the tiers (three tiles each: an ollie) to the next one above wherever Bo is; the blobs on tiers 2 and 4
+    const tiers = [[26, 7], [32, 10], [38, 13], [44, 16], [50, 19], [56, 22], [62, 25]] as const;
+    const stomped = new Set<number>();
+    for (let n = 0; n < 30 && b.foot > px(32 - 25); n++) {
+      const [tier, h] = tiers.find(([, th]) => px(32 - th) < b.foot)!;
+      b.brakeToStop();
+      b.until((x) => (x.x < px(tier) - 10 ? B.R : x.x > px(tier) - 6 ? B.L : stop(x)), (x) => Math.abs(x.x - px(tier) + 8) <= 2 && x.vx === 0, 300, `to tier h${h}`);
+      ollieOnto(b, (x) => x.grounded && x.foot === px(32 - h), `up to tier h${h}`);
+      b.brakeToStop();
+      b.until((x) => (x.x < px(tier) + 4 ? B.R : stop(x)), (x) => x.x >= px(tier) + 4 && x.vx === 0, 120, `onto tier h${h}`);
+      if ((tier === 32 || tier === 44) && !stomped.has(tier)) {
+        stompEnemy(b, 12, [EV.STOMP], `the candy blob on tier h${h}`);
+        stomped.add(tier);
+      }
+    }
+    standBefore(b, 68);
+    hopOnto(b, (x) => x.grounded && x.foot === px(32 - 25 - 3), 'onto the first lollipop');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 25 - 3) && x.x >= px(72) - 3, 'onto the second lollipop');
+    b.brakeToStop();
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(32 - 25 - 3), 'straight up: star 1');
+    b.until(B.R, (x) => x.x >= px(79), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 25 - 3), 'onto the plank in the cotton candy');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '5-5': (b) => fightBoss5(b),
   // the chase: keep pushing, every hop where the apples show it, A at the last kicker
   '2-5': (b) => chaseRun(b, [52, 68, 112]),
 
@@ -868,6 +1163,69 @@ export const ROUTES: Record<string, Route> = {
       b.hold(0, 60);
     },
   },
+  // M24: the whole game from the title, all 25 levels (every star and part), the theft, the final and the ending
+  // with the statistics (the golden board with all 60 stars); then from the title to Backhoppet: SUPERBOSSE
+  'm24-game': {
+    seed: 1,
+    run: (b) => {
+      fromTitle(b);
+      LEVEL_RUNS['1-1']!(b);
+      finish(b);
+      for (const id of ['1-2', '1-3', '1-4']) {
+        fromMap(b);
+        LEVEL_RUNS[id]!(b);
+        finish(b);
+      }
+      fromMap(b);
+      b.hold(0, 20);
+      fightBoss1(b);
+      finish(b);
+      for (const w of ['2', '3', '4', '5']) {
+        b.until(0, (x) => x.mode === x.S('M_MAP'), 1200, `the scene, then the World ${w} map`);
+        for (const n of ['1', '2', '3', '4', '5']) {
+          fromMap(b);
+          LEVEL_RUNS[`${w}-${n}`]!(b);
+          finish(b);
+        }
+      }
+      b.until(0, (x) => x.mode === x.S('M_END'), 1200, 'the scene after the final, then the ending');
+      b.until(0, (x) => x.u('scene_t') > 150 * 5 + 120, 1200, 'home through the five worlds, the statistics');
+      b.step(B.A);
+      b.step(0);
+      b.startLevel('4-5'); // from the title (picture code of the test levels): Backhoppet
+      superbosse(b);
+    },
+  },
+  // M24: the final: the seagull's dive costs a life; the fight starts again and is won
+  'm24-final-retry': {
+    seed: 3,
+    run: (b) => {
+      b.startLevel('5-5');
+      b.until(0, (x) => x.state === 3, 1200, 'standing still: the dive hits');
+      b.until(0, (x) => x.state === 0, 200, 'back');
+      fightBoss5(b);
+      b.until(0, (x) => x.mode !== x.S('M_PLAY'), 900, 'the end of the level');
+      b.hold(0, 10);
+    },
+  },
+  // M24: before the final the same input gives no SUPERBOSSE (a 360)
+  'm24-super-before': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('4-5');
+      superbosse(b);
+    },
+  },
+  // M24: the patterns that are alternatives to the main path: Backhoppet without A (the low arc)
+  'm24-alts': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('4-5');
+      backhoppet(b, false);
+      b.until(B.R, (x) => x.u('goal_t') > 0, 3000, 'to the goal');
+      b.hold(0, 60);
+    },
+  },
   // M22: the boss's dive costs a life; the fight starts again and is won
   'm22-boss-retry': {
     seed: 3,
@@ -907,6 +1265,16 @@ export const ROUTES: Record<string, Route> = {
   'm23-3-3': levelRoute('3-3'),
   'm23-3-4': levelRoute('3-4'),
   'm23-dozer': levelRoute('3-5'),
+  'm24-4-1': levelRoute('4-1'),
+  'm24-4-2': levelRoute('4-2'),
+  'm24-4-3': levelRoute('4-3'),
+  'm24-4-4': levelRoute('4-4'),
+  'm24-4-5': levelRoute('4-5'),
+  'm24-5-1': levelRoute('5-1'),
+  'm24-5-2': levelRoute('5-2'),
+  'm24-5-3': levelRoute('5-3'),
+  'm24-5-4': levelRoute('5-4'),
+  'm24-final': levelRoute('5-5'),
   'm23-chase': levelRoute('2-5'),
   // M23: the patterns that are alternatives to the main path (apples never lie): 2-3's giant jump without A (the
   // low arc that still clears the brook)

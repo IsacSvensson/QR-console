@@ -49,6 +49,15 @@ export const PREFABS: Record<string, string[][]> = {
   ],
   basket: [['BASKET']],
   carrots: [['CARROTS', 'CARROTS', 'CARROTS', 'CARROTS']],
+  // World 4 SNÖ
+  snowspruce: [['SPRUCE_ST'], ['SPRUCE_S']],
+  cabin: [
+    ['CABIN_T', 'CABIN_T'],
+    ['CABIN', 'CABIN'],
+  ],
+  // World 5 GODISLANDET
+  lollipop: [['LOLLI'], ['LOLLI_S'], ['LOLLI_S']],
+  nest: [['NEST', 'NEST', 'NEST']],
   // World 3 STADEN
   car: [
     ['CARR_L', 'CARR_M', 'CARR_R'],

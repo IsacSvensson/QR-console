@@ -450,7 +450,7 @@ pd_trick:
 
 .data
 pop_arc: .byte 0, 2, 4, 5, 6, 7, 7, 8, 8, 8, 8, 7, 7, 6, 5, 4, 3, 2, 1, 1, 0, 0, 0, 0
-board_colors: .byte C_BLACK, C_GREEN, C_BROWN, C_RED, C_CYAN, C_PEACH, C_YELLOW, C_DGREY
+board_colors: .byte C_BLACK, C_GREEN, C_BROWN, C_RED, C_CYAN, C_PEACH, C_YELLOW, C_PURPLE   ; BD_*: own, worlds 1-5, gold, licorice
 .code
 
 ; the hint above Bo's head, blinking

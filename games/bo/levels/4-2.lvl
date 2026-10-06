@@ -1,0 +1,52 @@
+# 4-2 PULKABACKEN — the sledging hill (DESIGN §8.3): one long downhill in steps, faster and faster, small and big
+# kickers, sleds that slide at Bo (hop over them: they hurt from above too).
+name  PULKABACKEN
+world 4
+music 4
+rows  32
+start 4
+
+terrain
+h 24
+flat 14         # 0-13    the top: start, sign, apples
+down22 4        # 14-21   (h20)
+flat 8          # 22-29   a small kicker and star 1
+down45 4        # 30-33   (h16)
+flat 8          # 34-41   flag
+down22 4        # 42-49   (h12)
+flat 12         # 50-61   a sled
+down45 4        # 62-65   (h8)
+flat 6          # 66-71
+down45 4        # 72-75   (h4)
+flat 80         # 76-155  the big kicker and star 2, flag, a sled, the box, the bush with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+10  prefab snowspruce g
+15  apple g+1
+17  apple g+1
+19  apple g+1
+21  apple g
+26  ramp22 1
+27  arc 49 r22a
+36  flag
+37  star 29 1
+40  prefab snowspruce g
+53  arc 40 hold 5
+58  enemy sled g
+73  apple g+1
+75  apple g
+82  ramp45 2
+83  arc 52 r45a
+95  star 14 2
+116 flag
+122 apples g 4
+128 box g apples
+134 prefab snowspruce g
+140 apple g+4
+141 platform g+2 6
+141 fg bush g+3
+143 star g+3 3
+145 part g+3
+152 goal

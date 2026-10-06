@@ -33,6 +33,7 @@ B_BUS    = 10                       ; a moving platform that drives off when Bo 
 B_RABBIT = 11                       ; Jättekaninen: hops after Bo (the chase of 2-5), spawned by boss_step
 B_DOZER  = 12                       ; Bulldozern (3-5), dozer.asm
 B_STILL  = 13                       ; does nothing (the bulldozer's sand piles)
+B_LIFT   = 14                       ; a ski-lift chair: up the cable (45 degrees), then back at the bottom
 ; stomp outcomes
 O_APPLE  = 0
 O_AWAY   = 1
@@ -52,7 +53,7 @@ F_WIDE  = 4                         ; 16 x 8
 F_RIGHT = 8                         ; the sprite faces right
 F_BIG   = 16                        ; 16 x 16 (four sprites)
 F_PLAT  = 32                        ; a moving platform: its top carries Bo, no contact (drawn from world tiles)
-F_BOSS  = 64                        ; comes on at once, wherever the camera is (an arena boss)
+F_BOSS  = 64                        ; an arena boss: comes on at once and stays, wherever the camera is
 ; events (for the tests): what happened at a contact
 EV_STOMP  = 1
 EV_HIT    = 2
@@ -65,6 +66,7 @@ EN_CONE = 14
 EN_SNOWBALL = 15
 EN_POPCORN = 16
 JOKE_T = 40
+LIFT_WAIT = 120                     ; frames a lift chair waits at the bottom station
 PIGEON_NEAR = 48                    ; px: a pigeon flies up when Bo rolls this near
 
 .data
@@ -93,15 +95,20 @@ en_table:
     .byte B_RABBIT, 14, 14, 8, O_STAND, F_BIG | F_RIGHT, 255, 36    ; 20 Jättekaninen: hop speed 8..36 (boss.asm)
     .byte B_DOZER, 32, 16, 0, O_STAND, F_RIGHT | F_BOSS, 255, 21             ; 21 Bulldozern: drives up to 21 columns left of home
     .byte B_STILL, 8, 5, 0, O_STAND, 0, 255, 0                      ; 22 sand pile (slows Bo)
+    .byte B_LIFT,  16, 8, 8, O_STAND, F_PLAT, 255, 24               ; 23 ski-lift chair: 24 columns up the cable
+    .byte B_PLAT,  24, 6, 6, O_STAND, F_PLAT, 255, 10               ; 24 marshmallow raft: like the log
+    .byte B_BOSS1, 14, 12, 16, O_STAND, F_BIG | F_RIGHT | F_BOSS, 255, 0 ; 25 Stora Måsen in the final (5-5)
 en_sprites:
     .word 0, spr_en_snail, spr_en_gull, spr_en_hedgehog, spr_en_wasp, spr_en_ball, spr_en_teddy, spr_en_squirrel
     .word spr_en_pigeon, spr_en_snowman, spr_en_sled, spr_en_jelly, spr_en_blob, spr_en_cannon, spr_en_cone
-    .word spr_en_snowball, spr_en_popcorn, RA_BOSS_GULL, plat_log, plat_bus, RA_RABBIT, RA_DOZER, RA_SANDPILE
+    .word spr_en_snowball, spr_en_popcorn, RA_BOSS_GULL, plat_log, plat_bus, RA_RABBIT, RA_DOZER, RA_SANDPILE, plat_chair, plat_raft, RA_BOSS_GULL5
 behaviours: .word b_walk, b_dive, b_fly, b_bounce, b_throw, b_proj, b_roll, b_pigeon, b_boss1, b_plat, b_bus, b_rabbit
-            .word b_dozer, b_still
-; platform pictures (instead of a sprite): columns, rows, then world tile codes row by row
-plat_log:   .byte 3, 1, TW_LOG_L, TW_LOG_M, TW_LOG_R
-plat_bus:   .byte 6, 2, TW_BUS_R, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_F
+            .word b_dozer, b_still, b_lift
+; platform pictures (instead of a sprite): columns, rows, rows above its top, then world tile codes row by row
+plat_log:   .byte 3, 1, 0, TW_LOG_L, TW_LOG_M, TW_LOG_R
+plat_raft:  .byte 3, 1, 0, TW_RAFT_L, TW_RAFT_M, TW_RAFT_R
+plat_chair: .byte 2, 2, 1, TW_CHAIR_TL, TW_CHAIR_TR, TW_CHAIR, TW_CHAIR
+plat_bus:   .byte 6, 2, 0, TW_BUS_R, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_F
             .byte TW_BUS_WH, TW_BUS_B, TW_BUS_B, TW_BUS_B, TW_BUS_B, TW_BUS_WH
 sine32:     .byte 0, 2, 5, 7, 8, 10, 11, 12, 12, 12, 11, 10, 8, 7, 5, 2, 0, 254, 251, 249, 248, 246, 245, 244
             .byte 244, 244, 245, 246, 248, 249, 251, 254
@@ -293,11 +300,13 @@ act_step:
     CMP r0, 0
     JEQ @done                       ; the behaviour removed it
 @far:
-    LD r0, [r7 + AC_TYPE]           ; the rabbit stays, however far behind; so does the bulldozer
+    LD r0, [r7 + AC_TYPE]           ; the rabbit stays, however far behind; so do the arena bosses
     CMP r0, EN_RABBIT
     JEQ act_touch
-    CMP r0, EN_DOZER
-    JEQ act_touch
+    SHL r0, 3
+    LDB r0, [r0 + en_table + 5]
+    AND r0, F_BOSS
+    JNZ act_touch
     LD r1, [r7 + AC_X]
     SHR r1, 4
     LD r0, [cam_x]
@@ -382,21 +391,78 @@ b_still:
 
 ; plat_move: r7 = platform, r0 = dx this frame (1/16 px): move it, and Bo with it if he stands on it
 plat_move:
+    LDI r1, 0
+; plat_move_xy: the same with r1 = dy
+plat_move_xy:
     ST [r7 + AC_VX], r0
-    LD r1, [r7 + AC_X]
-    ADD r1, r0
-    ST [r7 + AC_X], r1
-    LD r1, [bo_state]
-    CMP r1, ST_GROUND
+    ST [r7 + AC_VY], r1
+    LD r2, [r7 + AC_X]
+    ADD r2, r0
+    ST [r7 + AC_X], r2
+    LD r2, [r7 + AC_Y]
+    ADD r2, r1
+    ST [r7 + AC_Y], r2
+    LD r2, [bo_state]
+    CMP r2, ST_GROUND
     JNE @off
-    LD r1, [bo_plat]
-    CMP r1, r7
+    LD r2, [bo_plat]
+    CMP r2, r7
     JNE @off
-    LD r1, [bo_x]
-    ADD r1, r0
-    ST [bo_x], r1
+    LD r2, [bo_x]
+    ADD r2, r0
+    ST [bo_x], r2
+    LD r2, [bo_y]
+    ADD r2, r1
+    ST [bo_y], r2
 @off:
     RET
+
+b_lift:                             ; waits 2 s at the bottom station, rides up the cable; at the end of its range
+    LD r0, [r7 + AC_SUB]            ; back at the bottom (it leaves Bo)
+    CMP r0, 0
+    JNE @going
+    LD r0, [r7 + AC_T]
+    ADD r0, 1
+    ST [r7 + AC_T], r0
+    CMP r0, LIFT_WAIT
+    JLT @waiting
+    LDI r0, 1
+    ST [r7 + AC_SUB], r0
+@waiting:
+    LDI r0, 0
+    LDI r1, 0
+    JMP plat_move_xy
+@going:
+    CALL en_row_of
+    LDB r2, [r1 + 7]                ; range in columns
+    SHL r2, 3
+    LD r3, [r7 + AC_HX]
+    ADD r2, r3
+    LD r3, [r7 + AC_X]
+    SHR r3, 4
+    CMP r3, r2
+    JLT @ride
+    LD r0, [r7 + AC_HX]             ; at the top: back to the bottom station
+    SHL r0, 4
+    ST [r7 + AC_X], r0
+    LD r0, [r7 + AC_HY]
+    SHL r0, 4
+    ST [r7 + AC_Y], r0
+    LDI r0, 0                       ; and waits there again
+    ST [r7 + AC_SUB], r0
+    ST [r7 + AC_T], r0
+    LD r0, [bo_plat]
+    CMP r0, r7
+    JNE @gone
+    LDI r0, 0
+    ST [bo_plat], r0
+@gone:
+    RET
+@ride:
+    LDB r0, [r1 + 3]                ; right and up at the same speed (45 degrees)
+    MOV r1, r0
+    NEG r1
+    JMP plat_move_xy
 
 ; plat_on: r7 = platform -> Z clear if Bo stands on it
 plat_on:
@@ -953,6 +1019,8 @@ contact:
     LD r0, [r7 + AC_TYPE]
     CMP r0, EN_BOSS1
     JEQ boss1_contact
+    CMP r0, EN_BOSS5
+    JEQ boss1_contact
     CMP r0, EN_RABBIT
     JEQ rabbit_contact
     CMP r0, EN_DOZER
@@ -1252,6 +1320,8 @@ draw_actor:                         ; r7 = actor
     CMP r5, 2
     JEQ @gull
     CMP r5, EN_BOSS1
+    JEQ @gull
+    CMP r5, EN_BOSS5
     JNE @draw
 @gull:
     CMP r4, 1
@@ -1344,7 +1414,10 @@ draw_actor:                         ; r7 = actor
 @zzz:
     LD r4, [r7 + AC_TYPE]           ; the dizzy boss: stars round its head
     CMP r4, EN_BOSS1
+    JEQ @boss
+    CMP r4, EN_BOSS5
     JNE @sleep
+@boss:
     LD r4, [r7 + AC_SUB]
     CMP r4, 3
     JNE @end
@@ -1386,24 +1459,25 @@ draw_actor:                         ; r7 = actor
 draw_plat:
     LD r5, [r7 + AC_TYPE]
     SHL r5, 1
-    LD r0, [r5 + en_sprites]        ; the picture: columns, rows, codes
-    LDB r2, [r0]
-    LDB r3, [r0 + 1]
-    ADD r0, 2
+    LD r0, [r5 + en_sprites]        ; the picture: columns, rows, rows above the top, codes
+    LDB r3, [r0 + 2]                ; rows above the top, in px
+    SHL r3, 3
+    PUSH r3
     CALL act_pos
-    MOV r4, r1
+    MOV r4, r1                      ; x: centre - width / 2 (r6 = the type's row)
     LDB r1, [r6 + 1]
     SHR r1, 1
     SUB r4, r1
     LD r1, [cam_x]
     SUB r4, r1
-    MOV r5, r2
+    MOV r5, r2                      ; y: top - rows above
     LD r2, [cam_y]
     SUB r5, r2
-    LD r2, [r7 + AC_TYPE]           ; cols again (r2 was the foot y)
-    SHL r2, 1
-    LD r2, [r2 + en_sprites]
-    LDB r2, [r2]
+    POP r3
+    SUB r5, r3
+    LDB r2, [r0]                    ; columns
+    LDB r3, [r0 + 1]                ; rows
+    ADD r0, 3
     LDI r1, tilebank
     SYS MAP
     RET

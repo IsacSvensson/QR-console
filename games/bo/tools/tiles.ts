@@ -131,6 +131,8 @@ const FIXED_ART: Record<number, Art> = {
 export interface World {
   name: string;
   sky: number;
+  /** the ground colour of the world map */
+  ground: number;
   /** symbolic colours for STRUCT_ART */
   sym: Record<string, string>;
   /** structural art drawn differently in this world (same shape for collision, e.g. stairs for 45° slopes) */
@@ -154,6 +156,7 @@ const ART_TRUNK: Art = ['...44...', '...44...', '...44...', '..4444..', '...44..
 const HEMMA: World = {
   name: 'HEMMA',
   sky: 13,
+  ground: 11,
   sym: { g: 'a', h: '3', k: '7', w: 'e', v: '9', u: '4', s: 'a', t: '7', r: '3' },
   tiles: {
     [W(0)]: ['SOLID', 0, ['5bb5bbb5', 'bbbbbbbb', 'b5bbb5bb', '44b444b4', '44444444', '44414444', '44444441', '14444444']], // grass
@@ -193,6 +196,7 @@ const HEMMA: World = {
 const SKOGEN: World = {
   name: 'SKOGEN',
   sky: 12,
+  ground: 5,
   sym: { g: 'b', h: '4', k: '1', w: 'c', v: '9', u: '4', s: 'a', t: '7', r: '5' },
   tiles: {
     [W(0)]: ['SOLID', 0, ['bbbbbbbb', 'b5bb5bb5', '55555555', '45544554', '44444444', '44414444', '44444441', '14444444']], // moss (alt ground)
@@ -231,6 +235,7 @@ const SKOGEN: World = {
 const STADEN: World = {
   name: 'STADEN',
   sky: 2,
+  ground: 7,
   sym: { g: 'a', h: '7', k: '3', w: 'd', v: '8', u: '2', s: '9', t: '6', r: '1' },
   structArt: {
     [T.S45U]: ['......gg', '......hh', '....gghh', '....hhhh', '..gghhhh', '..hhhhhh', 'gghhhhhh', 'hhhhhhhh'], // stairs
@@ -280,7 +285,78 @@ const STADEN: World = {
   strip: [row16(W(15)), row16(W(16)), row16(W(16))],
 };
 
-export const WORLDS: World[] = [HEMMA, SKOGEN, STADEN];
+/** World 4 SNÖ — winter: a clear blue sky, white snow with grey specks, snowy mountains, icy blue ramps. */
+const SNO: World = {
+  name: 'SNÖ',
+  sky: 8,
+  ground: 15,
+  sym: { g: 'f', h: 'f', k: 'a', w: 'f', v: 'd', u: '8', s: 'f', t: 'a', r: '7' },
+  tiles: {
+    [W(0)]: ['SOLID', 0, ['ffffffff', 'fdfffdff', 'dddddddd', 'd8dddd8d', 'dddddddd', '8ddd8ddd', 'dddddddd', 'dd8ddddd']], // packed snow (alt ground)
+    [W(1)]: ['SOLID', 0, ['ffffffff', 'fffaffff', 'ffffffaf', 'ffffffff', 'faffffff', 'ffffffff', 'ffffafff', 'ffffffff']], // snow fill
+    [W(2)]: ['EMPTY', 0, ['........', '...ff...', '..ffff..', '.ffaaff.', 'ffaaaaff', 'ffffffff', '........', '........']], // snow heap (decor)
+    [W(3)]: ['EMPTY', 0, ['...ff...', '..f55f..', '..5f55..', '.f555f5.', '.55f555.', 'f5555f55', '...44...', '...44...']], // snowy spruce top
+    [W(4)]: ['EMPTY', 0, ['.f55f55.', 'f555555f', '55f555f5', '...44...', '...44...', '...44...', '...44...', '..4444..']], // snowy spruce
+    [W(5)]: ['EMPTY', 0, ['...77...', '...77...', '...77...', '...77...', '...77...', '...77...', '...77...', '..7777..']], // lift pole
+    [W(6)]: ['EMPTY', 0, ['3.......', '.33.....', '...33...', '.....33.', '.......3', '........', '........', '........']], // lift cable
+    [W(7)]: ['EMPTY', 0, ['......00', '......0.', '......0.', '......0.', '......0.', '......0.', '......0.', '666666..']], // chair hanger L (moving platform)
+    [W(8)]: ['EMPTY', 0, ['00......', '.0......', '.0......', '.0......', '.0......', '.0......', '.0......', '..666666']], // chair hanger R
+    [W(9)]: ['EMPTY', 0, ['66666666', '6eeeeee6', '66666666', '.0....0.', '........', '........', '........', '........']], // chair seat
+    [W(10)]: ['EMPTY', 0, ['....66..', '...6666.', '..666666', '.6666666', '66666666', '6ffff6f6', '6f22f6f6', '6f22f666']], // cabin roof/wall
+    [W(11)]: ['EMPTY', 0, ['6f22f666', '6f22f6f6', '6f22f6f6', '6ffff666', '66666666', '66666666', '66666666', '66666666']], // cabin wall
+    [W(12)]: ['EMPTY', 0, ['f.f..f.f', '.f....f.', '........', '........', '........', '........', '........', '........']], // icicles
+    [W(13)]: ['ONEWAY', 0, ['ffffffff', 'cccccccc', '9c9c9c9c', '99999999', '........', '........', '........', '........']], // snowy plank
+    [W(14)]: ['EMPTY', 0, ['........', '..666...', '..666...', '666666..', '..ff....', '.ffff...', 'ffffff..', 'ffffff..']], // flag on a snow pile
+    [W(15)]: ['EMPTY', 0, ['....f...', '...faf..', '..faaaf.', '.faaaaaf', 'faaaaaaa', 'aaaaaaaa', 'aaaaaaaa', 'aaaaaaaa']], // mountains (parallax)
+    [W(16)]: ['EMPTY', 0, ['aaaaaaaa', 'aaa7aaaa', 'aaaaaaaa', 'a7aaaaa7', 'aaaaaaaa', 'aaaaa7aa', 'aaaaaaaa', 'aaaaaaaa']], // mountain (parallax)
+    [W(17)]: ['EMPTY', 0, ['f.d.f..d', '.fd.ffd.', 'dff.df.f', '.f..fd..', 'fd.f..ff', '.fdf.df.', 'd..fd..f', '.ff..df.']], // snowy bush (foreground)
+    [W(21)]: ['EMPTY', 0, ART_TRUNK], // trunk
+    [W(22)]: ['ONEWAY', 0, ['.ffffff.', 'ff5fff5f', 'f5ff5fff', '5ffff5f5', '.5f5ff5.', '..5555..', '........', '........']], // snowy crown (one-way)
+  },
+  names: {
+    GRASS: W(0), DIRT: W(1), SNOWHEAP: W(2), SPRUCE_ST: W(3), SPRUCE_S: W(4), LIFTPOLE: W(5), CABLE: W(6),
+    CHAIR_TL: W(7), CHAIR_TR: W(8), CHAIR: W(9), CABIN_T: W(10), CABIN: W(11), ICICLES: W(12), SNOWPLANK: W(13),
+    SNOWFLAG: W(14), STRIP_T: W(15), STRIP: W(16), HEDGE: W(17), TRUNK: W(21), CROWN: W(22),
+  },
+  strip: [row16(W(15)), row16(W(16)), row16(W(16))],
+};
+
+/** World 5 GODISLANDET — candy land at a purple dusk: white frosting on peach cake, red sprinkles, biscuit ramps,
+ *  lollipops, licorice, a candy castle on the horizon. */
+const GODIS: World = {
+  name: 'GODISLANDET',
+  sky: 1,
+  ground: 12,
+  sym: { g: 'f', h: 'c', k: '6', w: 'e', v: '9', u: '4', s: 'f', t: 'c', r: '6' },
+  tiles: {
+    [W(0)]: ['SOLID', 0, ['ffffffff', 'f6ff66ff', 'cccccccc', 'c4cccc4c', 'cccccccc', '4ccc4ccc', 'cccccccc', 'cc4ccccc']], // frosted cake (alt ground)
+    [W(1)]: ['SOLID', 0, ['cccccccc', 'cc6ccccc', 'cccccccc', 'cccccc6c', 'cccccccc', 'c6cccccc', 'cccccccc', 'ccccc6cc']], // cake fill
+    [W(2)]: ['ONEWAY', 0, ['..6666..', '.66ff66.', '66f66f66', '6f6ff6f6', '66f66f66', '.66ff66.', '..6666..', '........']], // lollipop (one-way top)
+    [W(3)]: ['EMPTY', 0, ['...ff...', '...ff...', '...ff...', '...ff...', '...ff...', '...ff...', '...ff...', '...ff...']], // lollipop stick
+    [W(4)]: ['EMPTY', 0, ['........', '........', '...ee...', '..eeee..', '.eefeee.', '.eeeeee.', 'eeeeeeee', 'eeeeeeee']], // gumdrop
+    [W(5)]: ['RAIL', 0, ['11111111', '10101010', '11111111', '........', '........', '........', '........', '........']], // licorice rail (grind)
+    [W(6)]: ['EMPTY', 0, ['f6ff6ff6', '6ff6ff6f', 'ff6ff6ff', 'f6ff6ff6', '6ff6ff6f', 'ff6ff6ff', 'f6ff6ff6', '6ff6ff6f']], // candy cane wall
+    [W(7)]: ['EMPTY', 0, ['.ffffff.', 'ffcffcff', 'fffffcff', 'fcffffff', 'ffffcfff', 'fffffffc', 'cffffcff', '.ffffff.']], // marshmallow raft L (moving platform)
+    [W(8)]: ['EMPTY', 0, ['ffffffff', 'ffcffcff', 'fffffcff', 'fcffffff', 'ffffcfff', 'fffffffc', 'cffffcff', 'ffffffff']], // marshmallow raft
+    [W(9)]: ['EMPTY', 0, ['.ffffff.', 'ffcffcff', 'fffffcff', 'fcffffff', 'ffffcfff', 'fffffffc', 'cffffcff', '.ffffff.']], // marshmallow raft R
+    [W(10)]: ['EMPTY', 0, ['4.4..4.4', '44444444', '14141441', '44444444', '14141414', '.444444.', '..4444..', '........']], // the seagull's nest
+    [W(11)]: ['ONEWAY', 0, ['eeeeeeee', '99999999', '9e9e9e9e', '44444444', '........', '........', '........', '........']], // biscuit plank
+    [W(12)]: ['EMPTY', 0, ['..cc....', '.cccc...', 'ccffcc..', '.cccc...', '..cc....', '...4....', '...4....', '..444...']], // cotton candy (decor)
+    [W(15)]: ['EMPTY', 0, ['..6..6..', '.666666.', '.6f66f6.', '.666666.', '66666666', '6f6666f6', '66666666', '66666666']], // candy castle (parallax)
+    [W(16)]: ['EMPTY', 0, ['66666666', '66f66666', '66666666', '666666f6', '66666666', '6f666666', '66666666', '66666666']], // castle wall (parallax)
+    [W(17)]: ['EMPTY', 0, ['c.f.c..f', '.cf.ccf.', 'fcc.fc.c', '.c..cf..', 'cf.c..cc', '.cfc.fc.', 'f..cf..c', '.cc..fc.']], // cotton candy bush (foreground)
+    [W(21)]: ['EMPTY', 0, ['...ff...', '...ff...', '...ff...', '..ffff..', '...ff...', '...ff...', '...ff...', '..ffff..']], // candy stick (trunk)
+    [W(22)]: ['ONEWAY', 0, ['.cccccc.', 'cc6ccc6c', 'c6cc6ccc', '6cccc6c6', '.c6c6cc.', '..cccc..', '........', '........']], // cotton candy crown (one-way)
+  },
+  names: {
+    GRASS: W(0), DIRT: W(1), LOLLI: W(2), LOLLI_S: W(3), GUMDROP: W(4), LIQRAIL: W(5), CANEWALL: W(6),
+    RAFT_L: W(7), RAFT_M: W(8), RAFT_R: W(9), NEST: W(10), BISCUIT: W(11), CANDYFLOSS: W(12),
+    STRIP_T: W(15), STRIP: W(16), HEDGE: W(17), TRUNK: W(21), CROWN: W(22),
+  },
+  strip: [row16(W(15)), row16(W(16)), row16(W(16))],
+};
+
+export const WORLDS: World[] = [HEMMA, SKOGEN, STADEN, SNO, GODIS];
 
 /** World-specific tile names of every world, merged (a name means the same code in every world that has it). */
 export const WTILE: Record<string, number> = (() => {
@@ -424,6 +500,7 @@ export function generateTiles(): string {
   L.push('ts_common:', ...common.map((e, i) => `    .byte ${entry(e, 0).join(', ')}   ; ${COMMON_CODES[i]}`));
   L.push('; sky colour per world (also in the world block; this copy is for screens that show any world)');
   L.push('world_sky:', `    .byte ${WORLDS.map((w) => w.sky).join(', ')}`);
+  L.push('world_ground:', `    .byte ${WORLDS.map((w) => w.ground).join(', ')}`);
   L.push('; the world blocks: far addresses (hi, lo)', 'world_blocks:');
   WORLDS.forEach((world, w) => L.push(`    .word wb_${w + 1} >> 16, wb_${w + 1} & $FFFF   ; ${world.name}`));
   L.push(`NUM_PATTERNS = ${shared.length}`, 'patterns:');

@@ -1,0 +1,56 @@
+# 4-3 ISSJÖN — the frozen lake (DESIGN §8.3): long stretches of ice (no friction: Bo keeps his speed), holes in
+# the ice (water), hops that must start in the right place although nothing slows Bo down; snowmen.
+name  ISSJÖN
+world 4
+music 4
+rows  16
+start 4
+
+terrain
+h 4
+flat 16         # 0-15    start, sign, apples
+mat ice
+flat 20         # 16-35   the ice begins
+liq water
+liquid 3        # 36-38   a hole
+flat 16         # 39-54
+liquid 3        # 55-57   a hole
+flat 20         # 58-77   an ice block with star 1
+mat normal
+flat 10         # 78-87   flag (normal snow)
+mat ice
+flat 22         # 88-109  the kicker on the ice, star 2
+liquid 4        # 110-113 a wide hole
+mat normal
+flat 54         # 114-167 a snowman, the box, the bush with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  prefab snowspruce g
+18  apples g 10
+33  arc 24 hold
+42  apples g 8
+52  arc 24 hold
+60  apples g 3
+64  arc 24 hold
+67  star 8 1
+68  block g 1 2
+72  tile SNOWHEAP g
+80  flag
+84  prefab cabin g
+92  apples g 6
+104 ramp45 1
+104 arc 24 r45a
+110 star 12 2
+124 enemy snowman g
+132 flag
+136 box g apples
+142 prefab snowspruce g
+146 apple g+4
+147 platform g+2 6
+147 fg bush g+3
+149 star g+3 3
+151 part g+3
+160 apples g 4
+165 goal

@@ -6,9 +6,11 @@ import { type Bo, type FrameView, type RefGrid, LEVEL_IDS, boxOverlaps, readRefL
 /** The moving platforms (DESIGN §9 PLATTFORM), as this oracle specifies them: enemy type -> width px, how it moves
  *  (`drift`: right over `range` px from its home and back, at `speed` 1/16 px per frame; `bus`: waits, then drives
  *  right over `range` px once Bo stands on it). Its top is the bottom edge of the cell it is placed in. */
-export const PLATFORMS: Record<number, { name: string; w: number; move: 'drift' | 'bus'; range: number; speed: number }> = {
+export const PLATFORMS: Record<number, { name: string; w: number; move: 'drift' | 'bus' | 'lift'; range: number; speed: number }> = {
   18: { name: 'log', w: 24, move: 'drift', range: 80, speed: 6 },
   19: { name: 'bus', w: 48, move: 'bus', range: 1280, speed: 16 },
+  23: { name: 'lift chair', w: 16, move: 'lift', range: 192, speed: 8 }, // waits 2 s at the bottom, then up at 45 degrees
+  24: { name: 'raft', w: 24, move: 'drift', range: 80, speed: 6 },
 };
 
 const grids = new Map<string, RefGrid>();
@@ -79,7 +81,8 @@ export function frameProblems(b: BoView, f: number, grid = gridOf(b.level)): str
   const hits = boxOverlaps(grid, b.cx - 3, b.cx + 2, top, b.foot - 3);
   if (hits.length) out.push(`frame ${f + 1}: ${b.level} body box (${b.cx - 3}..${b.cx + 2}, ${top}..${b.foot - 3}) overlaps solid cells ${hits.join(' ')}`);
   // the same three sensors as for the level: the middle of the feet and the two edges of the body box
-  const onPlatform = b.platforms.some((p) => p.top === b.foot && [b.cx - 3, b.cx, b.cx + 2].some((x) => x >= p.x - (p.w >> 1) && x < p.x - (p.w >> 1) + p.w));
+  // (a platform that also moves up, the lift chair, moves half a pixel a frame: the whole pixels may differ by one)
+  const onPlatform = b.platforms.some((p) => Math.abs(p.top - b.foot) <= 1 && [b.cx - 3, b.cx, b.cx + 2].some((x) => x >= p.x - (p.w >> 1) && x < p.x - (p.w >> 1) + p.w));
   if (b.grounded && !onPlatform && !surfaceAt(grid, b.cx, b.foot) && !surfaceAt(grid, b.cx - 3, b.foot) && !surfaceAt(grid, b.cx + 2, b.foot)) {
     out.push(`frame ${f + 1}: ${b.level} grounded at (${b.cx}, ${b.foot}) but no reference surface there`);
   }

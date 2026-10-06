@@ -1,0 +1,52 @@
+# 5-3 LAKRITSFABRIKEN — the licorice factory (DESIGN §8.3): licorice rails everywhere and long grinds; off the end
+# of a rail onto the down-slope after it (boost), an ollie off the end of the long rail for star 1; a jelly man.
+name  LAKRITSFABRIKEN
+world 5
+music 5
+rows  16
+start 4
+
+terrain
+h 6
+flat 30         # 0-29    start, the first licorice rail
+down45 2        # 30-31   the landing slope (h4)
+flat 30         # 32-61   a jelly man, the kicker and star 2
+up22 2          # 62-65   (h6)
+flat 12         # 66-77   the second rail
+down45 2        # 78-79   (h4)
+flat 40         # 80-119  flag, the long rail and star 1
+up22 3          # 120-125 (h7)
+flat 10         # 126-135 the third rail
+down45 3        # 136-138 (h4)
+flat 60         # 139-198 flag, the box, the cotton candy with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  tile GUMDROP g
+18  tile LIQRAIL g 10 1
+18  apples g+1 10
+34  apples g 6
+44  enemy jelly g
+54  ramp45 1
+54  arc 24 r45a
+60  star 12 2
+66  tile LIQRAIL g 10 1
+66  apples g+1 10
+84  flag
+88  tile LIQRAIL g+1 12 1
+88  apples g+2 12
+103 star g+4 1
+112 tile CANDYFLOSS g
+126 tile LIQRAIL g 8 1
+126 apples g+1 8
+142 apples g 6
+150 flag
+156 box g apples
+162 apple g+4
+163 platform g+2 6
+163 fg bush g+3
+165 star g+3 3
+167 part g+3
+176 apples g 6
+190 goal

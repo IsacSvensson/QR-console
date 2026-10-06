@@ -2,9 +2,9 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M24 (Worlds 4 and 5, the theft and the ending)
+**Current milestone:** M25 (Picture codes, music, delivery)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
-Part 3 (Bo's Skateäventyr) in progress: M19-M23 done; the M22 budget gate projects over 32 KB (flagged).
+Part 3 (Bo's Skateäventyr) in progress: M19-M24 done (the whole game is playable); the M22 budget gate projects over 32 KB (flagged).
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -40,7 +40,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M22 World 1 and the game around it (budget gate)
 - [x] M22b ISA 2: xdata + COPY/FILL/UNPACK (human decision after the budget gate)
 - [x] M23 Worlds 2 and 3
-- [ ] M24 Worlds 4 and 5, the theft and the ending
+- [x] M24 Worlds 4 and 5, the theft and the ending
 - [ ] M25 Picture codes, music, delivery
 
 ## Current work
@@ -64,7 +64,11 @@ chose to extend the VM: **M22b = ISA 2** (D-034) — an optional xdata section (
 space) and `COPY`/`FILL`/`UNPACK`; every ISA 1 game is byte-identical; the app marks cartridges that need a
 newer ISA. Bo is now ISA 2: levels packed in xdata, ROM 25.6 KB (D-035). M23 done — Worlds 2 (Skogen) and 3 (Staden): each
 world looks clearly different (own sky, parallax, colours, decor; world blocks in xdata), moving platforms (logs, the
-bus), the rabbit chase, the bulldozer, world music; one replay from the title to the World 4 map (D-036). ROM 28.1 KB. **Runtime baseline for M23-M25 = 932e534 (M22b).** Human request (2026-10-06): the worlds must look clearly
+bus), the rabbit chase, the bulldozer, world music; one replay from the title to the World 4 map (D-036). M24 done —
+Worlds 4 (Snö: ice, the ski lift, Backhoppet, the longest jump) and 5 (Godislandet: lollipops, chocolate and rafts,
+licorice, the cake mountain), the theft and the licorice board, the final (Stora Måsen in three phases), the ending
+with the statistics and the golden board, boards, SUPERBOSSE, the seagull's food; one replay plays the whole game
+(D-037). ROM 30.3 KB of 32 KB. **Runtime baseline for M23-M25 = 932e534 (M22b).** Human request (2026-10-06): the worlds must look clearly
 different (own sky, parallax, ground/structure colours, decor) — added to DESIGN §14.4, done in M23–M24.
 DESIGN §17 defaults apply (only question 1 answered). Part 3 runtime baseline was the M19 commit (394e012) until
 M22b; from the M22b commit on

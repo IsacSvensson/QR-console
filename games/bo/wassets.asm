@@ -2,6 +2,7 @@
 ; world changes, the loader copies the world's block into RAM (wasset); the code reaches them through the RA_*
 ; addresses below, which are valid while that world is loaded.
 
+RA_FOOD      = wasset                     ; every world's food sprite is first in its block
 RA_HEM_MEL   = wasset + (hem_mel - wa_1)
 RA_HEM_BASS  = wasset + (hem_bass - wa_1)
 RA_BOSS_GULL = wasset + (spr_boss_gull - wa_1)
@@ -13,16 +14,33 @@ RA_STA_BASS  = wasset + (sta_bass - wa_3)
 RA_DOZER     = wasset + (spr_dozer - wa_3)
 RA_BUCKET    = wasset + (spr_bucket - wa_3)
 RA_SANDPILE  = wasset + (spr_sandpile - wa_3)
+RA_SNO_MEL   = wasset + (sno_mel - wa_4)
+RA_SNO_BASS  = wasset + (sno_bass - wa_4)
+RA_GOD_MEL   = wasset + (god_mel - wa_5)
+RA_GOD_BASS  = wasset + (god_bass - wa_5)
+RA_BOSS_GULL5 = wasset + (spr_boss_gull5 - wa_5)
 
 .data
 world_assets:                       ; per world: far address (hi, lo), length
     .word wa_1 >> 16, wa_1 & $FFFF, wa_1_end - wa_1
     .word wa_2 >> 16, wa_2 & $FFFF, wa_2_end - wa_2
     .word wa_3 >> 16, wa_3 & $FFFF, wa_3_end - wa_3
+    .word wa_4 >> 16, wa_4 & $FFFF, wa_4_end - wa_4
+    .word wa_5 >> 16, wa_5 & $FFFF, wa_5_end - wa_5
 
 .xdata
 ; ---- World 1 HEMMA ----
 wa_1:
+spr_food_1:                        ; the seagull's food at the tally (DESIGN 11.1); first in every block
+.sprite
+    .e.e.e..
+    .eeeee..
+    .eeeee..
+    6666666.
+    66f6666.
+    .66666..
+    .66666..
+    ........
 ; World 1, HEMMA: happy and simple, C major, a skipping rhythm
 hem_mel:
     N 523, 12
@@ -107,6 +125,16 @@ wa_1_end:
 
 ; ---- World 2 SKOGEN ----
 wa_2:
+spr_food_2:                        ; the seagull's food at the tally (DESIGN 11.1); first in every block
+.sprite
+    ........
+    ..cccc..
+    .c9999c.
+    bbbbbbbb
+    .666666.
+    eeeeeeee
+    .c9999c.
+    ..cccc..
 ; World 2, SKOGEN: bouncy, G major, short notes with rests
 sko_mel:   ; 288 frames
     N 392, 6
@@ -255,6 +283,16 @@ wa_2_end:
 
 ; ---- World 3 STADEN ----
 wa_3:
+spr_food_3:                        ; the seagull's food at the tally (DESIGN 11.1); first in every block
+.sprite
+    ........
+    ........
+    .cccccc.
+    c666666c
+    6eeeeee6
+    c666666c
+    .cccccc.
+    ........
 ; World 3, STADEN: a funky syncopated bass, A minor pentatonic, a sparse tune above it
 sta_mel:   ; 256 frames
     N 0, 16
@@ -419,4 +457,127 @@ spr_sandpile:
     9e999999
     99999999
 wa_3_end:
+
+; ---- World 4 SNÖ ----
+wa_4:
+spr_food_4:                        ; the seagull's food at the tally (DESIGN 11.1); first in every block
+.sprite
+    .....b.b
+    ......b.
+    .....99.
+    ....999.
+    ...999..
+    ..999...
+    .99.....
+    9.......
+; World 4, SNÖ: bells, high and slow
+sno_mel:   ; 270 frames
+    N 1047, 18
+    N 1319, 18
+    N 1568, 18
+    N 1319, 18
+    N 1175, 18
+    N 1397, 18
+    N 1760, 36
+    N 1568, 18
+    N 1319, 18
+    N 1175, 18
+    N 1047, 36
+    N 0, 36
+    LOOP
+sno_bass:   ; 270 frames
+    N 131, 54
+    N 196, 54
+    N 175, 54
+    N 147, 54
+    N 131, 54
+    LOOP
+wa_4_end:
+
+; ---- World 5 GODISLANDET ----
+wa_5:
+spr_food_5:                        ; the seagull has Bo's board (DESIGN 11.1)
+.sprite
+    ........
+    ........
+    ........
+    00000000
+    .000000.
+    .a....a.
+    ........
+    ........
+; World 5, GODISLANDET: fast and silly
+god_mel:   ; 138 frames
+    N 784, 6
+    N 880, 6
+    N 988, 6
+    N 1047, 6
+    N 988, 6
+    N 880, 6
+    N 784, 12
+    N 659, 6
+    N 784, 6
+    N 659, 6
+    N 523, 12
+    N 0, 6
+    N 1047, 6
+    N 1175, 6
+    N 1319, 6
+    N 1047, 6
+    N 988, 6
+    N 784, 12
+    N 0, 12
+    LOOP
+god_bass:   ; 138 frames
+    N 131, 12
+    N 262, 12
+    N 196, 12
+    N 262, 12
+    N 131, 12
+    N 262, 12
+    N 196, 12
+    N 262, 12
+    N 131, 12
+    N 262, 12
+    N 196, 12
+    N 262, 6
+    LOOP
+spr_boss_gull5:                      ; 16 x 16: top-left, top-right, bottom-left, bottom-right (facing right)
+.sprite
+    ........
+    ........
+    aa......
+    .aaa....
+    ..aaaa..
+    ...aaaaf
+    ....ffff
+    ...fffff
+.sprite
+    ........
+    ....fff.
+    ...ffff1
+    ..fffff9
+    .ffffff9
+    ffffff..
+    fffff...
+    ffff....
+.sprite
+    ..ffffff
+    .fffffff
+    .ffffff.
+    ..fffff.
+    ...fff..
+    ....9...
+    ...99...
+    ........
+.sprite
+    fff.....
+    ff......
+    f.......
+    ........
+    ........
+    ..9.....
+    .99.....
+    ........
+wa_5_end:
 .code

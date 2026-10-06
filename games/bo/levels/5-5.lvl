@@ -1,0 +1,24 @@
+# 5-5 MÅSENS BO — THE FINAL: the great skateboard theft (DESIGN §10.5). On top of the candy castle: a kicker on the
+# left, a biscuit plank and the licorice rail up to the seagull's nest on the right. (1) as Stora Måsen, but it drops
+# popcorn; (2) it ends its dive dizzy high up above the kicker: kicker + A; (3) it sits in the nest with Bo's board:
+# grind the licorice rail and land on it with a trick. MIN BRÄDA!
+name  MÅSENS BO
+world 5
+music 5
+rows  16
+start 3
+
+terrain
+h 4
+flat 40         # 0-39
+
+objects
+6   ramp45 1
+12  tile GUMDROP g
+18  platform g+2 4
+18  apples g+3 4
+20  enemy boss5 g+6
+22  tile LIQRAIL g+5 8 1
+22  apples g+6 8
+30  prefab nest g+2
+37  tile CANDYFLOSS g

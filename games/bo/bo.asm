@@ -32,6 +32,8 @@ init:
     ST [bub_id], r0
     LDI r0, 5
     ST [lives], r0
+    LDI r0, 1 << BD_OWN             ; his own board
+    ST [boards], r0
     JMP to_title
 
 update:
@@ -101,5 +103,5 @@ timers:
     RET
 
 .data
-mode_handlers: .word on_menu, on_load, on_play, on_title, on_intro, on_code, on_map, on_tally, on_cut
+mode_handlers: .word on_menu, on_load, on_play, on_title, on_intro, on_code, on_map, on_tally, on_cut, on_end
 .code

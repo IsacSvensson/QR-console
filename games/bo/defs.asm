@@ -91,6 +91,7 @@ M_CODE  = 5
 M_MAP   = 6
 M_TALLY = 7
 M_CUT   = 8
+M_END   = 9                     ; the ending (DESIGN 10.5)
 ; progress per game level (one byte): stars in bits 0-2
 PR_PART = 8
 PR_DONE = 16
@@ -276,7 +277,18 @@ PW_GODIS  = 2
 .var godis_used                 ; the godissnurr of this airtime is used
 .var inv_t                      ; invulnerable frames after losing the helmet
 .var apples_life                ; apples towards the next extra life
-.var board_sel                  ; the board Bo rides (0 = his own)
+.var board_sel                  ; the board Bo rides (BD_*)
+.var boards                     ; unlocked boards: bit n = board n (DESIGN 7.2)
+.var stars_total                ; stars found in the whole game (boards_update counts them)
+.var apples_total               ; apples taken in the whole game (at each tally)
+.var stolen                     ; the seagull has Bo's own board (from the theft in 4-5 to the final)
+.var super_ok                   ; SUPERBOSSE is unlocked (the final is done, DESIGN 4)
+.var super_seq                  ; SUPERBOSSE input: 1 after up, 2 after up then down
+.var launch_v                   ; |vx| when Bo last left the ground by a crest or a kicker (0 after an ollie)
+.var launch_cls                 ; the class of the surface he left then
+BD_OWN    = 0
+BD_GOLD   = 6
+BD_LIQ    = 7
 .var goal_said
 .var d_x                        ; drawing Bo: sprite top-left on screen and SPR flags
 .var d_y

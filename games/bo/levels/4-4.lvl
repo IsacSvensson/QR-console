@@ -1,0 +1,56 @@
+# 4-4 LIFTEN — the ski lift (DESIGN §8.3): the mountainside is too steep to ride up; hop onto the lift chair at the
+# bottom station, ride it up the cable (45 degrees, three tiles above the slope), step off at the top. A snowman
+# throws snowballs up there; then the long ride down with a kicker, and the goal at the bottom.
+name  LIFTEN
+world 4
+music 4
+rows  32
+start 4
+
+terrain
+h 4
+flat 30         # 0-29    the bottom station: start, cabin, the lift
+up45 20         # 30-49   the steep mountainside (h24): take the lift
+flat 30         # 50-79   the top station: a snowman, star 1 on the cabin, flag
+down22 10       # 80-99   the ride down (h14)
+flat 10         # 100-109 the kicker and star 2
+down45 10       # 110-119 (h4)
+flat 44         # 120-163 flag, the box, the bush with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+10  prefab cabin g
+16  apples g 6
+28  tile LIFTPOLE g 1 3
+28  enemy chair 5
+51  tile LIFTPOLE g 1 3
+55  apple g
+57  arc 24 hold
+60  prefab cabin g
+60  star g+4 1
+72  enemy snowman g
+77  flag
+81  apple g+1
+83  apple g+1
+85  apple g+1
+87  apple g+1
+89  apple g+1
+91  apple g+1
+93  apple g+1
+95  apple g+1
+97  apple g+1
+99  apple g
+104 ramp45 1
+104 arc 24 r45a
+110 star 22 2
+122 flag
+128 box g apples
+134 prefab snowspruce g
+138 apple g+4
+139 platform g+2 6
+139 fg bush g+3
+141 star g+3 3
+143 part g+3
+152 apples g 6
+160 goal

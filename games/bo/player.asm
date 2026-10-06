@@ -149,6 +149,7 @@ cap_speed:
 
 ; ---- bo_update ------------------------------------------------------------------------------------
 bo_update:
+    CALL super_track
     CALL feet
     ST [bo_pfoot], r2
     LDI r0, 0
@@ -428,6 +429,11 @@ bo_ground:
     JNE @launch
     LDI r7, 0
 @launch:
+    LD r0, [t_s]                    ; for SUPERBOSSE: how fast, and from what
+    ST [launch_v], r0
+    LD r0, [bo_sattr]
+    AND r0, 15
+    ST [launch_cls], r0
     LDI r0, 0
     CMP r7, 0
     JEQ @nolip

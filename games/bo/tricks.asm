@@ -1,3 +1,4 @@
+SUPER_V = 40                        ; SUPERBOSSE: launched from a kicker at 2.5 px per frame or more
 ; Tricks and combos (DESIGN.md §4). B in the air starts a trick; it scores when it is complete. All tricks of one
 ; airtime (and a grind just before) are summed and multiplied by their number on a clean landing; landing mid-trick
 ; is a sloppy landing: OJ!, half speed, no points.
@@ -30,10 +31,15 @@ trick_air:
     MOV r2, r1
     AND r2, BTN_DOWN
     JNZ @start
-    LDI r0, TR_360
     MOV r2, r1
     AND r2, BTN_LEFT | BTN_RIGHT
+    JZ @kick
+    CALL super_ready                ; <- or -> with B: the 360, or SUPERBOSSE when everything is right
+    LDI r0, TR_SUPER
     JNZ @start
+    LDI r0, TR_360
+    JMP @start
+@kick:
     LDI r0, TR_KICKFLIP
 @start:
     ST [trick], r0
@@ -81,6 +87,15 @@ grab_points:                        ; r1 = frames held -> 50 + 10 per 8 frames b
     LDI r0, TR_GRAB
 ; trick_complete: r0 = trick, r1 = points
 trick_complete:
+    CMP r0, TR_SUPER                ; SUPERBOSSE! in big letters
+    JNE @plain
+    PUSH r0
+    LDI r0, TX_SUPERBOSSE
+    ST [banner_id], r0
+    LDI r0, 90
+    ST [banner_t], r0
+    POP r0
+@plain:
     PUSH r1
     LDI r1, TR_NONE
     ST [trick], r1
@@ -99,8 +114,60 @@ combo_add:
     ST [combo_n], r2
     RET
 
+; super_ready -> Z clear if SUPERBOSSE may start now (DESIGN 4): unlocked, up then down pressed since the ramp,
+; launched from a kicker at 2.5 px per frame or more
+super_ready:
+    LDI r0, 0
+    LD r2, [super_ok]
+    CMP r2, 0
+    JEQ @no
+    LD r2, [super_seq]
+    CMP r2, 2
+    JNE @no
+    LD r2, [launch_cls]
+    CMP r2, C_RAMP
+    JNE @no
+    LD r2, [launch_v]
+    CMP r2, SUPER_V
+    JLT @no
+    LDI r0, 1
+@no:
+    CMP r0, 0
+    RET
+
+; super_track: every frame: up, then down, on a kicker or in the air
+super_track:
+    LD r0, [bo_state]
+    CMP r0, ST_GROUND
+    JNE @keys
+    LD r0, [bo_sattr]
+    AND r0, 15
+    CMP r0, C_RAMP
+    JEQ @keys
+    LDI r0, 0                       ; on the ground (not a kicker): start again
+    ST [super_seq], r0
+    RET
+@keys:
+    LD r0, [btnp]
+    MOV r1, r0
+    AND r1, BTN_UP
+    JZ @down
+    LDI r1, 1
+    ST [super_seq], r1
+@down:
+    AND r0, BTN_DOWN
+    JZ @done
+    LD r1, [super_seq]
+    CMP r1, 1
+    JNE @done
+    LDI r1, 2
+    ST [super_seq], r1
+@done:
+    RET
+
 combo_reset:
     LDI r0, 0
+    ST [launch_v], r0
     ST [combo_pts], r0
     ST [combo_n], r0
     ST [bo_ollied], r0
