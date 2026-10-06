@@ -6,25 +6,32 @@ level_start:
     ST [level], r0
     MUL r0, LV_REC
     ADD r0, level_table
-    LD r1, [r0]
+    PUSH r0
+    LD r1, [r0]                     ; unpack terrain + objects from xdata (ISA 2)
+    LD r2, [r0 + 2]
+    LDI r0, lv_src
+    SYS UNPACK
+    POP r0
+    LDI r1, lv_src
     ST [lv_ter], r1
     ST [ld_ptr], r1
-    LD r1, [r0 + 2]
+    LD r2, [r0 + 4]
+    ADD r1, r2
     ST [lv_obj], r1
-    LD r1, [r0 + 4]
+    LD r1, [r0 + 6]
     ST [lv_w], r1
     SHL r1, 3
     ST [lv_wpx], r1
-    LDB r1, [r0 + 6]
+    LDB r1, [r0 + 8]
     ST [lv_h0], r1
     ST [ld_h], r1
-    LDB r1, [r0 + 7]
-    ST [lv_rows], r1
-    LDB r1, [r0 + 8]
-    ST [lv_world], r1
     LDB r1, [r0 + 9]
-    ST [lv_start], r1
+    ST [lv_rows], r1
     LDB r1, [r0 + 10]
+    ST [lv_world], r1
+    LDB r1, [r0 + 11]
+    ST [lv_start], r1
+    LDB r1, [r0 + 12]
     ST [lv_music], r1
     LDI r1, 0
     ST [ld_phase], r1

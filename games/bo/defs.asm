@@ -49,7 +49,7 @@ PH_AIR_ACC:     .word 2         ; steering in the air: 1 per 2 frames (DECISIONS
 ; ---- engine constants ---------------------------------------------------------------------------
 LV_ROWS   = 32
 MAX_COLS  = 384
-LV_REC    = 12                  ; level_table record: ter, obj, width (words), h0, rows, world, start, music, pad
+LV_REC    = 14                  ; level_table record: data hi, lo, objects offset, width (words), h0, rows, world, start, music, pad
 HUD_H     = 8
 VIEW_COLS = 17
 STEP_UP   = 6                   ; how far the feet may step up while rolling (px); more is a wall
@@ -154,6 +154,7 @@ NONE = $7FFF
 
 ; current level
 .var level
+.var lv_src, LV_SRC_MAX          ; the current level's terrain and objects, unpacked from xdata
 .var lv_ter
 .var lv_obj
 .var lv_w

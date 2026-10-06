@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M23 (Worlds 2 and 3), first moving Bo's world data to ISA 2 xdata
+**Current milestone:** M23 (Worlds 2 and 3)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) in progress: M19-M22 done; the M22 budget gate projects over 32 KB (flagged).
 **Last updated:** 2026-10-06
@@ -62,12 +62,12 @@ star and part of World 1, the boss pattern and a retry, FIRST10 §8 rules, all 7
 **Budget gate: ROM 27.1 KB after World 1 (code 20.1 KB); five worlds projected 41-43 KB** (D-033). The human
 chose to extend the VM: **M22b = ISA 2** (D-034) — an optional xdata section (256 KB, outside the address
 space) and `COPY`/`FILL`/`UNPACK`; every ISA 1 game is byte-identical; the app marks cartridges that need a
-newer ISA. Next: Bo moves its per-world data to xdata (packed), then M23 with 5 levels per world.
-**Runtime baseline for M23-M25 = the M22b commit.** Human request (2026-10-06): the worlds must look clearly
+newer ISA. Bo is now ISA 2: levels packed in xdata, ROM 25.6 KB (D-035); per-world tiles, boss sprites and music follow
+in M23. **Runtime baseline for M23-M25 = 932e534 (M22b).** Human request (2026-10-06): the worlds must look clearly
 different (own sky, parallax, ground/structure colours, decor) — added to DESIGN §14.4, done in M23–M24.
 DESIGN §17 defaults apply (only question 1 answered). Part 3 runtime baseline was the M19 commit (394e012) until
 M22b; from the M22b commit on
-`git diff <M22b> -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
+`git diff 932e534 -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
 
 Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.md *Manual acceptance*). **M12 baseline commit: 5a7ca7d** — from here on
 `git diff 5a7ca7d -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.

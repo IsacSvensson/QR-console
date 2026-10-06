@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { unpack } from '@qrc/asm';
 import { BOX_CONTENT, ENEMY_TYPE, PREFAB_IDS, SIGN_KIND, generateLevels } from '../../games/bo/tools/levels';
 import { generateTiles, T, WTILE } from '../../games/bo/tools/tiles';
 import { boView, frameProblems, gridOf } from './frames';
@@ -55,12 +56,17 @@ function decodeRom(bo: Bo) {
   const rom = bo.rom;
   const rd16 = (a: number) => rom[a]! | (rom[a + 1]! << 8);
   const table = symbol(bo.sym, 'level_table');
+  const xdata = bo.cart.sections.xdata!;
   return LEVEL_IDS.map((_, i) => {
-    const base = table + i * 12;
-    const head = { width: rd16(base + 4), h0: rom[base + 6]!, rows: rom[base + 7]!, world: rom[base + 8]!, start: rom[base + 9]!, music: rom[base + 10]! };
+    const base = table + i * 14;
+    const head = { width: rd16(base + 6), h0: rom[base + 8]!, rows: rom[base + 9]!, world: rom[base + 10]!, start: rom[base + 11]!, music: rom[base + 12]! };
+    // the level's terrain and objects are packed in xdata (ISA 2): far address (hi, lo), objects at an offset
+    const far = rd16(base) * 0x10000 + rd16(base + 2);
+    expect(far, `level ${i} lives in xdata`).toBeGreaterThanOrEqual(0x10000);
+    const data = unpack(xdata.subarray(far - 0x10000));
     const terrain: { op: string; n: number }[] = [];
-    for (let p = rd16(base); ; p++) {
-      const b = rom[p]!;
+    for (let p = 0; ; p++) {
+      const b = data[p]!;
       const type = b >> 5;
       const low = b & 31;
       if (type < 7) terrain.push({ op: TERRAIN_OPS[type]!, n: low + 1 });
@@ -72,12 +78,12 @@ function decodeRom(bo: Bo) {
     }
     const items: Item[] = [];
     const apples = new Set<string>();
-    for (let p = rd16(base + 2); ; ) {
-      if (rom[p] === 255 && rom[p + 1] === 255) break;
-      const col = rom[p]! | ((rom[p + 1]! & 1) << 8);
-      const type = rom[p + 1]! >> 1;
-      const row = rom[p + 2]!;
-      const param = rom[p + 3]!;
+    for (let p = rd16(base + 4); ; ) {
+      if (data[p] === 255 && data[p + 1] === 255) break;
+      const col = data[p]! | ((data[p + 1]! & 1) << 8);
+      const type = data[p + 1]! >> 1;
+      const row = data[p + 2]!;
+      const param = data[p + 3]!;
       const y = ROWS - 1 - row;
       p += 4;
       switch (type) {
@@ -86,8 +92,8 @@ function decodeRom(bo: Bo) {
           let w = 1;
           let h = 1;
           if (type === 2) {
-            w = (rom[p]! & 15) + 1;
-            h = (rom[p]! >> 4) + 1;
+            w = (data[p]! & 15) + 1;
+            h = (data[p]! >> 4) + 1;
             p++;
           }
           const kind = KIND_OF_CODE[param];
@@ -101,7 +107,7 @@ function decodeRom(bo: Bo) {
           let r = row;
           apples.add(`${c},${r}`);
           for (let k = 1; k < param; k++) {
-            const d = rom[p++]!;
+            const d = data[p++]!;
             c += d >> 4;
             r += (d & 15) >= 8 ? (d & 15) - 16 : d & 15;
             apples.add(`${c},${r}`);

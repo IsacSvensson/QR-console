@@ -608,3 +608,16 @@ Decision:
 Measurement: every committed game (hello, Breakout, Pong, BLACKBOX, Bo) rebuilds to its committed `.qrc`
 byte for byte as ISA 1 (`test/isa2.test.ts`); replay hash suites unchanged. e2e also needed
 `shell: true` on Windows for the fixture step (tooling only).
+
+## D-035 - Bo on ISA 2: levels packed in xdata; the new budget projection (M22b)
+Date: 2026-10-06 - Milestone: M22b
+Decision: each level's terrain and objects are one `.pack` block in xdata; the level table (ROM, 14 bytes a
+record) holds its far address and the offset of the objects; `level_start` unpacks it into `lv_src` (RAM,
+LV_SRC_MAX bytes) and the loader reads from there exactly as it read ROM before. Gameplay is unchanged: the
+replays were not re-recorded, only their state hashes (RAM layout) regenerated; all `test:bo` checks pass.
+Plan for the rest of the game, so the ROM holds only code and shared data: per-world tilesets and patterns,
+boss sprites and per-world music also go to xdata and are unpacked into RAM when a world or boss level starts.
+Measurement: ROM 27 133 -> 25 609 B (code 20 098, data 5 511); cartridge 15.2 KB. Projection for five worlds
+with that plan: code 24.5-25.5 KB + resident data ~5.5 KB = 30-31 KB of 32 KB; xdata ~12-15 KB packed. The
+code-size pass stays on the list as the safety margin; DESIGN 16.1 cuts are no longer needed (5 levels per
+world, distinct world graphics as the human asked).
