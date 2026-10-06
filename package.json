@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice --project blackbox --project bo",
     "check": "npm run typecheck && npm run lint && npm test",
+    "check:console": "npm run typecheck && npm run lint && vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice",
     "bench:fountain": "tsx bench/fountain.ts",
     "qrc": "tsx packages/tools/src/cli.ts",
     "test:slice": "vitest run --project slice",

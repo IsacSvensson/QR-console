@@ -81,6 +81,7 @@ This is a **prototype that proves a concept**, not a console platform.
 |---|---|
 | `npm ci` | install everything (then `npx playwright install --with-deps chromium` once for e2e) |
 | `npm run check` | typecheck (pure packages without DOM/Node types, then everything) + ESLint + unit tests |
+| `npm run check:console` | the console alone: typecheck + ESLint + runtime/tool/slice tests, no game suites (CI deploys the app after this; each game's tests then run in their own job and only passing games get their demo GIF published, `.github/workflows/pages.yml`) |
 | `npm test -w packages/<name>` | one package's tests (cartridge, transport, vm, asm, qr, tools) |
 | `npm run qrc -- <cmd>` | CLI: `build <game dir>` (+ `.sym`, `.lst`), `run <file.qrc> --frames N --dump-frame out.png [--inputs f --ram a,b --trace N --trace-frame F]`, `replay <file.qrc> <inputs.json> --frames N` |
 | `npm run refs:games` | rebuild every `games/<g>/<g>.qrc`, `frame1.png`, `reference.json`, `hashes.txt` (from the VM, never a browser) |

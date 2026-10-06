@@ -724,3 +724,22 @@ Decision:
   `test:e2e` script change, the runtime does not.
 Measurement: ROM 31 608 B of 32 768 (code 25 404, data 6 043, sound 161), cartridge 22 945 B; `demo/bo.gif` 132
 frames (K=88), 19.8 s loop, 1.8 MB.
+
+## D-039 - Deploy: the console first, then each game on its own (human request, 2026-10-06)
+Date: 2026-10-06 - Milestone: none (CI; human request: "deploy the console before the game tests; one game's
+failing test must not sink everything; publish what is OK")
+Decision:
+- **`npm run check:console`**: typecheck + lint + the console's own Vitest projects (unit, cartridge, transport,
+  vm, asm, qr, tools, slice). `npm run check` is unchanged (it still runs every suite) and stays the rule for every
+  commit. The two top-level BLACKBOX tests (`test/blackbox-layout`, `test/blackbox-text`) move from the `unit`
+  project to the `blackbox` project (the files stay where they are), so the console check holds no game tests.
+  `test/isa2.test.ts` stays in `unit`: it guards the runtime (every game still builds byte-identical).
+- **`pages.yml`**: job `console` (check:console, web build) -> `deploy-console` (the app alone) ; a `game` matrix
+  (breakout, pong, blackbox, bo; `fail-fast: false`) runs each game's tests after the console job, and a passing
+  game uploads its committed `demo/<game>.gif`; `publish` runs whenever the console deploy succeeded and deploys the
+  app plus the GIFs that passed, listing published and held-back games in the job summary. A red game job makes the
+  run red but publishes the rest.
+- Trade-off: two Pages deploys per push; between them (the length of the game jobs, minutes) the site has the new
+  app without demo GIFs. Accepted: the app is what matters, and the GIFs are not precached.
+Measurement: `check:console` 172 tests in 15 files, ~16 s locally; `check` 340 tests, green. The workflow itself
+runs only on GitHub (main) and is **not verified** here.
