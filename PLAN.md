@@ -274,3 +274,193 @@ first then left), asserting P1 hit/miss, D5 seen only on the right-hand path, an
 
 Scan `demo/blackbox.gif` on a phone, play through at least one ending, and judge the one thing tests cannot:
 whether it is any good.
+
+---
+
+# Part 3 — BO'S SKATEÄVENTYR (planned 2026-10-05 at the human's request)
+
+A side-scrolling skateboard platformer for a six-year-old (and the adults who play with him). It proves that the
+console can carry a fast, physics-driven action game with scrolling, slopes and 25 levels, which neither
+Breakout, Pong nor BLACKBOX needed. The design is the **specification** for these milestones:
+
+- `games/bo/DESIGN.md` — locked design decisions, physics constants and derived values (§3), tricks (§4),
+  power-ups (§5), enemies (§9), bosses (§10), texts (§11–12), level and graphics formats (§14), budget (§16).
+  It is a draft: the open questions in §17 have defaults that apply unless the human changes them before M19.
+- `games/bo/FIRST10.md` — the first ten minutes: title, intro, level 1-1 column by column, the start of 1-2, the
+  rules its tests check (§8) and the observation list for the Bo test (§9).
+- `games/bo/mockup/` — a VM-rendered spike of one screen (drawing approach measured, DECISIONS D-025).
+- `games/bo/levels/*.lvl` — the level sources, written from M19 on (one per level, generator + preview PNG).
+
+Rules for M19–M25 (in addition to CLAUDE.md, same spirit as Part 2):
+
+- **The runtime does not change**, except in M22b (ISA 2, decided by the human on 2026-10-06 after the M22
+  budget gate). From the M22b commit on,
+  `git diff <M22b commit> -- packages/vm packages/cartridge packages/transport packages/qr apps` stays **empty**
+  through M25 (before M22b the baseline was the M19 commit). Wiring Bo into the existing scripts (the demo list, e2e fixtures, a Vitest project) is expected; any
+  other change to `packages/asm` or `packages/tools` must be generic, needs a `DECISIONS.md` entry, and every other
+  game must still assemble to identical sections. If something seems to need a runtime change (ROM over 32 KB, a
+  save feature), record the measurement, flag it under *Blocked / needs human*, and continue within the limits.
+- **The design documents are the test oracle.** The tests read the tables of `DESIGN.md` (§0.2, §3.2–3.3, §4, §5,
+  §9, §11–12), `FIRST10.md` and the `.lvl` sources; what the engine holds in RAM or ROM is compared against them,
+  never against itself.
+- **All game code and data live in `games/bo/`**; generators and the replay bot in `games/bo/tools/`.
+- Every milestone has recorded replays (`games/bo/replays/*.json`) with committed per-frame hashes from the VM
+  (`npm run refs:games`), recorded by the bot from RAM-driven routes (re-recordable when the physics is tuned), and
+  assertions in `test/bo/**`.
+- **Budgets, asserted in every replay:** no fault, 0 cycle-budget overruns, max cycles per frame ≤ 25 000 (half
+  the budget); ROM size reported by `test:bo` (≤ 32 KB, *measure*; projected at M22).
+
+The test command for all Part 3 milestones is `npm run test:bo` (a Vitest project for `test/bo/**`); each
+milestone adds to it and never removes earlier checks.
+
+## M19 — Engine: levels, scrolling, rolling
+
+- `.lvl` source format; `games/bo/tools/levels.ts` writes `levels.gen.asm` and a preview PNG per level; the ROM
+  level table (terrain profile + objects, DESIGN §14.1); unpacking into the column-major RAM buffer (32 rows per
+  column); camera and drawing (one `MAP` per visible column, parallax strip); HUD frame.
+- Bo on flat ground and slopes: push, coast, brake, crouch, ollie with variable height, landing; solid blocks and
+  one-way platforms. Test levels `T1` (flat ground and blocks) and `T2` (slopes and platforms).
+
+**Accept:** `npm run test:bo`
+- a TypeScript decoder of the ROM level table reproduces the terrain and objects of every `.lvl` source; for every
+  level the RAM buffer after unpacking equals the reference grid that an independent TypeScript decoder builds from
+  the `.lvl` source
+- replays on T1 and T2 with per-frame hashes; in **every frame** Bo's box overlaps no solid tile of the reference
+  grid, and whenever he is grounded his feet are exactly on the reference surface height
+- the derived values of DESIGN §3.3 for flat ground and slopes are **measured from the replays** and match the
+  table within its rounding (±1 px, ±1 frame): ollie height and airtime, tap height, push to top speed, coasting
+  and braking distance, downhill acceleration; the constants in ROM equal §3.2
+- budgets as above; ROM size reported
+
+## M20 — Skate mechanics and the feel prototype
+
+- Ramp launch (with and without an ollie at the lip), landing boost on down-slopes, rails and grind (flat and
+  diagonal), tricks and combos (DESIGN §4), sloppy landings, surfaces (sand, ice, bounce), breakable blocks and
+  boxes, hazards (pits, water), checkpoints, lives, respawn, game over → level restart. Test level `T3`
+  (a small skatepark).
+- Bo's signature (DESIGN §0.2: push kicks, leaning forward and back, the idle pop and balance, looking back after a
+  big landing) and the wheel sound (§15: rolling noise and a click every 16 px), because the feel test needs them.
+- From now on `npm run demo` also writes `demo/bo.gif` (at this stage it starts in the test levels), so the human
+  can try the feel on a phone before any content is built.
+
+**Accept:** `npm run test:bo`
+- ramp launches on 22.5° and 45° at 1.5 / 2.5 / 3.5 px per frame, with and without ollie, match DESIGN §3.3
+- grind: in every frame where Bo's feet are on a rail cell of the reference grid his state is GRIND; speed is
+  constant on flat rails and increases on diagonal ones; A jumps off
+- every trick of §4 scores its points; a two-trick combo scores the combo formula; landing mid-trick gives OJ
+  (speed halved, no damage); a clean landing gives `TRICK_BOOST` per trick
+- ice braking distance and sand slow-down match §3.3; landing on a breakable removes exactly its tiles from the
+  RAM buffer (and the reference grid agrees)
+- a fall into a pit or water costs one life and respawns at the last checkpoint; at 0 lives the level restarts
+  with 5 lives
+- every signature behaviour of DESIGN §0.2 appears in a replay at its trigger (Bo's pose in RAM) and never changes
+  his position or his box; any button cancels the idle pop and the balance in the same frame
+- the wheel clicks in the audio commands match the distance travelled (one per 16 px)
+- `npm run demo` writes and verifies `demo/bo.gif`; `npm run check` green
+
+## M21 — Enemies, power-ups, items, HUD, Bo's voice
+
+- The nine enemy behaviours and the enemy table of DESIGN §9; power-ups (§5), hits, lives and checkpoints (§6),
+  apples, stars and skate parts (§7.1); complete HUD; the bubble font (1 bit per pixel, ÅÄÖ) and Bo's lines,
+  encoded by `games/bo/tools/text.ts` from DESIGN §11–12.
+
+**Accept:** `npm run test:bo`
+- for every enemy of §9, replays show each outcome of its row (landing on it and its joke, side contact); every
+  hit happens on a frame where the boxes in RAM overlap, and no overlap goes unhandled
+- the helmet absorbs exactly one hit and gives 120 frames of invulnerability; pommes lasts 600 frames, the measured
+  top speed is 2.5 px per frame and the music's note lengths shrink to 2/3, and pommes changes nothing else
+  (obstacles and enemies behave as without it); a seagull takes the pommes without damage; godis gives exactly one
+  extra jump per airtime; 100 apples give one life
+- a TypeScript decoder of the ROM text reproduces every line of DESIGN §11–12 byte for byte; rendered bubble
+  frames match committed reference frames (from the VM)
+
+## M22 — World 1 and the game around it (budget gate)
+
+- Title, intro, world map, level cards, tally, game over; levels 1-1 to 1-4 and 1-5 (Stora Måsen, DESIGN §10.1);
+  the World 1 tileset, enemies and music. The first play goes straight from the intro into 1-1. 1-1 and 1-2 are
+  built exactly as `FIRST10.md` §5 and §7 describe. Apple arcs are generated from the physics (DESIGN §14.1).
+
+**Accept:** `npm run test:bo`
+- for every World 1 level a replay from its start to the goal; together these replays collect **every star and
+  skate part** of World 1 (checked against the `.lvl` sources)
+- boss: one replay wins with exactly three hits in the pattern of §10.1, another loses a life to the dive and retries
+- one replay plays from the title to the World 2 map; the tally on screen equals the RAM counters
+- **the first ten minutes:** every rule of `FIRST10.md` §8 passes (checked against the `.lvl` sources and replays)
+- **apples never lie:** for every apple pattern in World 1 there is a replay route that follows it, collects all of
+  its apples and loses no life (DESIGN §8.4)
+- **budget gate:** code bytes, World 1 data bytes and ROM size are measured and a projection for five worlds is
+  recorded in `DECISIONS.md`. If it exceeds 32 KB, apply DESIGN §16.1's cut list in order and flag it for a human
+
+## M22b — ISA 2: extended data and block syscalls (human decision, 2026-10-06)
+
+The M22 budget gate projected Bo at 41–43 KB (D-033). The human chose a generic VM extension over cutting
+content, with the rule that old cartridges keep working unchanged:
+
+- ISA 2 = ISA 1 + an optional **xdata** cartridge section (≤ 256 KB, outside the address space) + three
+  generic syscalls: `COPY` and `FILL` (block copy/fill, far source) and `UNPACK` (a simple LZ format).
+  The VM runs ISA 1 and 2; a cartridge declares the lowest ISA it needs; features newer than a cartridge's
+  ISA behave as if they did not exist. The assembler picks the ISA itself (`.xdata`, `.pack`/`.endpack`).
+- The app marks a stored cartridge that needs a newer ISA ("needs a newer QR Console") and disables Play.
+- Double resolution was considered and **not** done (it would change locked decision L3 and quadruple
+  graphics data): *Ideas for later* in `PROGRESS.md`.
+
+**Accept:** `npm run check` (with `test/isa2.test.ts`), `npm run test:games`, `npm run test:blackbox`,
+`npm run test:bo`, `npm run test:e2e`
+- every committed ISA 1 game (hello, Breakout, Pong, BLACKBOX, and Bo until it moves) still assembles to its
+  committed `.qrc`, byte for byte, and its replay hashes are unchanged
+- the VM runs ISA 1 and 2 and refuses 0 and 3 with a clear message; an xdata section needs ISA 2; in an ISA 1
+  cartridge syscalls 17–19 fault exactly like any unknown syscall
+- `COPY`/`FILL`/`UNPACK` semantics and cycle costs as in `VM.md`; the encoder (asm) and the VM decoder agree on
+  seeded random data of several kinds (the seed is printed on failure)
+- the assembler chooses ISA 1 or 2 as `ASM.md` says; `.pack` rejects labels, instructions and late values
+- e2e: an ISA 2 cartridge (xdata + UNPACK) plays in the app; an ISA 3 cartridge is stored but marked and
+  cannot be started
+- `VM.md`, `ASM.md`, `FORMAT.md` and `docs/PROGRAMMING.md` (§7.10, with a tested example) describe ISA 2
+
+## M23 — Worlds 2 and 3
+
+- Levels 2-1 to 2-5 (Kaninjakten, §10.2) and 3-1 to 3-5 (Bulldozern, §10.3); moving platforms, the chase, the
+  World 2 and 3 tilesets, enemies and music.
+
+**Accept:** `npm run test:bo` — as M22 for Worlds 2 and 3 (including "apples never lie", and every godis leads to a
+secret it is needed for, DESIGN §8.5), plus: in the winning chase replay the rabbit never
+overlaps Bo, and a second replay is caught and restarts at the checkpoint; the bulldozer stops after exactly three
+STOP presses; replays from the World 2 map to the World 4 map.
+
+## M24 — Worlds 4 and 5, the theft and the ending
+
+- Levels 4-1 to 4-5 (Backhoppet and the theft, §10.4) and 5-1 to 5-5 (the final, §10.5); the ending; every board
+  of §7.2 including the golden one; the seagull's food at every tally (§11.1); SUPERBOSSE (§4), unlocked by the
+  final.
+
+**Accept:** `npm run test:bo`
+- as M22 for Worlds 4 and 5; the Backhoppet replay's jump is the longest in the game (measured in RAM); after the
+  theft the board flag is set and World 5 uses the licorice board
+- **one replay from the title to the end of the game** (all 25 levels, no code entry); a replay with all 60 stars
+  shows the golden board
+- after the final a replay performs SUPERBOSSE (3000 points); before the final the same input gives no SUPERBOSSE
+- ROM ≤ 32 KB, or the overrun measured and flagged for a human
+
+## M25 — Picture codes, music, delivery
+
+- Picture codes (DESIGN §7.3), all music tracks and sound effects (§15), Bo's speech blips (optional in §12).
+- Bo delivered like the other games.
+
+**Accept:**
+- `npm run test:bo`: every code round-trips (TypeScript reference encoder ⇄ VM decoder) for all worlds (and value 6,
+  game complete, which unlocks SUPERBOSSE) × board sets × star sets, and wrong codes are rejected; a replay enters a code and resumes in the right world with the right
+  boards; every world has its own track and every track is heard in the replays; sound effects interrupt the
+  music and it resumes
+- `npm run demo` writes and verifies `demo/bo.gif`; `npm run test:e2e` scans it with the fake camera to 100 %,
+  presses PLAY and the first frame matches the VM reference
+- `games/bo/GUIDE.md` (Swedish, for parents and Bo); `REPORT.md` gains a Bo section (tested / measured / not
+  verified); `npm run check` green
+
+## Manual acceptance for Part 3 (human only)
+
+1. **After M20 (feel test):** scan `demo/bo.gif` on a phone and ride the test levels. Does rolling, jumping and
+   grinding feel right? Change the constants in DESIGN §3.2 if not; the bot re-records the replays.
+2. **After M22 (first ten minutes):** Bo plays from the title without help, and the human observes with the list in
+   `FIRST10.md` §9. The answers go into `PROGRESS.md`; what they show is tuned before Worlds 2–5 are built.
+3. **After M25 (Bo test):** Bo plays. The tests cannot judge the one thing that matters: whether it is fun for a
+   six-year-old, and whether he can read the bubbles and use the touch controls. Notes go into `PROGRESS.md`.

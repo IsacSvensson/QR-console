@@ -1,0 +1,54 @@
+# 5-4 TÅRTBERGET — the cake mountain (DESIGN §8.3): a vertical climb, tier after tier of cake (each one three
+# tiles higher: an ollie), candy blobs on the way, the last chance for stars; the goal at the top.
+name  TÅRTBERGET
+world 5
+music 5
+rows  32
+start 4
+
+terrain
+h 4
+flat 26         # 0-25    the bottom: start, the kicker and star 2
+step 3
+flat 6          # 26-31   tier 1 (h7)
+step 3
+flat 6          # 32-37   tier 2 (h10)
+step 3
+flat 6          # 38-43   tier 3 (h13)
+step 3
+flat 6          # 44-49   tier 4 (h16)
+step 3
+flat 6          # 50-55   tier 5 (h19)
+step 3
+flat 6          # 56-61   tier 6 (h22)
+step 3
+flat 40         # 62-101  the top (h25): lollipops and star 1, the cotton candy with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+10  ramp45 1
+10  arc 24 r45a
+16  star 12 2
+22  apples g 3
+27  apples g 4
+33  apples g 4
+36  enemy blob g
+39  apples g 4
+45  apples g 4
+48  enemy blob g
+51  apples g 4
+57  apples g 4
+64  apples g 3
+68  prefab lollipop g
+68  apple g+3
+72  prefab lollipop g
+72  apple g+3
+72  star g+5 1
+78  tile GUMDROP g
+82  apple g+4
+83  platform g+2 6
+83  fg bush g+3
+85  star g+3 3
+87  part g+3
+96  goal

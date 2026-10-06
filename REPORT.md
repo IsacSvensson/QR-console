@@ -100,6 +100,34 @@ through the south door on the first frame, a missing charging station before the
 shelves. Engine bugs found by the tests: a clobbered register in room transitions, a stale forecast in RAM, and a
 jump that skipped the music player entirely.
 
+## Part 3 — Bo's Skateäventyr
+
+A side-scrolling skateboard platformer for a six-year-old, designed in `games/bo/DESIGN.md` and `FIRST10.md`: 25
+levels in five worlds, 13 enemies, five bosses, 60 stars, seven boards, picture-code saves. After the M22 budget
+gate projected 41–43 KB for a 32 KB ROM, the human chose to extend the VM once: **ISA 2** (M22b, D-034) adds an
+optional xdata section and `COPY`/`FILL`/`UNPACK`; every ISA 1 game is byte-identical, and the app marks cartridges
+that need a newer ISA. From that commit on, `git diff 932e534 -- packages/vm packages/cartridge packages/transport
+packages/qr apps` is empty [tested]. Parents' guide in Swedish: `games/bo/GUIDE.md`.
+
+| # | Capability | Status |
+|---|---|---|
+| C1 | Levels: a TypeScript reader of the 30 `.lvl` sources (25 levels, 5 test levels) equals the ROM level table and every level unpacked into RAM (from xdata), tile class by tile class | [tested] `npm run test:bo` |
+| C2 | Physics: the constants in ROM equal DESIGN §3.2; jump heights, airtimes and kicker launches measured from replays equal the derived values of §3.3 within rounding | [tested] / [measured] |
+| C3 | In every frame of every replay Bo's feet are on a surface of the reference grid (or a moving platform of the reference spec) or in the air, and his box overlaps no solid tile | [tested] |
+| C4 | Enemies, power-ups, items, bubbles: every behaviour of DESIGN §9 seen in the zoo levels; the bubble font and all lines of §11–12 byte for byte | [tested] |
+| C5 | The whole game: one bot replay plays from the title through all 25 levels to the ending (~43 500 frames), every star and skate part, all apple patterns followed, the bosses with retries, SUPERBOSSE | [tested] |
+| C6 | Picture codes: all 1 365 valid codes round-trip (TypeScript encoder → VM decoder → the map shows the same code), all other values rejected; a replay enters a code from the title and resumes in World 3 with the right boards and stars | [tested] |
+| C7 | Music: every world has its own track, all ten tracks are heard in the replays; sound effects take their channel and the music resumes | [tested] |
+| C8 | Budgets: no fault, no cycle overrun, heaviest frame of every replay ≤ 25 000 cycles | [tested] |
+| C9 | Size: ROM 31.6 KB of 32 KB (code 25.4 KB, data 6.0 KB), cartridge 22.9 KB; xdata (levels, world graphics and music) packed | [measured] |
+| C10 | Delivery: `demo/bo.gif` (132 frames, 19.8 s loop, 1.8 MB) decodes back byte-identical; the web app scans it with a fake camera to 100 % and renders the VM reference frame | [tested] `npm run demo`, `npm run test:e2e` |
+| C11 | Whether it is fun for a six-year-old, whether he can read the bubbles, the touch controls, the sound on a phone | [not verified] — PLAN *Manual acceptance* for Part 3 |
+
+"Completable" means completable by the bot's routes, which read RAM; how hard the levels are for a child is not
+known. Design changes found by the bot (each recorded in DECISIONS D-029 – D-038): Backhoppet has no stars so the
+total is 60, the ski-lift chair waits at its station, popcorn drops less often, the longest jump is 1.3 s rather
+than the design's "over 2 s".
+
 ## Known limitations
 
 - **Real-device scanning is not verified.** The distortion simulator (scale, rotation, perspective, blur,

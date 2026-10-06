@@ -1,0 +1,58 @@
+# 4-1 SNÖGATAN — the snowy street (DESIGN §8.3): ice (no friction, hard to brake: start braking early), snow heaps
+# that break when Bo lands on them, snowmen that throw snowballs.
+name  SNÖGATAN
+world 4
+music 4
+rows  16
+start 4
+
+terrain
+h 4
+flat 22         # 0-21    start, sign, apples
+mat ice
+flat 28         # 22-49   the first ice: glide
+mat normal
+flat 20         # 50-69   snow heaps (weak), a snowman
+up22 2          # 70-73   (h6)
+flat 16         # 74-89   flag
+down22 2        # 90-93   (h4)
+mat ice
+flat 30         # 94-123  ice again, to the gap
+mat normal
+gap 3           # 124-126
+flat 72         # 127-198 the kicker and star 2, a snowman, the box, the bush with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  prefab snowspruce g
+16  apples g 4
+24  apples g 12
+40  tile SNOWHEAP g
+51  arc 24 hold
+52  weak g 1 2
+54  star 8 1
+58  weak g 1 2
+62  enemy snowman g
+71  apple g+1
+73  apple g+1
+76  flag
+80  apples g 8
+96  apples g 8
+112 tile SNOWHEAP g
+120 arc 24 hold
+128 apples g 2
+136 ramp45 1
+136 arc 24 r45a
+142 star 12 2
+154 enemy snowman g
+156 flag
+160 box g apples
+166 prefab snowspruce g
+174 apple g+4
+175 platform g+2 6
+175 fg bush g+3
+177 star g+3 3
+179 part g+3
+188 apples g 4
+196 goal

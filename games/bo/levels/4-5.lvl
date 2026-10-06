@@ -1,0 +1,38 @@
+# 4-5 BACKHOPPET — the ski jump (DESIGN §10.4): from the top of the tower down the icy inrun to full speed, off the
+# takeoff table (A at the lip: the highest, longest arc in the game), over the long landing hill. Then the outrun,
+# the goal, and the theft (the scene after the level). A big level like the boss levels: no stars, no part (the
+# game has 60 stars, DESIGN 7.1 and the M24 acceptance; D-037).
+name  BACKHOPPET
+world 4
+music 4
+rows  32
+start 3
+
+terrain
+h 28
+flat 8          # 0-7     the top of the tower: start, sign
+mat ice
+down45 6        # 8-13    the icy inrun (h22)
+flat 6          # 14-19
+down45 10       # 20-29   (h12)
+flat 8          # 30-37   the takeoff table (ice)
+mat normal
+step -4         #         (h8)
+down22 7        # 38-51   the landing hill (h1)
+flat 62         # 52-113  the outrun: flag, the box, apples in the bush, the goal
+
+objects
+2   apples g 4
+6   sign right
+14  arc 56 hold
+34  ramp22 2
+37  arc 56 r22
+37  arc 56 r22a
+88  flag
+92  box g apples
+96  prefab snowspruce g
+100 apple g+4
+101 platform g+2 6
+101 fg bush g+3
+102 apples g+3 4
+112 goal

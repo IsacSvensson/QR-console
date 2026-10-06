@@ -1,0 +1,61 @@
+# 1-2 TRÄDGÅRDEN — FIRST10.md §7: the lawn slope, the trampoline with an apple column to star 1, the B sign and
+# the first trick, wasps round the apple tree, the hedgehog in a dip, flag 1, two kickers with time for a combo,
+# the secret behind a bush, the goal. 22.5° hills on grass (DESIGN §8.3).
+name  TRÄDGÅRDEN
+world 1
+music 1
+rows  16
+start 4
+
+terrain
+h 8
+mat alt
+flat 10         # 0-9     the top of the lawn
+down22 3        # 10-15   the slope (h5)
+flat 67         # 16-82   trampoline, B sign + kicker, the apple tree
+step -1         #         the dip: straight sides keep the hedgehog in it
+flat 5          # 83-87   the hedgehog (h4)
+step 1
+flat 54         # 88-141  flag 1, two kickers
+down22 1        # 142-143
+flat 98         # 144-241 the bush and its secret, the run-in, the goal
+
+objects
+2   apples g 6
+11  apple g
+13  apple g
+15  apple g
+18  apples g 4
+24  bounce g 2 1
+24  column g+2 6
+24  star g+8 1
+25  column g+2 6
+32  sign b
+40  ramp45 1
+40  arc 24 r45a
+52  apples g 6
+56  enemy wasp g+3
+58  prefab tree g
+60  apples g 6
+63  enemy wasp g+3
+82  arc 24 hold
+85  enemy hedgehog g
+100 flag
+104 apples g 6
+112 ramp45 1
+112 arc 24 r45a
+126 ramp45 1
+126 arc 24 r45a
+134 star g+8 2
+150 flag
+160 box g apples
+166 apple g+4
+167 platform g+2 6
+167 fg bush g+3
+169 star g+3 3
+171 part g+3
+182 apples g 12
+200 enemy snail g
+208 arc 24 hold
+222 apples g 6
+232 goal

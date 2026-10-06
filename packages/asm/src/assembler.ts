@@ -1,5 +1,6 @@
 import { serializeCartridge } from '@qrc/cartridge';
-import { BUTTONS, ISA_VERSION, MEMORY, NO_ENTRY, OPCODES, SYSCALLS } from './isa';
+import { BUTTONS, MEMORY, MIN_ISA_VERSION, NO_ENTRY, OPCODES, SYSCALLS, SYSCALL_SINCE } from './isa';
+import { pack } from './pack';
 
 // Syntax reference: ../ASM.md
 
@@ -36,7 +37,9 @@ export interface AssembleOptions {
 
 export interface AsmResult {
   title: string;
-  sections: { code: Uint8Array; rodata: Uint8Array; sound: Uint8Array };
+  /** The lowest ISA the program needs: 2 if it has xdata or uses an ISA 2 syscall, else 1. */
+  isaVersion: number;
+  sections: { code: Uint8Array; rodata: Uint8Array; sound: Uint8Array; xdata?: Uint8Array };
   /** All resolved symbols: labels (absolute addresses), constants, RAM variables, sfx ids. */
   symbols: Map<string, number>;
   /** Kind of every symbol in `symbols`. */
@@ -44,7 +47,7 @@ export interface AsmResult {
   listing: ListingLine[];
 }
 
-type SectionName = 'code' | 'rodata';
+type SectionName = 'code' | 'rodata' | 'xdata';
 
 interface Ctx {
   file: string;
@@ -304,12 +307,15 @@ export function assemble(source: string, opts: AssembleOptions = {}): AsmResult 
   const listingRaw: { section: SectionName; offset: number; size: number; src: SrcLine }[] = [];
   const syms = new Map<string, SymDef>();
   const items: Item[] = [];
-  const size: Record<SectionName, number> = { code: 4, rodata: 0 }; // code starts with the vector table
+  const size: Record<SectionName, number> = { code: 4, rodata: 0, xdata: 0 }; // code starts with the vector table
   const sfx: { ctx: Ctx; args: string[] }[] = [];
   let section: SectionName = 'code';
   let scope = '';
   let title = '';
   let ramNext: number = MEMORY.RAM_START;
+  let isa = MIN_ISA_VERSION;
+  /** Open `.pack` block: where it started. */
+  let packing: { section: SectionName; items: number; listing: number; offset: number; ctx: Ctx } | null = null;
 
   for (const [k, v] of Object.entries(SYSCALLS)) syms.set(k, { kind: 'value', value: v });
   for (const [k, v] of Object.entries(BUTTONS)) syms.set(`BTN_${k}`, { kind: 'value', value: v });
@@ -329,7 +335,7 @@ export function assemble(source: string, opts: AssembleOptions = {}): AsmResult 
   };
 
   // Symbol resolution (lazy, so constants may refer to labels defined later).
-  const bases: Record<SectionName, number> = { code: 0, rodata: 0 };
+  const bases: Record<SectionName, number> = { code: 0, rodata: 0, xdata: MEMORY.XDATA_BASE };
   let basesReady = false;
   const resolving = new Set<string>();
   const resolve = (name: string, sc: string, at: Ctx): number => {
@@ -409,6 +415,7 @@ export function assemble(source: string, opts: AssembleOptions = {}): AsmResult 
         scope = name;
         ctx.scope = scope;
       }
+      if (packing) fail('no labels inside .pack (the packed bytes have no addresses)');
       define(name, { kind: 'label', section, offset: size[section] });
       text = text.slice(lm[0].length).trim();
       if (!text) listingRaw.push({ section, offset: size[section], size: 0, src: currentSrc });
@@ -428,6 +435,9 @@ export function assemble(source: string, opts: AssembleOptions = {}): AsmResult 
     const ops = splitOperands(rest);
     const ev = (e: string) => evalAt(e, ctx);
 
+    if (packing && !['.BYTE', '.WORD', '.STRING', '.FILL', '.SPRITE', '.ENDPACK'].includes(head)) {
+      fail(`only .byte, .word, .string, .fill and .sprite are allowed inside .pack, not ${head}`);
+    }
     if (head.startsWith('.')) {
       switch (head) {
         case '.CODE':
@@ -437,6 +447,32 @@ export function assemble(source: string, opts: AssembleOptions = {}): AsmResult 
         case '.RODATA':
           section = 'rodata';
           break;
+        case '.XDATA':
+          section = 'xdata';
+          break;
+        case '.PACK':
+          if (ops.length) fail('.pack takes no operands');
+          packing = { section, items: items.length, listing: listingRaw.length, offset: size[section], ctx: { ...ctx } };
+          break;
+        case '.ENDPACK': {
+          if (!packing) fail('.endpack without .pack');
+          const p = packing!;
+          const raw = new Uint8Array(size[section] - p.offset);
+          // the contents are packed now, so they may only use values known at this point (no labels)
+          for (const it of items.slice(p.items)) it.emit(raw, it.offset - p.offset, (e) => evalAt(e, it.ctx));
+          let packed: Uint8Array;
+          try {
+            packed = pack(raw);
+          } catch (e) {
+            return fail((e as Error).message);
+          }
+          items.length = p.items;
+          listingRaw.length = p.listing;
+          size[section] = p.offset;
+          packing = null;
+          emitItem(packed.length, (out, at) => out.set(packed, at));
+          break;
+        }
         case '.TITLE':
           title = String.fromCharCode(...parseString(rest, fail));
           break;
@@ -565,12 +601,18 @@ export function assemble(source: string, opts: AssembleOptions = {}): AsmResult 
       insn(COND_JUMPS[head]!, 0, 0, true, ops[0]!);
     } else if (head === 'SYS') {
       expectN(1);
-      insn(OPCODES.SYS, 0, 0, true, ops[0]!);
+      const e = ops[0]!;
+      emitItem(4, (out, at, evx) => {
+        const v = imm16(evx(e), e);
+        isa = Math.max(isa, SYSCALL_SINCE[v] ?? MIN_ISA_VERSION); // the program needs the ISA of every syscall it uses
+        out.set([OPCODES.SYS, 0x80, v & 0xff, v >>> 8], at);
+      });
     } else {
       fail(`unknown instruction '${head}'`);
     }
   }
 
+  if (packing) throw new AsmError('.pack without .endpack', packing.ctx.file, packing.ctx.line, packing.ctx.via);
   // ---- layout and pass 2 --------------------------------------------------------------------
   const soundSize = sfx.length ? 1 + sfx.length * 8 : 0;
   bases.code = 0;
@@ -579,7 +621,11 @@ export function assemble(source: string, opts: AssembleOptions = {}): AsmResult 
   if (size.code + size.rodata + soundSize > MEMORY.ROM_END) {
     throw new AsmError(`ROM too large: ${size.code + size.rodata + soundSize} bytes (max ${MEMORY.ROM_END})`, file, lines.length ? lines[lines.length - 1]!.line : 0);
   }
-  const out = { code: new Uint8Array(size.code), rodata: new Uint8Array(size.rodata), sound: new Uint8Array(soundSize) };
+  if (size.xdata > MEMORY.XDATA_MAX) {
+    throw new AsmError(`xdata too large: ${size.xdata} bytes (max ${MEMORY.XDATA_MAX})`, file, lines.length ? lines[lines.length - 1]!.line : 0);
+  }
+  if (size.xdata > 0) isa = Math.max(isa, 2);
+  const out = { code: new Uint8Array(size.code), rodata: new Uint8Array(size.rodata), sound: new Uint8Array(soundSize), xdata: new Uint8Array(size.xdata) };
   for (const it of items) it.emit(out[it.section], it.offset, (e) => evalAt(e, it.ctx));
 
   const entry = (name: string) => (syms.has(name) ? resolve(name, '', { file, line: 0, scope: '' }) : NO_ENTRY);
@@ -622,14 +668,16 @@ export function assemble(source: string, opts: AssembleOptions = {}): AsmResult 
     line: l.src.line,
     text: l.src.text,
   }));
-  return { title, sections: out, symbols, symbolKinds, listing };
+  const sections: AsmResult['sections'] = { code: out.code, rodata: out.rodata, sound: out.sound };
+  if (size.xdata > 0) sections.xdata = out.xdata;
+  return { title, isaVersion: isa, sections, symbols, symbolKinds, listing };
 }
 
 /** Symbol file: one `ADDR KIND NAME` line per symbol, sorted by value then name. */
 export function formatSymbols(asm: AsmResult): string {
   return [...asm.symbols]
     .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
-    .map(([name, v]) => `${(v & 0xffff).toString(16).padStart(4, '0')} ${asm.symbolKinds.get(name)!.padEnd(5)} ${name}`)
+    .map(([name, v]) => `${(v > 0xffff ? v : v & 0xffff).toString(16).padStart(4, '0')} ${asm.symbolKinds.get(name)!.padEnd(5)} ${name}`)
     .join('\n') + '\n';
 }
 
@@ -647,7 +695,7 @@ export async function buildCartridge(source: string, opts: AssembleOptions & { t
   const asm = assemble(source, opts);
   const bytes = await serializeCartridge({
     title: opts.title ?? (asm.title || 'UNTITLED'),
-    isaVersion: ISA_VERSION,
+    isaVersion: asm.isaVersion,
     sections: asm.sections,
     compression: opts.compression ?? 'auto',
   });

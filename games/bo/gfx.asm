@@ -1,0 +1,252 @@
+; Sprites at 4 bits per pixel (Bo after the human photo, DESIGN.md 0.1; HUD icons).
+.data
+spr_bo_up:
+.sprite
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    .1ffff8.
+    .cffffc.
+spr_bo_up_apple:                    ; Apple-Bo: the helmet becomes a red apple (stem and leaf drawn on top)
+.sprite
+    ..6666..
+    .6f6666.
+    effffff6
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    .1ffff8.
+    .cffffc.
+spr_bo_lo:
+.sprite                             ; legs, frame A (riding)
+    ..ffff..
+    ..7777..
+    .77..77.
+    .18..18.
+    .7....7.
+    aa....aa
+    ........
+    ........
+.sprite                             ; legs, frame B (pushing)
+    ..ffff..
+    ..7777..
+    .77..7..
+    18...18.
+    7....7..
+    a...aa..
+    ........
+    ........
+spr_bo_push:                        ; legs while pushing: only the front leg (the back leg is drawn by push_legs)
+.sprite
+    ..ffff..
+    ..7777..
+    ....77..
+    ....18..
+    .....7..
+    ....aa..
+    ........
+    ........
+spr_bo_up_bal:                      ; balancing: arms out
+.sprite
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    c1ffff8c
+    ..ffff..
+spr_bo_lo_bal:                      ; balancing: the front foot on the raised nose
+.sprite
+    ..ffff..
+    ..7777..
+    .77..18.
+    .18...7.
+    .7....aa
+    aa......
+    ........
+    ........
+spr_bo_crouch:                      ; legs, crouching (drawn 8 px below the upper sprite, which is 4 px lower)
+.sprite
+    ........
+    ........
+    ........
+    ........
+    ..77718.
+    .aa..aa.
+    ........
+    ........
+spr_bo_head:                        ; HUD icon
+.sprite
+    ..cccc..
+    .cfcccc.
+    effffffc
+    9ecccccc
+    .ec1cc1c
+    e9cccc6.
+    ........
+    ........
+spr_apple:
+.sprite
+    ....4b..
+    ...4bb..
+    .66466..
+    6f66666.
+    6f66666.
+    6666666.
+    .66666..
+    ..6.66..
+spr_star:
+.sprite
+    ...ee...
+    ...ee...
+    eeeeeeee
+    .eeeeee.
+    ..eeee..
+    .eeeeee.
+    .ee..ee.
+    .e....e.
+spr_star_off:
+.sprite
+    ...77...
+    ...77...
+    77777777
+    .777777.
+    ..7777..
+    .777777.
+    .77..77.
+    .7....7.
+spr_snail:
+.sprite
+    a.a.....
+    .a.a999.
+    .a.94449
+    .aa94949
+    .aa94449
+    aaaa9999
+    aaaaaaaa
+    ........
+spr_fries:
+.sprite
+    .e.e.e..
+    .eeeee..
+    .eeeee..
+    6666666.
+    66f6666.
+    .66666..
+    .66666..
+    ........
+spr_candy:
+.sprite
+    ........
+    .c...c..
+    cfc.cfc.
+    .ccccc..
+    .cfffc..
+    .cfcfc..
+    .ccccc..
+    ........
+spr_btn_a:                          ; the A button (title, hints)
+.sprite
+    ..6666..
+    .666666.
+    666ff666
+    66f66f66
+    66ffff66
+    66f66f66
+    .666666.
+    ..6666..
+spr_hint_right:                     ; the arrow hint (as on the sign)
+.sprite
+    ...ff...
+    ...fff..
+    ffffff6.
+    f666666f
+    ffffff6.
+    ...fff..
+    ...ff...
+    ........
+spr_cloud:                          ; half a cloud (the other half flipped)
+.sprite
+    ........
+    ...fff..
+    ..fffff.
+    .fffffff
+    ffffffff
+    ffffffff
+    .aaaaaaa
+    ........
+spr_stop:                           ; a stop on the world map
+.sprite
+    ..3333..
+    .3ffff3.
+    3ff66ff3
+    3f6666f3
+    3f6666f3
+    3ff66ff3
+    .3ffff3.
+    ..3333..
+spr_star_small:
+.sprite
+    ..e.....
+    eeeee...
+    .eee....
+    .e.e....
+    ........
+    ........
+    ........
+    ........
+spr_star_small_off:
+.sprite
+    ..3.....
+    33333...
+    .333....
+    .3.3....
+    ........
+    ........
+    ........
+    ........
+spr_part_small:                     ; a wheel
+.sprite
+    ..33....
+    .3aa3...
+    3a33a3..
+    3a33a3..
+    .3aa3...
+    ..33....
+    ........
+    ........
+spr_bigapple:
+.sprite
+    ...bb...
+    ..6bb...
+    .666666.
+    6ff66666
+    6f666666
+    66666666
+    .666666.
+    ..6666..
+spr_truck:                          ; a skateboard truck
+.sprite
+    ........
+    aaaaaaaa
+    .a7777a.
+    ..7777..
+    .ff..ff.
+    .ff..ff.
+    ........
+    ........
+spr_sticker:                        ; a sticker: a lightning bolt
+.sprite
+    .8888888
+    8eeee..8
+    8...ee.8
+    8..ee..8
+    8.eeee.8
+    8..ee..8
+    8.ee...8
+    .888888.
+.code

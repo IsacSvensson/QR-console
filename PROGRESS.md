@@ -2,9 +2,10 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** — (Part 2 complete; human checks pending)
-**Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*
-**Last updated:** 2026-09-24
+**Current milestone:** none — Parts 1–3 complete; awaiting the human's manual acceptance (PLAN.md)
+**Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
+Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
+**Last updated:** 2026-10-06
 
 ## Milestones
 
@@ -31,7 +32,48 @@ Part 2 — BLACKBOX (design: `games/blackbox/`)
 - [x] M17 Content, sections 4–7, bosses and endings
 - [x] M18 Music, access codes, delivery
 
+Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
+
+- [x] M19 Engine: levels, scrolling, rolling
+- [x] M20 Skate mechanics and the feel prototype
+- [x] M21 Enemies, power-ups, items, HUD, Bo's voice
+- [x] M22 World 1 and the game around it (budget gate)
+- [x] M22b ISA 2: xdata + COPY/FILL/UNPACK (human decision after the budget gate)
+- [x] M23 Worlds 2 and 3
+- [x] M24 Worlds 4 and 5, the theft and the ending
+- [x] M25 Picture codes, music, delivery
+
 ## Current work
+
+Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
+buffer, camera, parallax, HUD frame, Bo's rolling physics on flat ground, hills, blocks and one-way platforms; test
+levels T1/T2; bot-recorded replays; `npm run test:bo` checks the ROM table and every level's RAM against an
+independent reader of the `.lvl` sources and measures DESIGN §3.3 from the replays (all within rounding, D-029).
+M20 done — kickers, landing boost, rails and grind, tricks and combos, sloppy landings, sand/ice/trampoline,
+weak blocks and boxes, water and pits, flags, lives, game over; Bo's signature poses, bubbles in the game's font
+(`tools/text.ts`), wheel clicks; test level T3; `demo/bo.gif` (starts in the test menu: the feel prototype for the
+human's first Bo test, PLAN *Manual acceptance* 1). All seven T3 kicker launches match DESIGN §3.3 (D-030).
+M21 done — the 13 enemies of DESIGN §9 (nine behaviours, every landing joke and side hit shown in the zoo test
+levels T4/T5), apple helmet, pommes (music 1.5× faster), godis (one extra jump), 100 apples = a life, a music
+sequencer with a World 1 loop, the bubble font with ÅÄÖ checked byte for byte against DESIGN §11–12 (D-031).
+M22 done — title, intro, picture-code screen (test levels via the code of four Bos), world map, level cards,
+tally, after-boss scene; levels 1-1..1-4 and Stora Måsen (1-5); replays from the title to the World 2 map, every
+star and part of World 1, the boss pattern and a retry, FIRST10 §8 rules, all 71 apple patterns followed (D-032).
+**Budget gate: ROM 27.1 KB after World 1 (code 20.1 KB); five worlds projected 41-43 KB** (D-033). The human
+chose to extend the VM: **M22b = ISA 2** (D-034) — an optional xdata section (256 KB, outside the address
+space) and `COPY`/`FILL`/`UNPACK`; every ISA 1 game is byte-identical; the app marks cartridges that need a
+newer ISA. Bo is now ISA 2: levels packed in xdata, ROM 25.6 KB (D-035). M23 done — Worlds 2 (Skogen) and 3 (Staden): each
+world looks clearly different (own sky, parallax, colours, decor; world blocks in xdata), moving platforms (logs, the
+bus), the rabbit chase, the bulldozer, world music; one replay from the title to the World 4 map (D-036). M24 done —
+Worlds 4 (Snö: ice, the ski lift, Backhoppet, the longest jump) and 5 (Godislandet: lollipops, chocolate and rafts,
+licorice, the cake mountain), the theft and the licorice board, the final (Stora Måsen in three phases), the ending
+with the statistics and the golden board, boards, SUPERBOSSE, the seagull's food; one replay plays the whole game
+(D-037). M25 done — picture codes (all 1 365 valid codes round-trip, the rest rejected; a replay resumes from a
+code), ten music tracks, the Bo e2e scan, `games/bo/GUIDE.md`, REPORT Part 3 (D-038). ROM 31.6 KB of 32 KB. **Runtime baseline for M23-M25 = 932e534 (M22b).** Human request (2026-10-06): the worlds must look clearly
+different (own sky, parallax, ground/structure colours, decor) — added to DESIGN §14.4, done in M23–M24.
+DESIGN §17 defaults apply (only question 1 answered). Part 3 runtime baseline was the M19 commit (394e012) until
+M22b; from the M22b commit on
+`git diff 932e534 -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
 
 Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.md *Manual acceptance*). **M12 baseline commit: 5a7ca7d** — from here on
 `git diff 5a7ca7d -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
@@ -49,6 +91,12 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | BLACKBOX ROM / cartridge | 26.1 KB of 32 KB ROM (80 %) / 15.0 KB cartridge; 4 endings replayed (7.7k–8.2k frames each) | test:blackbox |
 | BLACKBOX as QR | 58 blocks, 87-frame loop (13.1 s), 1.2 MB GIF; fake-camera scan 11 s in e2e | npm run demo, test:e2e |
 | Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
+| Bo mockup: full-screen draw cost | 1 356 cycles/frame (17 MAP columns + sprites + bubble + HUD); font 47 glyphs = 376 B | D-025–D-027 |
+| Bo ROM estimate | 23.5–29 KB of 32 KB (code 11–13 KB); measured at the M22 budget gate | DESIGN §16 |
+| Bo ROM after M25 (final) | 31.6 KB (code 25.4 KB, data 6.0 KB), ISA 2; cartridge 22.9 KB; 132-frame GIF loop (19.8 s) | test:bo, npm run demo |
+| Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
+| Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
+| Bo ROM after M19 | 8.2 KB (code 5.8 KB, data 2.4 KB); cartridge 4.7 KB; play frames ~1.4k cycles, loading ≤ 15.1k | test:bo |
 
 ## Known issues
 
@@ -66,3 +114,10 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 - Calibrate the distortion simulator with real camera captures of the demo GIFs.
 - APNG output; Raptor-style precode for K ≫ 256; a `--scale` auto-choice from screen size.
+- A really giant Jättekaninen (32×24 sprites; it is Bo's size now), from the world assets.
+- Double resolution (256×256) as a later ISA: needs a human decision to change L3, and graphics grow ~4×
+  (considered with ISA 2 on 2026-10-06, D-034). Also generic syscalls for tile lookup and `TEXT` with a
+  cartridge font (~0.5 KB each for Bo).
+- (From planning Part 3) a generic save area persisted per cartridge id by the web app, which would replace picture
+  codes (runtime + app change); UTF-8 in `.title` (the cartridge format already allows it); Gamepad API input in
+  the web player for fast games.

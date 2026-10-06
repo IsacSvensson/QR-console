@@ -316,3 +316,411 @@ almost silent; server complex: fast arpeggios shifting by ORACLE's semitone). Co
 unchanged. The M18 music test now reads every track (MUS_COUNT) from ROM, requires every track to be heard in the
 replays, and a new test requires distinct tracks for sections 1-7. PLAN.md's "three music loops" is a minimum
 already met; DESIGN.md §5 updated.
+
+## D-024 — Part 3 planned: Bo's Skateäventyr, scope and the main design choices (proposed)
+Date: 2026-10-05 · Milestone: Part 3 planning (before M19)
+Decision: a side-scrolling skateboard platformer, `games/bo/DESIGN.md`. 5 worlds × (4 levels + 1 boss or set-piece
+level) = 25 levels; bosses Stora Måsen (W1), Jättekaninen as a chase level (W2), Bulldozern (W3), the Backhoppet
+set piece where the seagull steals the board (W4), and the final (W5). Where the human's pitch was open or
+contradictory: the power-up is a big apple, distinct from the collectible apples; B tricks are always available
+and candy adds the "godissnurr" (one extra jump per airtime, double trick points); the seagull is the recurring
+antagonist and the board thief, and it is befriended at the end. In-game text is Swedish uppercase in the game's
+own 5×6 bubble font with ÅÄÖ; everything important is also shown with pictures. Saving uses a 4-picture code
+(16 bits). The engine has about ten tile/object kinds and nine enemy behaviours, which the worlds re-skin. Each
+world adds at most two mechanics.
+Alternatives: 5 levels + boss per world (30 levels, over the ROM estimate); Jättekaninen as a snow hare in W4 with
+no boss in W2; English text as in BLACKBOX (a six-year-old Swedish player); diacritics drawn over the built-in
+3×5 font (only a single line, and too small for an early reader); persistent save RAM (a runtime change, human
+decision); 8-character text codes as in BLACKBOX (too hard for a six-year-old).
+Why: the ROM estimate (DESIGN §16, calibrated on BLACKBOX, D-025), a six-year-old's reading and motor skills,
+and no runtime change.
+Revisit if: the human answers DESIGN §17 differently (defaults apply otherwise), or the M22 budget gate projects
+more than 32 KB (cut list in DESIGN §16.1).
+
+## D-025 — Bo: drawing approach and ROM estimate, measured with a mockup and the BLACKBOX listing
+Date: 2026-10-05 · Milestone: Part 3 planning (before M19)
+Decision: the level lives in RAM column-major (32 rows per column) and each visible column is drawn with one
+`MAP` call (columns = 1 makes a column contiguous, because `MAP` reads `map + row × columns + column`). The bubble
+font is stored at 1 bit per pixel and unpacked once into RAM sprites (`SPR` reads any address). The skateboard is
+drawn with `RECTFILL`, so a new board costs only a colour. World tiles are planned at 2 bits per pixel, unpacked
+to RAM when the world changes.
+Measurement (`games/bo/mockup/`, a static screen of level 1-1 rendered by the VM): the full screen (sky, parallax
+strip, 17 columns with a 5 px scroll offset, 8 sprites, Bo, a 15-character bubble, HUD) costs **1 278 cycles per
+frame** (2.6 % of the budget). The font has 47 glyphs including ÅÄÖ: **376 B ROM, 1 504 B RAM**. The mockup
+cartridge is 1.5 KB, and `mockup.gif` has 10 frames.
+BLACKBOX calibration (address differences in `blackbox.lst`): code 10 884 B = 2 721 instructions (actors 2.7 KB,
+text engine 1.6, script interpreter 1.3, player 1.2, rooms 1.0, bosses 1.0); data 15 536 B (text 7.2 KB, rooms 2.7,
+tiles 1.6, sprites 0.9, music 0.6). Bo's estimate is 23.5–29 KB of 32 KB (DESIGN §16.1): little text, more
+graphics and physics.
+Alternatives: a ring buffer (impossible, `MAP` has no stride); a row-major buffer drawn one row per call (same
+cost, but vertical scrolling and column-wise decoding are simpler column-major); the big font as 4bpp sprites in
+ROM (1.5 KB instead of 376 B).
+Revisit if: real level data or code size differ from the estimate at the M22 budget gate.
+
+## D-026 — Bo's look from the human's photo; the apple power-up recolours the helmet
+Date: 2026-10-05 · Milestone: Part 3 planning (DESIGN.md §17 question 1)
+Decision: Bo is drawn after a photo the human shared (it is not in the repository): he always wears his pink
+helmet, has light curly hair, purple knee and elbow pads, a white T-shirt, khaki trousers, grey shoes, and rides a
+black board with light wheels. Palette mapping (DawnBringer 16, SPEC L3): the helmet dome is 12 with a white rim (15),
+curls 14 + 9 at the back of the neck, pads 1 + 8 (two pixels: plum + blue-violet), trousers 7, shoes 10, deck 0 with
+raised tails, wheels 15. Because Bo already wears a helmet, STORA ÄPPLET now turns the helmet into a red apple
+(dome 6, stem and leaf drawn above it) instead of giving him one; a hit turns it pink again. Bubble line `ÄPPELHJÄLM!`.
+Alternatives (rendered side by side in the VM before choosing): an all-pink helmet (12, the skin colour: it merges
+with the face and reads as a bald head); a white helmet with a pink tip (reads as white); a dark brim line (reads as
+sunglasses); curls across the forehead (read as a headband); pads 8 (reads blue), 2 (navy), 1 (brown); beige
+trousers 12 (read as bare legs).
+Measurement: with the new board drawing the mockup scene costs 1 309 cycles per frame (D-025: 1 278); the new
+character sheet with two 4× drawings costs 8 100. The mockup cartridge is 1 972 B, and its GIF has 12 frames and
+decodes back to the identical cartridge.
+Revisit if: the human prefers another variant, or the palette ever changes (it is locked).
+
+## D-027 — Bo: an identity pass after the human's review (no new mechanics)
+Date: 2026-10-05 · Milestone: Part 3 planning
+Decision (from the human's eight review points; DESIGN.md §0.2, §1, §5, §8.2–8.5, §9, §11.1, §4):
+- **Bo's signature** (§0.2): push kicks with the back foot on the ground, leaning forward above 2 px/frame, leaning
+  back and dust when braking, an idle pop after 3 s, balancing after 8 s, `WIII!` after a clean grind, looking back
+  after a landing with at least 0.8 s of air. These are visual only: they never move Bo or change his box, and any
+  button cancels the idle ones. Most are offsets and mirrors of existing sprites.
+- **One message per power-up:** 🍎 = protection, 🍟 = speed, 🍬 = one extra jump. Pommes lost its extra rules
+  (breaking weak obstacles, bumping enemies away). Everything now follows from the speed, plus feedback: the music
+  plays 1.5× faster, push kicks speed up and the board vibrates. Godis lost the double trick points. The seagull
+  still takes the pommes (it is the story's running gag).
+- **The apple language** (§8.4): rows, arcs, columns and a "KOLLA" apple sticking out of a hedge, with the rule
+  "apples never lie". The generator computes arcs from the physics, and tests check a route per pattern.
+- **Godis is the discovery mechanic** (§8.5): it always lies near something that looks out of reach, seen first.
+  **Pommes stretches**: ramps with arcs computed for pommes speed and no ground enemies.
+- **A memory per world** (§8.2), and every `POFF` is a joke (§9). **The seagull's journey** (§11.1): it is always
+  hungry and steals one food per world, which the ending pays off. **SUPERBOSSE** (§4): a secret 3000-point trick,
+  unlocked by finishing the game (picture-code world value 6), never needed.
+- Rendering detail for secrets: sparse foreground (hedges and bushes drawn over Bo, with holes).
+Alternatives: keeping pommes' extra rules (more for a six-year-old to learn, and the human asked for one clear
+message); unlocking SUPERBOSSE from the start (it should be a reward to show off); hiding secrets only above the
+screen (that needs 32-row levels, which the first level should not need).
+Measurement (mockup, three screens): scene with push animation 1 356 cycles per frame, character sheet 8 103, and
+the signature sheet 9 379 (one 2× pose per frame via PGET). The cartridge is 2 544 B and the GIF 15 frames; it
+decodes back to the identical cartridge. Estimated ROM cost of the identity details: ~0.7 KB (DESIGN §16.1).
+
+## D-028 — The first ten minutes are specified before any level is built
+Date: 2026-10-05 · Milestone: Part 3 planning (affects M22)
+Decision: `games/bo/FIRST10.md` fixes the title screen, the intro (15 s, skippable), level 1-1 column by column
+(208 columns, a two-minute target), the first three minutes of 1-2, nine rules the tests check, and the observation
+list for the human's Bo test. Choices: the first play goes straight from the intro into 1-1 with no map. Until the
+first checkpoint (about the first minute) nothing can cost a life: there are no pits, water or enemies, and walls only
+stop him. The box with the apple helmet sits in the way before the first enemy, with an apple arc leading onto it, and
+1-1 and 1-2 have no pits or water at all. Every lesson is taught without text (geometry, apples, three pictogram signs), with a
+blinking hint after 2–3 s of standing still. The first secret is a sparse hedge on the garage roof rather than a
+climb above the screen, so 1-1 stays one screen tall. Jump numbers were computed with the §3 physics: kicker with A
+at a 1.8 px/frame lip = 64 px high, 12 tiles long; bin window 11–41 px after takeoff.
+Alternatives: start on the world map (an extra step before the first push); a tree climb to a hidden treehouse
+(needs precise jumps and a vertical camera in the first level); a text tutorial (excludes a child who cannot read
+yet).
+Revisit if: the Bo test (FIRST10.md §9) shows where it does not work.
+
+## D-029 - Bo engine (M19): level format, physics details the design left open
+Date: 2026-10-05 - Milestone: M19
+Decision:
+- **Level sources** (`games/bo/levels/FORMAT.md`): a terrain profile (flat, 22.5/45 degree hills, gaps, liquid
+  pits, steps, materials) plus an object list sorted by column. Heights count tiles from the bottom of the
+  32-row buffer; a 16-row level uses rows 16-31. In ROM: one byte per terrain segment and 4 bytes per object
+  (+ extras); apple arcs are expanded by the generator from the physics into cells (one apple per 16 px).
+- **Tiles**: fixed codes with fixed meaning in every world (1-26 structure, 27-50 common items, 64-95 per world),
+  2 bits per pixel with a 4-colour palette per tile and *shared* pixel patterns (a slope drawn once is recoloured
+  per world: a tile costs 3 bytes per world plus its pattern once). 96 codes = 3 KB RAM.
+- **Kickers are their own class (RAMP)**: a height-mapped surface without slope deceleration. Otherwise the
+  speed "at the lip" could never be 3.5 px per frame (a 45 degree ramp costs 2 per frame on the way up), and the
+  ramp rows of DESIGN 3.3 would be unreachable. Terrain hills (SLOPE) decelerate up and accelerate down.
+- **Down = crouch, not brake.** DESIGN 2 says "huka ... bromsar lite. Hall ned for att stanna"; 3.2 said BRAKE
+  applies to down or the opposite arrow. Braking at 3 per frame would stop Bo before he is under a bar, so down
+  crouches with a gentle `CROUCH_FRIC` (1 per 2 frames) and the opposite arrow brakes. Added to 3.2.
+- **The brake holds Bo still on a slope** once he has stopped. This also lets the tests measure "from
+  standstill" on a slope (DESIGN 3.3).
+- **Air steering** `AIR_ACC` (1 per 2 frames), never beyond the push speed; added to 3.2.
+- **Pushing at exactly the push speed holds it** (no friction tick); above it (after a hill) Bo rolls out.
+- **Ollie on an up-slope or a ramp** adds the launch (speed x slope) to JUMP_V, capped at LAUNCH_MAX: "A at
+  the lip" works anywhere on the ramp, which is forgiving for a six-year-old and gives the same numbers.
+- **Collision model**: feet sensor in the middle (steps up at most 6 px, follows down |dx| + 1 px), two edge
+  sensors (flat tops exactly at the feet), body box 6 x 14 (crouching 6 x 9) above the board for walls and
+  heads. One-way surfaces only from above.
+- **Physics constants live in a ROM table** (`phys`, `PH_*`) that the engine reads, so the test can compare
+  the ROM against DESIGN 3.2 directly.
+- **Test levels are reached by input** (replays are pure input): until M22 the cartridge starts in a test
+  menu; from M22 it will be reached from the title screen.
+Measurement (M19 replays, from RAM): ollie 26.56 px / 34 frames; tap 5.25 px / 14 frames; jump length at
+1.5/2.5/3.5 px per frame 51/85/119 px; push 0-24 24 frames 18.75 px; coasting 96 frames 73.5 px; brake from
+24 8 frames 5.25 px, from 40 14 frames 15.44 px; downhill 22.5/45 degrees 56 frames 99.75 px / 28 frames
+50.75 px. All within DESIGN 3.3's rounding. Play frames ~1.4k cycles; loading frames up to 15k (terrain 64
+columns per frame; tile unpacking split over two frames after a 25.6k-cycle first try).
+Alternatives: down brakes at BRAKE (no way under bars); kickers as terrain slopes (3.5 px per frame at the
+lip impossible); a ring buffer for the level (impossible with MAP, D-025).
+
+## D-030 - Bo skate mechanics (M20): rules the design left open
+Date: 2026-10-06 - Milestone: M20
+Decision:
+- **Tricks**: B in the air starts one trick at a time; it scores when its frames have passed (DESIGN 4).
+  GRAB lasts while down+B are held, at least 12 frames, and scores 50 + 10 per full 8 frames beyond the first 12;
+  a grab still held at landing counts as clean. A landing with any other trick in progress is sloppy: speed
+  halved (truncated), the combo lost, OJ!, no damage. 360 needs 40 frames, so only a ramp gives the air for it.
+- **Combos**: every completed trick of one airtime plus a grind adds its points; a clean landing on the ground
+  scores the sum x the number of tricks (OLLIE is named in the combo text but counts 0 and does not multiply,
+  as in DESIGN's `OLLIE + KICKFLIP = 100`). Landing on a rail keeps the combo going (GRIND is added once per
+  rail, then 10 points per 8 frames); a trampoline bounce does not end it. Clean landings give TRICK_BOOST per
+  trick up to the speed cap. The combo text is drawn with the built-in font for 1 s.
+- **A at the lip**: besides an ollie anywhere on the ramp (D-029), A within LIP_GRACE = 6 frames after a ramp
+  launch still adds the ollie (capped at LAUNCH_MAX).
+- **Grind**: landing on a rail or rolling onto one starts it; flat rails have no friction, diagonal ones
+  accelerate like a 45 degree hill; A is an ollie off; at the end of a rail Bo flies on with his velocity (down
+  a down-rail: vy = speed). WIII! when a grind of at least 16 frames ends, at most every 5 s.
+- **Breakables**: landing on a weak block or a box clears exactly that object's cells (found in the ROM object
+  list) and Bo bounces up with STOMP_V = 40. A box leaves its content in its own cell (apples: up to five in a
+  column upwards, into empty cells).
+- **Lives**: water/chocolate/a pit cost a life even with the apple helmet (DESIGN 6); the helmet stays. Respawn
+  at the last flag passed; at 0 lives FORSOK IGEN! and the level loads again with 5 lives (counters kept).
+- **Signature**: the idle pop plays once at 3 s for 24 frames, balancing from 8 s until a button; looking back
+  for 0.5 s after a landing with at least 48 frames in the air; poses never touch position or box.
+- **Wheels**: a click (noise, 2400 Hz, 2 frames) every 16 px rolled on the ground, none on ice. The soft
+  rolling noise of DESIGN 15 is left for the M25 sound pass (it would cut off the board's noise effects on the
+  same channel without the sequencer's channel bookkeeping).
+- **DESIGN 3.3** gains the sand row (coasting out from 1.5 px per frame: 24 frames, 17 px), derived from
+  SAND_FRIC, so the M20 test has a document value to compare with.
+- **T3**: each high-speed kicker sits at the bottom of a hill (RAMP keeps the speed to the lip) and a hill climbs
+  back up after its landing zone; the bot regulates the launch speed exactly by braking and searching over when
+  to start.
+Measurement (m20-t3): launches 45 degrees without ollie at 1.5/2.5/3.5: 5.25/15.44/30.94 px, 2.81/8.13/16.19
+tiles; with ollie at 2.5/3.5: 64.19 px, 53 frames, 16.56/23.19 tiles; 22.5 degrees with ollie at 1.5/2.5:
+40.69/51.75 px, 7.88/15.00 tiles; ice brake from 2.5: 80 frames, 100 px; sand: 24 frames, 17.25 px. ROM 16.1 KB
+(code 12.1 KB), max 15.1k cycles per frame (loading), play frames under 2k.
+
+## D-031 - Bo enemies, power-ups and voice (M21)
+Date: 2026-10-06 - Milestone: M21
+Decision:
+- **Actors**: 12 slots, spawned from the level's enemy list when their column comes into view, freed when far away
+  (they come back when in view again unless defeated); defeated enemies stay away until Bo loses a life. Nine
+  behaviours: walk, dive (seagull: hovers, warns with SKRIII and blinking for 40 frames, dives at where Bo was
+  in 24 frames, rises back to its own home), fly (wasp: loops), bounce (ball; the candy blob hops towards Bo),
+  throw (squirrel, snowman, popcorn cannon: aimed arcs when Bo is 12..48 px away, first throw after 1.5 s),
+  projectile, roll (sled: starts when Bo is 56 px away), pigeon (walks; startled by Bo *rolling* within 24 px it
+  flaps for 12 frames, then flies off harmless). Follow and platform behaviours come with the bosses and moving
+  platforms (M22-M23).
+- **Contact**: Bo's contact box includes the board (feet up 16 px). A landing (falling, feet at most 4 px below
+  the enemy's top at the start of the frame) is the row's joke from DESIGN 9; otherwise a hit if the body hurts.
+  The throwers' bodies are harmless (their projectiles hit), the cannon cannot be landed on usefully (Bo bounces
+  off), hedgehog and sled hurt from above too (DESIGN: "traff" / "hoppa over"), the jelly man and the ball throw Bo
+  up with BOUNCE_V. A joke apple (snail, candy blob) goes into the enemy's cell if empty. The godissnurr knocks
+  enemies away; a seagull touching Bo while he has pommes takes them (no damage). Contact events (kind, enemy type)
+  are kept in RAM for the tests.
+- **Hits**: the apple helmet takes one hit and gives 120 frames of blinking with no contact; otherwise a life.
+  Losing a life also loses pommes and godis.
+- **Music**: a two-voice sequencer as in BLACKBOX, a World 1 loop; with pommes every note lasts 2/3 of its frames.
+  Effects take their channel for their length and the music resumes.
+- **Test levels T4 and T5** (the zoo): stations of flag, helmet box, an enemy to land on, one to touch from the
+  side; T4 also has 100 apples, T5 pommes (stolen, then a hit with pommes, then one that runs out) and godis.
+  Station spacing and the reach of divers, throwers and sleds were tuned together so a station's enemies do not
+  reach the next station.
+Measurement: m21-zoo1 2727 frames, m21-zoo2 4697 frames, max 15.1k cycles per frame (loading), play frames under
+3k; melody note lengths 12/24/36 frames, with pommes 8/16/24. ROM 21.7 KB (code 16.1 KB, data 5.4 KB):
+code is well above the DESIGN 16 estimate (11-13 KB for the whole game); the M22 budget gate must deal with it.
+
+## D-032 - Bo World 1 and the screens around it (M22)
+Date: 2026-10-06 - Milestone: M22
+Decision:
+- **Flow**: title (Bo rolls in, pulsing A) -> intro the first time (15 s, A skips) -> 1-1; later A on the title opens
+  the world map. Level card banner at every level start, a tally screen (apples, stars, parts, score; the seagull
+  flies past) at every goal, after a boss a short scene with its lines, then the map with the next world unlocked.
+  Progress (stars/parts per level) is kept in RAM for the session (persistence comes with picture codes, M25).
+- **Test levels** are no longer the start screen: title -> B -> the picture-code screen; the code of four Bos opens
+  the test menu (T1-T5). The bot uses this to reach any level; `demo/bo.gif` still shows the test menu path.
+- **A box gives its power-up directly** (apple helmet, pommes, godis) instead of dropping a pickup that could
+  fall into a pit or behind a block; apple boxes still put a column of apples.
+- **1-1 vs FIRST10**: the bins of the first minute moved 2-3 columns right (45, 53, 61-62) so the computed arcs over
+  them do not overlap each other; the fence at 16 was removed (it covered apples). The order of events is FIRST10's.
+- **Hints**: an arrow after 2 s standing still at the start, an A button in front of the first wall Bo rides into
+  (WALL_HINT frames), both only until used once.
+- **Stora Masen (1-5)**: fly -> warn (60 frames, SKRIII) -> dive (speed 3 + hits) -> dizzy (120 - 10 x hits frames,
+  the only time a landing counts) -> rise. Three landings win; MINA POMMES, pommes rain, then the goal.
+- **Arcs** stop when the jump falls 2 tiles below its takeoff (they never lead into a pit), and an apple covered by
+  a later object is no part of its pattern (the oracle drops it; levels avoid it). 1-4 was rebuilt wider (270
+  columns) so the four pommes-speed kicker arcs and the two pit arcs have room; the third kicker is without A.
+- **Bot**: `kickA`/`followArc` can brake to the arc's speed (pommes 40, normal 24); without that the run-up after a
+  downhill is faster than the arc and the apples above are missed.
+Measurement: m22-world1 (title -> World 2 map, all of World 1) 8557 frames; per-level routes 1241-2164 frames;
+boss win 1234 frames, boss retry 1465; max 3.4k cycles in play, 14.9k in loading frames. 71 apple patterns in
+World 1, all followed by life-safe replays.
+
+## D-033 - Bo budget gate after World 1 (M22): projected over 32 KB, flagged
+Date: 2026-10-06 - Milestone: M22
+Measurement (from bo.lst/bo.sym after M22): **ROM 27 133 B** = code 20 070 B + data 7 063 B. Data: levels 1 837
+(World 1: 1-1..1-4 = 221-252 B each, 1-5 arena 17 B, test levels T1-T5 599 B, tables/prefabs 265 B), tiles 1 541
+(patterns 1 088 = 68 tiles, World 1 tileset/strip/attributes 254 B), text + font 1 115, sprites 1 504 (Bo, items,
+all 13 enemies, boss 1), music + effects 164, tables ~900. Cartridge 15.1 KB compressed.
+Projection for five worlds (World 1 measured, the rest estimated from it):
+| Part | Now | Five worlds |
+|---|---:|---:|
+| Code (moving platforms, chase, bulldozer, 3 bosses, theft, ending, SUPERBOSSE, golden board, codes) | 20.1 | 24.5-25.5 |
+| Levels (4 more worlds x ~1.0 KB + Backhoppet) | 1.8 | 6.0 |
+| Tiles (own look per world, DESIGN 14.4 human request: ~30 patterns + tileset per world, ~0.75 KB) | 1.5 | 4.5 |
+| Sprites (bosses 2-4, rabbit, bulldozer, boards) | 1.5 | 2.7 |
+| Music and effects (~10 loops, ~25 effects) | 0.2 | 1.5 |
+| Text, font, tables | 2.0 | 2.6 |
+| **Sum** | **27.1** | **41-43 KB** |
+The DESIGN 16.1 cut list in order: (1) 4 levels per world, -1.0 KB per world for worlds 2-5 = -4 KB; (2) parallax
+in two worlds and fewer decor tiles, -0.5-1 KB (conflicts with the human's request for distinct worlds); (3) the
+final reuses Stora Masen, -0.3; (4) shorter loops, -0.3. After all four: **~35-37 KB, still over 32 KB.** Step 5
+(ROM banking or a larger ROM) is an ISA change: forbidden by the runtime freeze, a human decision.
+Decision: flagged in PROGRESS *Blocked / needs human*. Meanwhile, within the locks: cut (1) is applied from World 2
+on (3 levels + boss; World 1 keeps its four FIRST10 levels), cuts (3) and (4) are applied when those parts are
+written, and before M23 a code-size pass targets the code overrun (20 KB against DESIGN's 11-13 KB estimate:
+the largest routines are bo_ground 1.2 KB, draw_actor 0.7, b_boss1 0.6, on_map 0.6, pose_update 0.5) and the test
+levels leave the final ROM (-0.6 KB). Cut (2) waits for the human because it contradicts their request.
+
+## D-034 - ISA 2: extended data and block syscalls instead of mapped ROM banks (M22b)
+Date: 2026-10-06 - Milestone: M22b (human decision after D-033: extend the VM, keep old cartridges working;
+also: a standard set of generic syscalls; the app should say which version a cartridge needs; double
+resolution not now)
+Decision:
+- **No mapped bank window.** The 16-bit address space is full (ROM 0x0000-0x7FFF, RAM 0x8000-0xFFFF), and
+  banked code would need far calls and bank bookkeeping in every game. Instead: an optional **xdata** section
+  (type 4, at most 256 KB) that is not in the address space at all, plus `SYS COPY` / `SYS UNPACK` to bring
+  parts of it into RAM. Code and resident data stay in the 32 KB ROM; a game like Bo already builds each
+  level in a RAM buffer, and `SPR`/`MAP` read RAM. One mechanism, no new addressing modes.
+- **Far addresses** are two registers (hi, lo): hi 0 = memory, hi >= 1 = xdata offset. The assembler gives
+  xdata labels the value 0x10000 + offset, so `label >> 16` / `label & 0xFFFF` work for every label and a
+  ROM address passes as hi 0 (so `COPY` is also a plain memcpy).
+- **Syscalls 17-19**: `COPY` (dest, far src, len), `FILL` (dest, value, len), `UNPACK` (dest, far src ->
+  length). Generic (SPEC L2). Costs 8 + n/8 and 8 + n/4 cycles, so block work is cheap but not free.
+  Considered and left out for now: a tile-lookup syscall and `TEXT` with a cartridge font (smaller wins,
+  ~0.5 KB each for Bo).
+- **Packed format**: byte-oriented LZ (literal runs up to 128, matches 3-66 with 1- or 2-byte distance),
+  chosen over deflate because the VM decoder is ~20 lines and needs no tables or bit reader. The encoder
+  does an optimal parse over hash-chain matches. Measured on rodata: Breakout 378 -> 156 B (41 %), BLACKBOX
+  15 536 -> 11 743 B (76 %), Bo 7 073 -> 5 236 B (74 %); deflate gets Bo to 63 %. Encoding Bo takes 6 ms.
+- **The version rule**: the VM runs ISA 1..2; a cartridge declares the lowest ISA it needs (the assembler
+  picks it: 2 only with xdata or an ISA 2 syscall); features newer than the cartridge's ISA behave as if
+  they did not exist (an ISA 1 cartridge calling syscall 17 faults exactly as before). The cartridge format
+  is unchanged (format version 1): xdata is written only when non-empty, unknown section types are ignored,
+  so an old app parses an ISA 2 cartridge and refuses it at the ISA check. Compatibility data lives in the
+  existing header field, not in ROM.
+- **App**: the library reads the header's ISA and marks a cartridge it cannot run ("Needs a newer QR
+  Console (ISA n; this app runs up to 2) - update the app"), with Play disabled; the scan result says the
+  same. Old installed apps show their existing "unsupported ISA version" error when Play is pressed.
+- **Double resolution** (256x256) is not part of ISA 2: it changes locked decision L3 and would roughly
+  quadruple graphics bytes, the opposite of what Bo needs. Noted under *Ideas for later*.
+- New built-in assembler names `COPY`, `FILL`, `UNPACK`: no committed game used them as symbols.
+Measurement: every committed game (hello, Breakout, Pong, BLACKBOX, Bo) rebuilds to its committed `.qrc`
+byte for byte as ISA 1 (`test/isa2.test.ts`); replay hash suites unchanged. e2e also needed
+`shell: true` on Windows for the fixture step (tooling only).
+
+## D-035 - Bo on ISA 2: levels packed in xdata; the new budget projection (M22b)
+Date: 2026-10-06 - Milestone: M22b
+Decision: each level's terrain and objects are one `.pack` block in xdata; the level table (ROM, 14 bytes a
+record) holds its far address and the offset of the objects; `level_start` unpacks it into `lv_src` (RAM,
+LV_SRC_MAX bytes) and the loader reads from there exactly as it read ROM before. Gameplay is unchanged: the
+replays were not re-recorded, only their state hashes (RAM layout) regenerated; all `test:bo` checks pass.
+Plan for the rest of the game, so the ROM holds only code and shared data: per-world tilesets and patterns,
+boss sprites and per-world music also go to xdata and are unpacked into RAM when a world or boss level starts.
+Measurement: ROM 27 133 -> 25 609 B (code 20 098, data 5 511); cartridge 15.2 KB. Projection for five worlds
+with that plan: code 24.5-25.5 KB + resident data ~5.5 KB = 30-31 KB of 32 KB; xdata ~12-15 KB packed. The
+code-size pass stays on the list as the safety margin; DESIGN 16.1 cuts are no longer needed (5 levels per
+world, distinct world graphics as the human asked).
+
+## D-036 - Bo Worlds 2 and 3 (M23)
+Date: 2026-10-06 - Milestone: M23
+Decision:
+- **World look (human request, DESIGN 14.4)**: every world block (xdata) has its own sky, parallax strip, symbolic
+  colours for the structural tiles (ground, slopes, ramps, planks, blocks), optional own art for structural shapes
+  (Staden draws 45-degree slopes as stairs) and 32 own tiles. Skogen: warm evening sky, dark spruce parallax,
+  moss and brown earth, fresh-cut wood. Staden: navy dusk sky, a skyline with lit windows, light pavement, brick,
+  blue metal ramps. Patterns used by one world only live in its block (World 1's moved out of ROM too). A tile name
+  means the same code in every world that has it; the generator rejects a tile or prefab the level's world lacks.
+- **World assets** (D-035 plan): each world's music and boss sprites are raw xdata blocks copied into RAM
+  (`wasset`, 1 KB) with the world; the code reaches them through RA_* addresses. Not packed, so labels work.
+- **Moving platforms**: actors with F_PLAT whose top `surface()` also finds (one-way); the platform Bo stands on
+  carries him (bo_plat). Log: drifts right over 10 columns and back at 6/16 px per frame; bus: waits until Bo stands
+  on its roof, then drives 160 columns at 1 px per frame and stops. Drawn with world tiles (MAP). The test oracle has
+  its own platform spec (frames.ts PLATFORMS) and checks both the motion and Bo standing on them.
+- **Jättekaninen**: not in the enemy list; its object marks where it stops (the brook). It appears at the left
+  screen edge 1 s after the start (2.5 s after a lost life: "further back"), never despawns, and aims every hop to
+  land 24 px behind where Bo will be at his current speed (speeds 8..36), so it stays in sight and reaches a Bo who
+  stops. Each landing shakes the ground: a grounded Bo loses a quarter of his speed (half was tried: it made
+  every hop and the last kicker fail; not on a kicker). In the chase level there are no jump arcs (the shake makes
+  speeds unpredictable, so arcs would lie): an apple on a stump means "up here".
+- **Bulldozern**: drives towards Bo between its home and 21 columns left of it; the press counts only while it
+  drives (not while backing off after a press or waiting at home); a landing on the roof beside the button bounces
+  Bo off towards the open side; while Bo's feet are at or above the roof he is never hurt by the body. Phase 2: the
+  raised bucket (front, 16 px above the roof) hurts; Bo drops onto the button from the high plank (it stops right
+  under Bo). Phase 3: the bucket is down again (it dumps sand piles: actors that slow Bo), it parks at home under
+  the end of the crane arm while Bo is up high, and a press needs a trick in that airtime (grind + one more, or a
+  trick in progress). F_BOSS: an arena boss comes on at once wherever the camera is.
+- **Pigeon**: flies up when Bo *rolls* within 48 px (was 24 px and any grounded Bo): at 24 px riding at push speed
+  always ran into it during its flap, contradicting DESIGN 9 ("flyger upp när Bo kommer"). T5's second pigeon moved
+  to column 59 so it is not scared by the first station.
+- **Level design rules learned**: from a standstill Bo cannot push up a 45-degree slope (push 1 < slope 2) nor
+  gain speed on a 22.5-degree one, so hills that must be climbed are 22.5 degrees with a run-up; a grind combo adds
+  TRICK_BOOST per trick at the landing, so Bo is fast after rails (levels leave room, routes brake); arcs slower
+  than push speed must be followed without steering in the air (the generator keeps vx constant).
+- **Map music**: the map plays the current world's track (the World 1 tune id would point into another world's
+  assets once they are loaded).
+Measurement: ROM 28 073 B (code 22 774, data 5 299; was 25 609 after M22b), xdata ~6 KB, cartridge 19.6 KB.
+m23-worlds (title to the World 4 map, all 15 levels) 26 195 frames; max 4 004 cycles in a play frame, 15.1k while
+loading. 154 apple patterns in Worlds 2-3, all followed. Projection for M24: code +2-3 KB (lift, ice, Backhoppet,
+theft, final boss, ending, SUPERBOSSE, golden board), world assets and levels in xdata: about 31 KB of 32 KB, so a
+code-size pass comes first in M24.
+
+## D-037 - Bo Worlds 4 and 5, the theft, the final and the ending (M24)
+Date: 2026-10-06 - Milestone: M24
+Decision:
+- **Snö and Godislandet** get their own world blocks like Worlds 2-3 (D-036): Snö a clear blue sky, snowy mountains,
+  white snow with grey specks, icy blue ramps, snowy spruces, a cabin, the ski lift; Godislandet a purple dusk (the
+  palette has no pink), red candy castle walls, white frosting on peach cake with red sprinkles, biscuit ramps,
+  lollipops, licorice rails, marshmallow rafts, the seagull's nest. The world map's ground has a colour per world.
+- **Ski-lift chair**: a moving platform that waits 2 s at its bottom station (so a child can board it), rides up at
+  45 degrees three tiles above the slope, and returns to the bottom at the end of its range (leaving Bo). Platforms
+  that move up carry Bo vertically too. Marshmallow rafts drift like the logs.
+- **Backhoppet (4-5)** is a big level like the boss levels: no stars and no part. DESIGN 10.4 gives it three stars,
+  but DESIGN 7.1, the ending (x/60) and the M24 acceptance all say 60 stars, and 21 levels with three stars would be
+  63; the majority wins. Its inrun is ice (full speed, 56); the takeoff table launches the longest jump in the game:
+  measured 269 px (34 tiles) in 77 frames (1.3 s). DESIGN 10.4's "over 2 s" is not reachable inside 32 rows with
+  these physics (the fall height runs out); recorded, not forced.
+- **The theft**: the scene after 4-5 (JAG GJORDE DET!, SKRIII!, NEJ! MIN BRÄDA!, then the jelly man's LÅNA MIN!
+  and EN LAKRITSBRÄDA!) sets `stolen`, unlocks the licorice board and selects it; World 5 is played on it. After the
+  final Bo gets his own board back, SUPERBOSSE is unlocked, and the ending starts.
+- **The final (5-5)** reuses Stora Måsen's behaviour with three changes: phase 1 drops popcorn when it is right
+  above Bo (every 64 frames; 32 frames within 24 px rained on a child who waits by the wall); phase 2 ends the dive
+  dizzy high above the kicker (kicker + A reaches it); phase 3 sits in its nest at the end of the licorice rail and
+  only a landing with a trick (a combo of two or a trick in progress) takes the board. Arena bosses (F_BOSS) come
+  on at once and are never freed for being off-screen.
+- **Boards**: a bitmask (own, five world boards from the four parts of a world, golden from all 60 stars, licorice);
+  B on the map cycles through the boards Bo has (not his own while the seagull has it); the map shows the board.
+- **SUPERBOSSE**: unlocked by the final (`super_ok`; the picture code will restore it in M25). Every launch from a
+  crest or a kicker records its speed and surface; up then down on a kicker or in the air, then <- or -> with B in the
+  air, after leaving a kicker at 2.5 px per frame or more: 3000 points and a banner; otherwise the same input is a 360.
+- **The seagull's food**: the first sprite of every world's asset block (pommes, sandwich, sausage, carrot, Bo's
+  board), drawn at the tally and on the map.
+- **The ending**: Bo rides home through the five worlds (their skies and grounds, 2.5 s each) with the seagull, then
+  JAG GJORDE DET!, stars x/60, apples (a new total counted at every tally) and points, with the golden board under
+  Bo if he has all 60 stars; A goes back to the title.
+Measurement: ROM 30 301 B of 32 768 (code 24 588, data 5 713), cartridge 22.3 KB; the whole game from the title to the ending
+in one replay (m24-game, about 43 500 frames = 12 minutes of play, then SUPERBOSSE at Backhoppet).
+
+## D-038 - Bo picture codes, music, delivery (M25)
+Date: 2026-10-06 - Milestone: M25
+Decision:
+- **Picture code format** (written into DESIGN 7.3): 16 bits, v = world << 13 | boards << 8 | full << 3 | checksum,
+  world 1-5 or 6 (game done), boards and full worlds with World 1 as the lowest bit, checksum
+  (3 world + 5 boards + 7 full + 1) mod 8. The four pictures are v's hex digits, highest first. The map shows the
+  code of the current state (world boards and worlds with all 12 stars, masked to the worlds done).
+- **Impossible codes are rejected** like wrong checksums (FEL KOD): a board or full world for a world not yet
+  done. Of the 65 536 values, 1 365 are valid.
+- **Decoding** rebuilds the state: the levels of done worlds done, all stars of full worlds (others 0: DESIGN 7.3
+  says stars of incomplete worlds are not saved), the parts for world boards, then boards_update (so the golden
+  board follows from 60 stars). World 5 restores the theft (stolen, the licorice board selected); world 6
+  restores SUPERBOSSE and Bo's own board and opens the World 5 map.
+- **Music**: ten tracks (DESIGN 15): five world loops in the world assets (M23-M24), and in ROM the title, the
+  boss track (the four boss levels; Backhoppet keeps the Snö loop since it is a big level, not a boss), the
+  level-done fanfare, game over and the ending. Fanfare and game over play once and then rest. New effects: the
+  rabbit's landing thud (noise) and the STOP button.
+- **Bo's speech blips** (optional in PLAN M25 and DESIGN 15) are skipped: the bubbles already pop with an effect,
+  and ROM is 31.6 KB of 32 KB.
+- **Delivery**: e2e gets a Bo project (fake camera, `.tmp/e2e/bo.y4m`, like BLACKBOX); only the e2e wiring and the
+  `test:e2e` script change, the runtime does not.
+Measurement: ROM 31 608 B of 32 768 (code 25 404, data 6 043, sound 161), cartridge 22 945 B; `demo/bo.gif` 132
+frames (K=88), 19.8 s loop, 1.8 MB.

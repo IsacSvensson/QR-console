@@ -25,8 +25,8 @@ describe('games/hello', () => {
 
   it('the VM refuses the same cartridge re-labelled with an unsupported ISA version', async () => {
     const cart = await parseCartridge(new Uint8Array(readFileSync(join(GAME, 'hello.qrc'))));
-    const bytes = await serializeCartridge({ title: 'HELLO', isaVersion: 2, sections: cart.sections });
+    const bytes = await serializeCartridge({ title: 'HELLO', isaVersion: 3, sections: cart.sections });
     const relabelled = await parseCartridge(bytes); // valid cartridge format...
-    expect(() => VM.fromCartridge(relabelled)).toThrow(/unsupported ISA version 2/); // ...but not runnable
+    expect(() => VM.fromCartridge(relabelled)).toThrow(/unsupported ISA version 3/); // ...but not runnable
   });
 });

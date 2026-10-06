@@ -1,0 +1,54 @@
+# T5 - test level: the enemy zoo, part 2 (PLAN.md M21): the other enemies, then pommes with a seagull that takes them,
+# and godis with a platform out of reach (one extra jump per airtime).
+name  TESTBANA 5
+world 1
+music 1
+rows  16
+start 3
+
+terrain
+h 4
+flat 282
+
+objects
+10  flag
+12  box g apple
+22  enemy squirrel g
+29  enemy squirrel g
+36  flag
+38  box g apple
+48  enemy pigeon g
+59  enemy pigeon g
+62  flag
+64  box g apple
+74  enemy snowman g
+81  enemy snowman g
+88  flag
+90  box g apple
+100 enemy sled g
+107 enemy sled g
+110 box g apple
+114 flag
+116 box g apple
+126 enemy jelly g
+133 enemy jelly g
+140 flag
+142 box g apple
+152 enemy blob g
+159 enemy blob g
+166 flag
+168 box g apple
+178 enemy cannon g
+185 enemy cannon g
+192 flag
+195 pickup pommes g
+206 enemy gull g+2
+218 pickup pommes g
+232 enemy snail g
+238 flag
+241 pickup pommes g
+250 flag
+253 pickup godis g
+262 platform g+5 6
+264 star g+6 1
+274 goal

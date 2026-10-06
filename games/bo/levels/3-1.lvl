@@ -1,0 +1,65 @@
+# 3-1 TROTTOAREN — the pavement (DESIGN §8.2-8.3): grinding on low rails and benches, curbs, parked cars as
+# platforms, pigeons. The city at dusk.
+name  TROTTOAREN
+world 3
+music 3
+rows  16
+start 4
+
+terrain
+h 4
+flat 40         # 0-39    start, sign, the shop, the first low rail
+step 1          #         a curb up (h5)
+flat 30         # 40-69   benches, a pigeon
+step -1         #         and down (h4)
+flat 40         # 70-109  parked cars with star 1 above; flag
+step 1          #         (h5)
+flat 36         # 110-145 the long rail and star 2
+step -1         #         (h4)
+flat 84         # 146-229 a pigeon, the shop, the hedge with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  prefab shop g
+20  prefab lamp g
+26  apples g 4
+32  rail g 8
+36  apples g+1 4
+44  tile BENCH g 4 1
+44  apples g+1 4
+52  prefab lamp g
+60  tile BENCH g 4 1
+60  apples g+1 4
+74  prefab car g
+75  apple g+2
+80  prefab car g
+81  apples g+2 2
+81  star g+4 1
+86  prefab lamp g
+88  enemy pigeon g
+92  apples g 6
+100 flag
+104 prefab lamp g
+114 rail g+1 12
+114 apples g+2 12
+131 arc 24 hold
+134 star 9 2
+140 prefab lamp g
+150 enemy pigeon g
+158 apples g 6
+170 prefab shop g
+170 apples g+2 5
+176 tile CONE g
+186 flag
+190 box g apples
+196 prefab car g
+200 tile BUSSTOP g
+204 apple g+4
+205 platform g+2 6
+205 fg hedge g+3
+207 star g+3 3
+208 apple g+3
+209 part g+3
+218 apples g 6
+226 goal

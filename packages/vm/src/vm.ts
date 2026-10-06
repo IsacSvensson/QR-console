@@ -1,6 +1,6 @@
 import { type Cartridge, sha256, toHex } from '@qrc/cartridge';
 import { CELL_H, CELL_W, GLYPH_H, GLYPH_W, glyph } from './font';
-import { CYCLES_PER_FRAME, ISA_VERSION, MEMORY, NO_ENTRY, OPCODES as O, SCREEN, SYSCALLS as S, SYSCALL_CYCLES } from './isa';
+import { CYCLES_PER_FRAME, ISA_VERSION, MEMORY, MIN_ISA_VERSION, NO_ENTRY, OPCODES as O, SCREEN, SYSCALLS as S, SYSCALL_CYCLES, SYSCALL_SINCE } from './isa';
 
 /** One sound event produced during a frame. Backends (WebAudio) turn these into sound. */
 export interface AudioCommand {
@@ -34,6 +34,13 @@ export interface RomImage {
   code: Uint8Array;
   rodata: Uint8Array;
   sound: Uint8Array;
+  /** ISA 2: extended data, outside the address space (SYS COPY / UNPACK). */
+  xdata?: Uint8Array;
+}
+
+/** True if this VM runs cartridges that declare `isaVersion` (each ISA runs every older one). */
+export function isaSupported(isaVersion: number): boolean {
+  return isaVersion >= MIN_ISA_VERSION && isaVersion <= ISA_VERSION;
 }
 
 const s16 = (v: number) => (v << 16) >> 16;
@@ -72,11 +79,22 @@ export class VM {
   private readonly budget: number;
   private readonly initEntry: number;
   private readonly updateEntry: number;
+  /** The cartridge's declared ISA: syscalls newer than it are unknown, exactly as in that ISA. */
+  readonly isa: number;
+  private readonly xdata: Uint8Array;
 
   constructor(rom: RomImage, opts: VMOptions = {}) {
-    if (rom.isaVersion !== ISA_VERSION) {
-      throw new VMError(`unsupported ISA version ${rom.isaVersion} (this VM runs ISA ${ISA_VERSION})`);
+    if (!isaSupported(rom.isaVersion)) {
+      throw new VMError(
+        rom.isaVersion > ISA_VERSION
+          ? `unsupported ISA version ${rom.isaVersion}: this VM runs ISA ${MIN_ISA_VERSION}-${ISA_VERSION}; the cartridge needs a newer QR Console`
+          : `unsupported ISA version ${rom.isaVersion} (this VM runs ISA ${MIN_ISA_VERSION}-${ISA_VERSION})`,
+      );
     }
+    this.isa = rom.isaVersion;
+    this.xdata = rom.xdata ?? new Uint8Array(0);
+    if (this.xdata.length > 0 && this.isa < 2) throw new VMError('an xdata section needs ISA 2');
+    if (this.xdata.length > MEMORY.XDATA_MAX) throw new VMError(`xdata is ${this.xdata.length} bytes; max ${MEMORY.XDATA_MAX}`);
     const romSize = rom.code.length + rom.rodata.length + rom.sound.length;
     if (romSize > MEMORY.ROM_END) throw new VMError(`ROM is ${romSize} bytes; max ${MEMORY.ROM_END}`);
     if (rom.code.length < 4) throw new VMError('code section too short for the vector table');
@@ -285,8 +303,7 @@ export class VM {
           r[a] = this.pop();
           break;
         case O.SYS:
-          cycles += SYSCALL_CYCLES - 1;
-          this.syscall(imm);
+          cycles += SYSCALL_CYCLES - 1 + this.syscall(imm);
           if (this.fault) return;
           break;
         default:
@@ -310,8 +327,19 @@ export class VM {
   }
 
   // ---- syscalls -----------------------------------------------------------------------------
-  private syscall(n: number) {
+  /** ISA 2 far address (hi, lo) + i: hi 0 = memory address lo, hi >= 1 = xdata offset ((hi-1) << 16 | lo). */
+  private farRead(hi: number, lo: number, i: number): number {
+    if (hi === 0) return this.mem[(lo + i) & 0xffff]!;
+    return this.xdata[((hi - 1) << 16) + lo + i] ?? 0;
+  }
+
+  /** Runs syscall n; returns the cycles it costs beyond SYSCALL_CYCLES (only the ISA 2 block syscalls). */
+  private syscall(n: number): number {
     const r = this.regs;
+    if ((SYSCALL_SINCE[n] ?? 1) > this.isa) {
+      this.fault = `unknown syscall ${n} at 0x${((this.pc - 4) & 0xffff).toString(16)}`;
+      return 0;
+    }
     switch (n) {
       case S.CLS:
         this.fb.fill(r[0]! & 15);
@@ -405,9 +433,46 @@ export class VM {
       case S.FRAME:
         r[0] = this.frame & 0xffff;
         break;
+      case S.COPY: {
+        const [dest, hi, lo, len] = [r[0]!, r[1]!, r[2]!, r[3]!];
+        for (let i = 0; i < len; i++) this.write8(dest + i, this.farRead(hi, lo, i));
+        return Math.ceil(len / 8);
+      }
+      case S.FILL: {
+        const [dest, v, len] = [r[0]!, r[1]!, r[2]!];
+        for (let i = 0; i < len; i++) this.write8(dest + i, v);
+        return Math.ceil(len / 8);
+      }
+      case S.UNPACK: {
+        const out = this.unpack(r[0]!, r[1]!, r[2]!);
+        r[0] = out;
+        return Math.ceil(out / 4);
+      }
       default:
         this.fault = `unknown syscall ${n} at 0x${((this.pc - 4) & 0xffff).toString(16)}`;
     }
+    return 0;
+  }
+
+  /** The packed format of VM.md (encoder: packages/asm/src/pack.ts). Returns the unpacked length. */
+  private unpack(dest: number, hi: number, lo: number): number {
+    let p = 0;
+    const next = () => this.farRead(hi, lo, p++);
+    const n = next() | (next() << 8);
+    let o = 0;
+    while (o < n) {
+      const t = next();
+      if (t < 0x80) {
+        for (let k = 0; k <= t && o < n; k++, o++) this.write8(dest + o, next());
+      } else {
+        const len = (t & 0x3f) + 3;
+        let d = next();
+        if (t >= 0xc0) d |= next() << 8;
+        d += 1;
+        for (let k = 0; k < len && o < n; k++, o++) this.write8(dest + o, this.read8(dest + o - d));
+      }
+    }
+    return n;
   }
 
   private pset(x: number, y: number, c: number) {

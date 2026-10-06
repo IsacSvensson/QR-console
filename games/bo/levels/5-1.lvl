@@ -1,0 +1,50 @@
+# 5-1 KLUBBSKOGEN — the lollipop forest (DESIGN §8.3): lollipops as platforms, jelly men (land on one: a big
+# bounce), a godis path up to a biscuit plank, on the borrowed licorice board.
+name  KLUBBSKOGEN
+world 5
+music 5
+rows  16
+start 4
+
+terrain
+h 4
+flat 30         # 0-29    start, sign, apples, a jelly man
+flat 20         # 30-49   the lollipops and star 1
+flat 30         # 50-79   flag, the godis and the high biscuit plank with star 3
+flat 30         # 80-109  the kicker and star 2, a jelly man
+flat 46         # 110-155 the box, the cotton candy with the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  tile GUMDROP g
+14  apples g 4
+28  enemy jelly g
+32  prefab lollipop g
+32  apple g+3
+36  prefab lollipop g
+36  apple g+3
+40  prefab lollipop g
+40  apple g+3
+40  star g+5 1
+46  tile CANDYFLOSS g
+52  flag
+58  tile CANDYFLOSS g
+59  pickup godis g
+66  platform g+5 6
+66  apple g+6
+68  star g+6 3
+76  apples g 3
+84  ramp45 1
+84  arc 24 r45a
+90  star 12 2
+100 enemy jelly g
+110 box g apples
+116 tile GUMDROP g
+122 apple g+4
+123 platform g+2 6
+123 fg bush g+3
+125 apples g+3 2
+127 part g+3
+138 apples g 6
+150 goal

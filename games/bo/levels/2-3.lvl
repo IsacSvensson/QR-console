@@ -1,0 +1,66 @@
+# 2-3 STORA BACKEN — the big hill, the idea's level (DESIGN §8.3): a forest path at the top, then downhill, more
+# and more speed, a big kicker at the bottom and the GIANT JUMP over the brook (with A at the lip it is the long
+# high arc with star 2; without A the low one still clears the water). Then up the tree crowns to the part.
+name  STORA BACKEN
+world 2
+music 2
+rows  32
+start 4
+
+terrain
+h 22
+flat 30         # 0-29    the forest path at the top, stumps and star 1
+down22 4        # 30-37   (h18)
+flat 6          # 38-43
+down45 6        # 44-49   (h12)
+flat 4          # 50-53
+down45 8        # 54-61   (h4): full speed
+flat 2          # 62-63
+flat 4          # 64-67   the big kicker (3 high, 64-66)
+liq water
+liquid 12       # 68-79   the brook
+flat 70         # 80-149  landing, flag, the tree crowns up to the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+10  prefab spruce g
+14  prefab stump2 g
+14  apple g+2
+18  prefab stump3 g
+18  apple g+3
+18  star g+5 1
+22  apples g 6
+31  apple g+1
+33  apple g+1
+35  apple g+1
+37  apple g
+40  apples g 3
+45  apple g+1
+47  apple g+1
+49  apple g
+51  apples g 2
+55  apple g+1
+57  apple g+1
+59  apple g+1
+61  apple g
+64  ramp45 3
+66  arc 55 r45
+66  arc 55 r45a
+78  star 16 2
+92  flag
+96  apples g 6
+104 platform g+2 4
+104 apples g+3 4
+110 platform g+5 4
+110 apples g+6 4
+116 platform g+8 4
+116 apples g+9 4
+121 apple g+12
+122 platform g+11 6
+122 fg bush g+12
+124 star g+12 3
+126 part g+12
+134 enemy snail g
+138 apples g 6
+146 goal

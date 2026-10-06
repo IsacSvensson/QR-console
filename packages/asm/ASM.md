@@ -40,6 +40,8 @@ Values must fit 16 bits (−32768 … 65535).
 |---|---|
 | `.title "NAME"` | cartridge title (≤ 32 bytes) |
 | `.code` / `.data` | switch section (code is default; `.data` = read-only data, placed after code) |
+| `.xdata` | switch to the extended-data section (ISA 2): outside the address space, labels are far addresses `0x10000 + offset` |
+| `.pack` … `.endpack` | the data between them (`.byte .word .string .fill .sprite` only, no labels, only values known at that point) is stored packed in the format of `SYS UNPACK` |
 | `NAME = expr` or `.const NAME, expr` | constant (may reference labels, also later ones) |
 | `.var NAME [, size]` | allocate `size` bytes of RAM (default 2) starting at `0x8000` |
 | `.byte e, e, "str", …` | bytes (strings are not terminated) |
@@ -49,9 +51,15 @@ Values must fit 16 bits (−32768 … 65535).
 | `.sprite` | followed by 8 rows of 8 characters, `.` = transparent (0), `0`–`F` = palette index |
 | `.sfx NAME, channel, freq, duration, volume [, sweep]` | sound definition; `NAME` = its id for `SYS SFX` |
 
+## ISA version
+
+The assembler writes the **lowest ISA the program needs** into the cartridge: 2 if it has an xdata section or
+uses a syscall introduced in ISA 2 (`COPY`, `FILL`, `UNPACK`), otherwise 1. A program without them builds to
+exactly the same cartridge as before ISA 2 existed.
+
 ## Built-in constants
 
-Syscall names (`CLS`, `PSET`, …, `FRAME`), buttons (`BTN_LEFT`, `BTN_RIGHT`, `BTN_UP`, `BTN_DOWN`,
+Syscall names (`CLS`, `PSET`, …, `FRAME`, and in ISA 2 `COPY`, `FILL`, `UNPACK`), buttons (`BTN_LEFT`, `BTN_RIGHT`, `BTN_UP`, `BTN_DOWN`,
 `BTN_A`, `BTN_B`) and `RAM_START`. They cannot be redefined.
 
 ## Errors

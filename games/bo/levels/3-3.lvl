@@ -1,0 +1,52 @@
+# 3-3 BUSSEN — the bus (DESIGN §8.3): a moving platform. Hop onto the roof of the yellow bus at the stop; it drives
+# off and carries Bo down the street over the road works (pits). Crouch under the low signs, hop up for the stars
+# (the bus goes on under Bo while he is in the air, so start near its front). At the end: the parking lot.
+# The only flags are before the stop and after the ride (the bus does not come back for Bo).
+name  BUSSEN
+world 3
+music 3
+rows  16
+start 4
+
+terrain
+h 4
+flat 50         # 0-49    start, the shop, the bus stop
+gap 3           # 50-52   road works
+flat 37         # 53-89
+gap 3           # 90-92
+flat 37         # 93-129
+gap 3           # 130-132
+flat 27         # 133-159
+gap 3           # 160-162
+flat 72         # 163-234 the end of the ride, the parking lot, the goal
+
+objects
+2   apples g 4
+8   sign right
+10  prefab shop g
+16  flag
+18  apples g 2
+20  tile BUSSTOP g
+24  enemy bus g+2
+40  apples g+3 8
+60  bar g+3
+70  apples g+3 8
+84  star g+5 1
+100 bar g+3
+110 apples g+3 8
+120 bar g+3
+124 star g+5 2
+140 bar g+3
+150 apples g+3 8
+176 prefab lamp g
+192 flag
+196 enemy pigeon g
+200 box g apples
+206 prefab car g
+212 apple g+4
+213 platform g+2 6
+213 fg hedge g+3
+215 star g+3 3
+217 part g+3
+224 apples g 4
+230 goal

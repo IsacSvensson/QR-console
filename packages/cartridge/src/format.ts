@@ -21,12 +21,16 @@ export enum SectionType {
   Code = 1,
   Rodata = 2,
   Sound = 3,
+  /** ISA 2: extended data, not mapped into the address space (read with SYS COPY / UNPACK). Optional. */
+  Xdata = 4,
 }
 
 export interface CartridgeSections {
   code: Uint8Array;
   rodata: Uint8Array;
   sound: Uint8Array;
+  /** Optional; omitted from the body when absent or empty (so ISA 1 cartridges are unchanged). */
+  xdata?: Uint8Array;
 }
 
 export interface CartridgeHeader {
@@ -80,20 +84,24 @@ const SECTION_ORDER: [SectionType, keyof CartridgeSections][] = [
   [SectionType.Code, 'code'],
   [SectionType.Rodata, 'rodata'],
   [SectionType.Sound, 'sound'],
+  [SectionType.Xdata, 'xdata'],
 ];
 
 /** Body (uncompressed) = u8 section count, count × {u8 type, u32 length}, then section bytes in table order. */
 export function encodeBody(sections: CartridgeSections): Uint8Array {
-  const tableSize = 1 + SECTION_ORDER.length * 5;
-  const total = tableSize + SECTION_ORDER.reduce((n, [, k]) => n + sections[k].length, 0);
+  // xdata only when non-empty: a cartridge without it is byte-identical to one written before it existed
+  const present = SECTION_ORDER.filter(([type, k]) => type !== SectionType.Xdata || (sections[k]?.length ?? 0) > 0);
+  const tableSize = 1 + present.length * 5;
+  const total = tableSize + present.reduce((n, [, k]) => n + sections[k]!.length, 0);
   const body = new Uint8Array(total);
-  body[0] = SECTION_ORDER.length;
+  body[0] = present.length;
   let off = tableSize;
-  SECTION_ORDER.forEach(([type, key], i) => {
+  present.forEach(([type, key], i) => {
+    const sec = sections[key]!;
     body[1 + i * 5] = type;
-    put32(body, 2 + i * 5, sections[key].length);
-    body.set(sections[key], off);
-    off += sections[key].length;
+    put32(body, 2 + i * 5, sec.length);
+    body.set(sec, off);
+    off += sec.length;
   });
   return body;
 }
@@ -119,7 +127,10 @@ export function decodeBody(body: Uint8Array): CartridgeSections {
     if (!s) throw new CartridgeError(`missing required section: ${name}`);
     return s;
   };
-  return { code: get(SectionType.Code, 'code'), rodata: get(SectionType.Rodata, 'rodata'), sound: get(SectionType.Sound, 'sound') };
+  const sections: CartridgeSections = { code: get(SectionType.Code, 'code'), rodata: get(SectionType.Rodata, 'rodata'), sound: get(SectionType.Sound, 'sound') };
+  const xdata = found.get(SectionType.Xdata);
+  if (xdata) sections.xdata = xdata;
+  return sections;
 }
 
 export async function serializeCartridge(input: CartridgeInput): Promise<Uint8Array> {

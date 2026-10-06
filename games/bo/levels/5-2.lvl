@@ -1,0 +1,52 @@
+# 5-2 CHOKLADFLODEN — the chocolate river (DESIGN §8.3): chocolate is a hazard; marshmallow rafts drift across
+# (wait for one, roll on, stand still, roll off); a popcorn cannon, an island with lollipops, a candy blob.
+name  CHOKLADFLODEN
+world 5
+music 5
+rows  16
+start 4
+
+terrain
+h 4
+flat 22         # 0-21    start, sign, apples
+liq choc
+liquid 13       # 22-34   river 1: a raft
+flat 20         # 35-54   the popcorn cannon
+liquid 13       # 55-67   river 2: a raft
+flat 16         # 68-83   the island: lollipops and star 1
+liquid 13       # 84-96   river 3: a raft
+flat 62         # 97-158  flag, the kicker and star 2, a candy blob, the box, the cotton candy with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  tile GUMDROP g
+16  apples g 4
+22  apples 4 13
+23  enemy raft 4
+41  enemy cannon g
+46  apples g 3
+55  apples 4 13
+56  enemy raft 4
+70  prefab lollipop g
+70  apple g+3
+74  prefab lollipop g
+74  apple g+3
+74  star g+5 1
+78  apples g 3
+84  apples 4 13
+85  enemy raft 4
+100 flag
+104 apples g 4
+112 ramp45 1
+112 arc 24 r45a
+118 star 12 2
+128 enemy blob g
+134 box g apples
+140 tile GUMDROP g
+144 apple g+4
+145 platform g+2 6
+145 fg bush g+3
+147 star g+3 3
+149 part g+3
+156 goal

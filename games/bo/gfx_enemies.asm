@@ -1,0 +1,220 @@
+; Enemy sprites (DESIGN.md §9), 4 bits per pixel, facing right (drawn flipped when moving left).
+.data
+spr_en_snail:
+.sprite
+    a.a.....
+    .a.a999.
+    .a.94449
+    .aa94949
+    .aa94449
+    aaaa9999
+    aaaaaaaa
+    ........
+spr_en_gull:                        ; 16 x 8: left half, right half
+.sprite
+    ........
+    ........
+    .aa.....
+    ..aaa...
+    ..fffff.
+    ...fffff
+    ....ffff
+    .....1..
+.sprite
+    ........
+    ....ff..
+    ...ff1f.
+    fffffff9
+    ffffff..
+    ffff....
+    fff.....
+    ........
+spr_en_hedgehog:
+.sprite
+    ..4.4.4.
+    .4444444
+    44444444
+    4444444c
+    444444c1
+    .44444cc
+    ..1..1..
+    ........
+spr_en_wasp:
+.sprite
+    ..ff....
+    .ffff...
+    ..ee1e1.
+    .1e1e1e1
+    .e1e1e1.
+    ..1..1..
+    ........
+    ........
+spr_en_ball:
+.sprite
+    ..6666..
+    .666666.
+    66f16f16
+    66f16f16
+    66666666
+    6666ee66
+    .666666.
+    ..6666..
+spr_en_teddy:                       ; 8 x 16: head, body
+.sprite
+    .4....4.
+    444..444
+    .444444.
+    .4f44f4.
+    .441144.
+    .44cc44.
+    ..4444..
+    ........
+.sprite
+    .444444.
+    44cccc44
+    44cccc44
+    .4cccc4.
+    .444444.
+    .44..44.
+    .44..44.
+    ........
+spr_en_squirrel:
+.sprite
+    .....99.
+    ....9999
+    .99..999
+    9f99.999
+    9999.99.
+    .9999999
+    .99999..
+    .9..9...
+spr_en_pigeon:
+.sprite
+    ........
+    ..aa....
+    .a1aa...
+    ..aaaaa.
+    .aaaaaaa
+    ..aaaaa.
+    ...9.9..
+    ........
+spr_en_snowman:                     ; 8 x 16: head, body
+.sprite
+    ..1111..
+    ..1111..
+    .111111.
+    ..ffff..
+    .f1ff1f.
+    .ff99ff.
+    ..ffff..
+    ........
+.sprite
+    .ffffff.
+    ffff1fff
+    ffffffff
+    ffff1fff
+    ffffffff
+    .ffffff.
+    ..ffff..
+    ........
+spr_en_sled:
+.sprite
+    ........
+    ........
+    ........
+    6.....6.
+    66666666
+    6a6666a6
+    .aaaaaa.
+    a......a
+spr_en_jelly:
+.sprite
+    ..bbbb..
+    .bbbbbb.
+    bbfbbfbb
+    bb1bb1bb
+    bbbbbbbb
+    .bb11bb.
+    .bbbbbb.
+    .bb..bb.
+spr_en_blob:
+.sprite
+    ...cc...
+    ..cccc..
+    .cfccfc.
+    .c1cc1c.
+    cccccccc
+    cc6666cc
+    .cccccc.
+    c.c..c.c
+spr_en_cannon:
+.sprite
+    ....eff.
+    ...3333f
+    ..33333.
+    .3333...
+    33333...
+    .333....
+    ..7.7...
+    .7...7..
+spr_en_cone:
+.sprite
+    ........
+    ...44...
+    ..4444..
+    ..4144..
+    ..4414..
+    ...44...
+    ........
+    ........
+spr_en_snowball:
+.sprite
+    ........
+    ...ff...
+    ..ffff..
+    ..ffaf..
+    ...ff...
+    ........
+    ........
+    ........
+spr_en_popcorn:
+.sprite
+    ........
+    ..ff....
+    .ffef...
+    .feff...
+    ..ff....
+    ........
+    ........
+    ........
+spr_poff:
+.sprite
+    ..f.f...
+    .ffaff.f
+    ffaaaff.
+    .faaaaff
+    ffaaaff.
+    .fffaff.
+    f.ff.f..
+    ........
+spr_en_flat:
+.sprite
+    ........
+    ........
+    ........
+    ........
+    ........
+    .666666.
+    6f16f166
+    66666666
+spr_en_pile:
+.sprite
+    ........
+    ........
+    ........
+    ...11...
+    ...ff...
+    ..ffff..
+    .ffffff.
+    ffffffff
+.code

@@ -91,11 +91,14 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run test:games` | every game with a `replay.json`: assemble, size, per-frame hash replay, `games/<g>/checks.ts` rules |
 | `npm run dev -w apps/web` | Vite dev server (no service worker in dev) |
 | `npm run build -w apps/web` | production build → `apps/web/dist` (incl. generated `sw.js`) |
-| `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scans of Breakout and BLACKBOX, Library persistence |
+| `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scans of Breakout, BLACKBOX and Bo, Library persistence |
 | `npm run test:e2e:offline` | production build, SW precache, offline reload, fake-camera scan of Pong, zero network requests |
-| `npm run demo` | build Breakout, Pong and BLACKBOX → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
+| `npm run demo` | build Breakout, Pong, BLACKBOX and Bo → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
 | `npm run preview` / `npm run preview:https` | serve the production build on :4173 (https: self-signed cert in `.tmp/cert`) |
 | `npm run bench:scan` | 50 KB cartridge through the browser scanner with a fake camera → `bench/scan.md` |
 | `npm run test:blackbox` | BLACKBOX (PLAN Part 2): generated data up to date, ROM vs LAYOUT, every room in RAM vs LAYOUT, replays with per-frame hashes and oracle checks |
 | `npm run blackbox:gen` | regenerate `games/blackbox/rooms.gen.asm` and `tiles.gen.asm` from LAYOUT.md / tools |
 | `npm run blackbox:record [name…]` | re-record bot replays (`games/blackbox/tools/routes.ts`) and pick reference frames, then `npm run refs:games` |
+| `npm run test:bo` | Bo's Skateäventyr (PLAN Part 3): generated data up to date, ROM level table vs `.lvl` sources, every level in RAM vs an independent reader, replays with per-frame hashes and reference checks, DESIGN §3.3 measured |
+| `npm run bo:gen` | regenerate `games/bo/tiles.gen.asm`, `levels.gen.asm` and `levels/*.png` from `tools/tiles.ts` and `levels/*.lvl` |
+| `npm run bo:record [name…]` | re-record Bo's bot replays (`games/bo/tools/routes.ts`), then `npm run refs:games` |

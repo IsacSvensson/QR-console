@@ -1,0 +1,54 @@
+# 2-4 FLOTTLEDEN — the timber float (DESIGN §8.3): moving platforms, logs drifting across three rivers. Wait on
+# the bank until the log comes, roll on, stand still while it carries you, roll off on the other side. An island
+# with stumps in the middle; wasps.
+name  FLOTTLEDEN
+world 2
+music 2
+rows  16
+start 4
+
+terrain
+h 4
+flat 22         # 0-21    start, sign, apples
+liq water
+liquid 13       # 22-34   river 1: a log
+flat 18         # 35-52   apples, a wasp, flag
+liquid 13       # 53-65   river 2: a log
+flat 16         # 66-81   the island: stumps and star 1
+liquid 13       # 82-94   river 3: a log
+flat 60         # 95-154  flag, the kicker and star 2, the bush with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  prefab spruce g
+16  apples g 4
+22  apples 4 13
+23  enemy log 4
+38  apples g 6
+46  enemy wasp g+3
+50  flag
+53  apples 4 13
+54  enemy log 4
+68  apples g 2
+70  prefab stump2 g
+70  apple g+2
+74  prefab stump3 g
+74  apple g+3
+74  star g+5 1
+77  apples g 3
+82  apples 4 13
+83  enemy log 4
+98  flag
+104 apples g 4
+112 ramp45 1
+112 arc 24 r45a
+118 star g+8 2
+126 box g apples
+132 apple g+4
+133 platform g+2 6
+133 fg bush g+3
+135 star g+3 3
+137 part g+3
+144 apples g 6
+152 goal

@@ -1,0 +1,31 @@
+# T2 — test level: slopes and one-way platforms (PLAN.md M19). 32 rows (vertical camera).
+# A 22.5° valley and a 45° valley (Bo brakes to a stop on each slope and rolls down from standstill), a long
+# 22.5° hill into a long flat floor (jumps at 3.5 and 2.5 px per frame, braking from 2.5), platforms at two
+# heights, a last 45° hill down and a run-out.
+name  TESTBANA 2
+world 1
+music 1
+rows  32
+start 3
+
+terrain
+h 22
+flat 10
+down22 8
+flat 4
+up22 8
+flat 8
+down45 8
+flat 4
+up45 6
+flat 8
+down22 6
+flat 100
+down45 4
+flat 40
+
+objects
+160 platform g+2 6
+170 platform g+4 5
+178 platform g+2 4
+186 block g 2 1

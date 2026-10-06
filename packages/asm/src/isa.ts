@@ -1,7 +1,9 @@
-// Instruction set, version 1 (see packages/vm/VM.md). Copy of packages/vm/src/isa.ts, because asm
+// Instruction set, versions 1 and 2 (see packages/vm/VM.md). Copy of packages/vm/src/isa.ts, because asm
 // may not import vm (SPEC §3); test/isa-sync.test.ts asserts the two copies agree.
 
-export const ISA_VERSION = 1;
+/** The newest ISA this VM runs. A cartridge declares the lowest ISA it needs; every version runs all older ones. */
+export const ISA_VERSION = 2;
+export const MIN_ISA_VERSION = 1;
 
 export const OPCODES = {
   NOP: 0x00,
@@ -57,7 +59,14 @@ export const SYSCALLS = {
   SOUND: 14,
   SFX: 15,
   FRAME: 16,
+  // ISA 2
+  COPY: 17,
+  FILL: 18,
+  UNPACK: 19,
 } as const;
+
+/** The ISA version that introduced each syscall that is newer than ISA 1. */
+export const SYSCALL_SINCE: Record<number, number> = { 17: 2, 18: 2, 19: 2 };
 
 export const BUTTONS = { LEFT: 1, RIGHT: 2, UP: 4, DOWN: 8, A: 16, B: 32 } as const;
 
@@ -67,6 +76,10 @@ export const MEMORY = {
   RAM_START: 0x8000,
   VECTOR_INIT: 0x0000,
   VECTOR_UPDATE: 0x0002,
+  /** ISA 2 far addresses: values below are memory addresses, from here on xdata offsets (value - XDATA_BASE). */
+  XDATA_BASE: 0x10000,
+  /** ISA 2: maximum size of the xdata section. */
+  XDATA_MAX: 0x40000,
 } as const;
 
 export const SCREEN = 128;

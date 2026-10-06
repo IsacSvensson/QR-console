@@ -1,0 +1,20 @@
+# 1-5 SKATEPARKEN — BOSS: Stora Måsen (DESIGN §10.1). An arena one screen wide with a 45° ramp at each end and a
+# box to grind on; the seagull flies high, warns (SKRIII and blinking), dives at where Bo was, lands dizzy: then
+# Bo lands on it. Three times.
+name  SKATEPARKEN
+world 1
+music 7
+rows  16
+start 5
+
+terrain
+h 6
+flat 1          # 0
+down45 2        # 1-2     the left ramp (h4)
+flat 17         # 3-19
+up45 2          # 20-21   the right ramp
+flat 1          # 22
+
+objects
+10  rail g 3
+12  enemy boss1 g+6
