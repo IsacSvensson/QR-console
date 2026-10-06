@@ -109,7 +109,11 @@ draw_play:
     CALL draw_strip
     CALL draw_level
     CALL draw_bo
+    CALL draw_fg
+    CALL draw_combo
+    CALL draw_bubble
     CALL draw_hud
+    CALL draw_banner
     RET
 
 ; parallax strip: 16 x 3 tiles at half the camera speed, drawn twice to wrap
@@ -173,78 +177,7 @@ draw_level:
 @done:
     RET
 
-; Bo: upper body + legs (two sprites) + the board (RECTFILL). sx, sy = sprite top-left on screen.
-draw_bo:
-    LD r5, [bo_x]
-    SHR r5, 4
-    SUB r5, 4
-    LD r0, [cam_x]
-    SUB r5, r0                      ; r5 = sx
-    LD r6, [bo_y]
-    SAR r6, 4
-    SUB r6, 16
-    LD r0, [cam_y]
-    SUB r6, r0                      ; r6 = sy
-    LDI r3, 0
-    LD r0, [bo_dir]
-    CMP r0, 0
-    JGE @flip
-    LDI r3, 1
-@flip:
-    LD r0, [bo_crouch]
-    CMP r0, 0
-    JEQ @tall
-    LDI r0, spr_bo_up
-    MOV r1, r5
-    MOV r2, r6
-    ADD r2, 4
-    SYS SPR
-    LDI r0, spr_bo_crouch
-    ADD r2, 4
-    SYS SPR
-    JMP @board
-@tall:
-    LDI r0, spr_bo_up
-    MOV r1, r5
-    MOV r2, r6
-    SYS SPR
-    LDI r0, spr_bo_lo
-    LD r4, [bo_state]
-    CMP r4, ST_GROUND
-    JNE @legs
-    LD r4, [btn]                    ; pushing: the push frame every other 8 frames
-    AND r4, BTN_LEFT | BTN_RIGHT
-    JZ @legs
-    LD r4, [tick]
-    AND r4, 8
-    JZ @legs
-    LDI r0, spr_bo_lo + 32
-@legs:
-    ADD r2, 8
-    SYS SPR
-@board:
-    MOV r0, r5                      ; deck on row 14, tails on row 13, wheels on row 15
-    MOV r1, r6
-    ADD r1, 14
-    LDI r2, 8
-    LDI r3, 1
-    LDI r4, C_BLACK
-    SYS RECTFILL
-    SUB r0, 1
-    SUB r1, 1
-    LDI r2, C_BLACK
-    SYS PSET
-    ADD r0, 9
-    SYS PSET
-    MOV r0, r5
-    ADD r0, 1
-    ADD r1, 2
-    LDI r2, 2
-    LDI r4, C_WHITE
-    SYS RECTFILL
-    ADD r0, 4
-    SYS RECTFILL
-    RET
+.include "drawbo.asm"
 
 ; HUD: apples, the level's stars, Bo's head x lives
 draw_hud:
@@ -267,6 +200,12 @@ draw_hud:
     LDI r6, 0
 @star:
     LDI r0, spr_star_off
+    LD r1, [lv_stars]
+    SHR r1, r6
+    AND r1, 1
+    JZ @off
+    LDI r0, spr_star
+@off:
     MOV r1, r6
     MUL r1, 9
     ADD r1, 32
@@ -288,6 +227,31 @@ draw_hud:
     LD r0, [lives]
     LDI r1, 81
     SYS NUM
+    LD r6, [pw_kind]                ; the power-up: its icon and a shrinking bar
+    CMP r6, PW_NONE
+    JEQ @nopw
+    LDI r0, spr_fries
+    LDI r5, C_ORANGE
+    LDI r7, 600
+    CMP r6, PW_POMMES
+    JEQ @icon
+    LDI r0, spr_candy
+    LDI r5, C_PEACH
+    LDI r7, 900
+@icon:
+    LDI r1, 92
+    LDI r2, 0
+    LDI r3, 0
+    SYS SPR
+    LD r2, [pw_t]
+    MUL r2, 26
+    DIV r2, r7
+    LDI r0, 101
+    LDI r1, 2
+    LDI r3, 4
+    MOV r4, r5
+    SYS RECTFILL
+@nopw:
     RET
 
 .data

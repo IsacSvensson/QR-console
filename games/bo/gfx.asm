@@ -129,4 +129,24 @@ spr_snail:
     aaaa9999
     aaaaaaaa
     ........
+spr_fries:
+.sprite
+    .e.e.e..
+    .eeeee..
+    .eeeee..
+    6666666.
+    66f6666.
+    .66666..
+    .66666..
+    ........
+spr_candy:
+.sprite
+    ........
+    .c...c..
+    cfc.cfc.
+    .ccccc..
+    .cfffc..
+    .cfcfc..
+    .ccccc..
+    ........
 .code

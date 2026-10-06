@@ -1,5 +1,5 @@
 # T1 — test level: flat ground and blocks (PLAN.md M19). A clean flat start for measuring push, ollie, tap,
-# coasting and braking; then blocks of 1, 2, 3 and 5 tiles, steps up and down, and a ceiling.
+# coasting and braking; then blocks of 1, 2, 3 and 5 tiles, steps up and down, a ceiling, a flag and water.
 name  TESTBANA 1
 world 1
 rows  16
@@ -15,7 +15,9 @@ flat 30
 step 2
 flat 12
 step -2
-flat 50
+flat 42
+liquid 3
+flat 5
 
 objects
 6   sign right
@@ -26,3 +28,4 @@ objects
 81  block g 1 5
 128 block g+3 4 1
 150 block g 1 1
+153 flag

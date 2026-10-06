@@ -452,3 +452,40 @@ Measurement (M19 replays, from RAM): ollie 26.56 px / 34 frames; tap 5.25 px / 1
 columns per frame; tile unpacking split over two frames after a 25.6k-cycle first try).
 Alternatives: down brakes at BRAKE (no way under bars); kickers as terrain slopes (3.5 px per frame at the
 lip impossible); a ring buffer for the level (impossible with MAP, D-025).
+
+## D-030 - Bo skate mechanics (M20): rules the design left open
+Date: 2026-10-06 - Milestone: M20
+Decision:
+- **Tricks**: B in the air starts one trick at a time; it scores when its frames have passed (DESIGN 4).
+  GRAB lasts while down+B are held, at least 12 frames, and scores 50 + 10 per full 8 frames beyond the first 12;
+  a grab still held at landing counts as clean. A landing with any other trick in progress is sloppy: speed
+  halved (truncated), the combo lost, OJ!, no damage. 360 needs 40 frames, so only a ramp gives the air for it.
+- **Combos**: every completed trick of one airtime plus a grind adds its points; a clean landing on the ground
+  scores the sum x the number of tricks (OLLIE is named in the combo text but counts 0 and does not multiply,
+  as in DESIGN's `OLLIE + KICKFLIP = 100`). Landing on a rail keeps the combo going (GRIND is added once per
+  rail, then 10 points per 8 frames); a trampoline bounce does not end it. Clean landings give TRICK_BOOST per
+  trick up to the speed cap. The combo text is drawn with the built-in font for 1 s.
+- **A at the lip**: besides an ollie anywhere on the ramp (D-029), A within LIP_GRACE = 6 frames after a ramp
+  launch still adds the ollie (capped at LAUNCH_MAX).
+- **Grind**: landing on a rail or rolling onto one starts it; flat rails have no friction, diagonal ones
+  accelerate like a 45 degree hill; A is an ollie off; at the end of a rail Bo flies on with his velocity (down
+  a down-rail: vy = speed). WIII! when a grind of at least 16 frames ends, at most every 5 s.
+- **Breakables**: landing on a weak block or a box clears exactly that object's cells (found in the ROM object
+  list) and Bo bounces up with STOMP_V = 40. A box leaves its content in its own cell (apples: up to five in a
+  column upwards, into empty cells).
+- **Lives**: water/chocolate/a pit cost a life even with the apple helmet (DESIGN 6); the helmet stays. Respawn
+  at the last flag passed; at 0 lives FORSOK IGEN! and the level loads again with 5 lives (counters kept).
+- **Signature**: the idle pop plays once at 3 s for 24 frames, balancing from 8 s until a button; looking back
+  for 0.5 s after a landing with at least 48 frames in the air; poses never touch position or box.
+- **Wheels**: a click (noise, 2400 Hz, 2 frames) every 16 px rolled on the ground, none on ice. The soft
+  rolling noise of DESIGN 15 is left for the M25 sound pass (it would cut off the board's noise effects on the
+  same channel without the sequencer's channel bookkeeping).
+- **DESIGN 3.3** gains the sand row (coasting out from 1.5 px per frame: 24 frames, 17 px), derived from
+  SAND_FRIC, so the M20 test has a document value to compare with.
+- **T3**: each high-speed kicker sits at the bottom of a hill (RAMP keeps the speed to the lip) and a hill climbs
+  back up after its landing zone; the bot regulates the launch speed exactly by braking and searching over when
+  to start.
+Measurement (m20-t3): launches 45 degrees without ollie at 1.5/2.5/3.5: 5.25/15.44/30.94 px, 2.81/8.13/16.19
+tiles; with ollie at 2.5/3.5: 64.19 px, 53 frames, 16.56/23.19 tiles; 22.5 degrees with ollie at 1.5/2.5:
+40.69/51.75 px, 7.88/15.00 tiles; ice brake from 2.5: 80 frames, 100 px; sand: 24 frames, 17.25 px. ROM 16.1 KB
+(code 12.1 KB), max 15.1k cycles per frame (loading), play frames under 2k.

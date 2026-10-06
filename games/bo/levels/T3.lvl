@@ -1,0 +1,60 @@
+# T3 — test level: a small skatepark (PLAN.md M20). Seven kicker launches at 1.5, 2.5 and 3.5 px per frame
+# (each high-speed kicker sits at the bottom of a hill, and a hill climbs back up after it), then a flat rail, a
+# diagonal handrail down a slope, sand, a trampoline, ice after a short hill, a weak block, a box, a water pit,
+# a pit and the goal.
+name  TESTBANA 3
+world 1
+rows  32
+start 3
+
+terrain
+h 22
+flat 38
+down22 6
+flat 22
+up22 6
+down22 6
+flat 30
+up22 6
+down22 6
+flat 16
+up22 6
+down22 6
+flat 22
+up22 6
+down22 6
+flat 34
+down45 4
+flat 8
+mat sand
+flat 10
+mat normal
+flat 6
+down22 3
+mat ice
+flat 36
+mat normal
+flat 6
+liquid 3
+flat 6
+gap 3
+flat 12
+
+objects
+12  ramp45 1
+22  ramp22 1
+50  ramp45 1
+96  ramp45 1
+150 ramp45 1
+190 ramp45 1
+236 ramp22 1
+262 flag
+264 rail g 6
+270 raild g 4 down
+277 bounce g 1 1
+288 apple g
+340 flag
+341 weak g 1 1
+344 box g apple
+350 flag
+366 goal

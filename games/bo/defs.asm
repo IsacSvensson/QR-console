@@ -62,6 +62,25 @@ CAM_AHEAD = 40                  ; Bo at x 40 on screen when rolling right (88 wh
 CAM_BOT   = 80                  ; vertical camera: Bo's feet at screen y 80 (dead zone ±16)
 LOAD_COLS = 64                  ; terrain columns decoded per frame while loading
 
+LIP_GRACE = 6                   ; frames after leaving a ramp in which A still adds the ollie
+STOMP_V   = 40                  ; Bo bounces up this much after landing on a box, a weak block or an enemy
+LOOK_AIR  = 48                  ; a landing after this many frames in the air: Bo looks back (0.8 s)
+LOOK_T    = 30                  ; for 0.5 s
+IDLE_POP  = 180                 ; standing still 3 s: the little trick on the spot
+POP_T     = 24
+IDLE_BAL  = 480                 ; 8 s: balancing on the back wheels
+BUMP_T    = 30                  ; wobble after bumping into a wall
+BUMP_MIN  = 8                   ; ... at this speed or more
+WIII_GAP  = 300                 ; WIII! at most every 5 s
+GRIND_WIII = 16                 ; a grind this long is "successful"
+DEAD_T    = 60
+OVER_T    = 120
+GOAL_T    = 150                 ; frames from the goal flag until the level ends
+BUB_T     = 90                  ; a bubble shows for 1.5 s
+COMBO_T   = 60                  ; the combo name shows for 1 s
+WHEEL_STEP = 16 * 16            ; a click every 16 px (1/16 px units)
+MAX_CP    = 4                   ; checkpoint flags per level
+
 ; modes
 M_MENU = 0
 M_LOAD = 1
@@ -70,6 +89,37 @@ M_PLAY = 2
 ; Bo's states
 ST_GROUND = 0
 ST_AIR    = 1
+ST_GRIND  = 2
+ST_DEAD   = 3
+ST_OVER   = 4
+
+; poses (what is drawn; never changes position or box, DESIGN.md §0.2)
+P_RIDE    = 0
+P_PUSH    = 1
+P_FAST    = 2
+P_BRAKE   = 3
+P_POP     = 4
+P_BALANCE = 5
+P_LOOK    = 6
+P_CROUCH  = 7
+P_AIR     = 8
+P_TRICK   = 9
+P_OJ      = 10
+P_HURT    = 11
+P_GOAL    = 12
+P_GRIND   = 13
+
+; tricks (DESIGN.md §4)
+TR_NONE     = 0
+TR_KICKFLIP = 1
+TR_SHOVEIT  = 2
+TR_GRAB     = 3
+TR_360      = 4
+TR_GODIS    = 5
+TR_GRIND    = 6
+TR_SUPER    = 7
+TR_OLLIE    = 8
+MAX_COMBO   = 7
 
 ; class flags (class_flags table)
 CF_SURF   = 1                   ; can be stood on
@@ -152,3 +202,72 @@ NONE = $7FFF
 ; HUD state
 .var apples
 .var lives
+
+; Bo: more state (M20)
+.var bo_pose
+.var bo_idle_t
+.var bo_look_t
+.var bo_lip_t
+.var bo_ollied                  ; this airtime started with an ollie (OLLIE heads the combo name)
+.var f_push                     ; this frame: pushing / braking (for the pose)
+.var f_brake
+.var bo_kick_t                  ; push-kick animation phase
+.var dead_t
+.var goal_t                     ; > 0 after the goal flag
+.var wheel_d                    ; distance rolled since the last wheel click (1/16 px)
+.var t_scol                     ; x of the sensor that found the landing surface
+
+; tricks and combos
+.var trick
+.var trick_t
+.var combo_pts
+.var combo_n
+.var combo_list, MAX_COMBO
+.var combo_show_t
+.var combo_x                    ; where the combo name is shown (world px)
+.var combo_y
+.var combo_str, 64
+.var grind_t
+.var wiii_t
+.var score_lo                   ; score = score_hi * 10000 + score_lo
+.var score_hi
+
+; bubbles
+.var font, FONT_GLYPHS * 32     ; the bubble font unpacked to 4-bit sprites
+.var bub_id                     ; text id (255 = none)
+.var bub_t
+.var banner_id                  ; a big centred banner (255 = none)
+.var banner_t
+
+; checkpoints and goal
+.var cp_n
+.var cp_next
+.var cp_cols, MAX_CP * 2
+.var cp_rows, MAX_CP * 2
+.var cp_col                     ; respawn column
+.var goal_col
+
+; power-ups (DESIGN.md §5)
+PW_NONE   = 0
+PW_POMMES = 1
+PW_GODIS  = 2
+.var pw_kind
+.var pw_t
+.var helmet                     ; the apple helmet (one extra hit)
+.var godis_used                 ; the godissnurr of this airtime is used
+.var inv_t                      ; invulnerable frames after losing the helmet
+.var apples_life                ; apples towards the next extra life
+.var board_sel                  ; the board Bo rides (0 = his own)
+.var goal_said
+.var d_x                        ; drawing Bo: sprite top-left on screen and SPR flags
+.var d_y
+.var d_f
+MAX_FG = 8
+.var fg_n
+.var fg_list, MAX_FG * 4        ; column (word), bottom row, prefab
+
+; collectibles of the current level
+.var lv_stars                   ; bits 0-2
+.var lv_part
+.var apple_chain                ; consecutive apples: rising pitch
+.var apple_chain_t

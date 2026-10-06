@@ -177,6 +177,51 @@ export class Bot {
     );
   }
 
+  /** tile code of a level cell in RAM */
+  cell(col: number, row: number) {
+    return this.vm.read8(this.S('lvl') + col * 32 + row);
+  }
+  get state() {
+    return this.w('bo_state');
+  }
+  get cls() {
+    return this.w('bo_sattr') & 15;
+  }
+  get onRamp() {
+    return this.grounded && this.cls === 3;
+  }
+
+  /**
+   * Ride on to the next kicker and leave its lip at exactly `target` (1/16 px per frame), with an ollie on the
+   * ramp if `ollie`; optional `air(frame)` gives the buttons in the air until landing. Speed is regulated by
+   * braking and coasting; the search shifts when the regulation starts until the launch speed is exact.
+   */
+  launch(target: number, ollie: boolean, air: (f: number) => number = () => 0) {
+    let launchV = 0;
+    this.search(
+      (k) => {
+        for (let i = 0; this.grounded; i++) {
+          if (i > 3000) throw new Error('no ramp');
+          let b = 0;
+          if (this.onRamp) b = ollie ? B.A : 0;
+          else if (i < k) b = this.vx <= 24 ? B.R : 0;
+          else if (this.vx > target) b = B.L;
+          else if (this.vx <= 24 && this.vx <= target) b = B.R; // pushing holds 24 exactly
+          this.step(b);
+        }
+        launchV = this.vx;
+        if (this.w('bo_vy') >= 0) throw new Error('not a launch');
+        for (let f = 1; !this.grounded && this.state !== 2; f++) {
+          if (f > 400) throw new Error('long flight');
+          this.step(air(f) | (ollie ? B.A : 0));
+        }
+      },
+      () => launchV === target,
+      200,
+      `launch at ${target}`,
+    );
+  }
+
   replayFile(seed: number) {
     const out: [number, number][] = [];
     for (const b of this.inputs) {

@@ -40,6 +40,23 @@ level_start:
     ST [ld_liq], r1
     LDI r1, M_LOAD
     ST [mode], r1
+    ; per-level state
+    LDI r1, 0
+    ST [cp_n], r1
+    ST [fg_n], r1
+    ST [cp_next], r1
+    ST [goal_t], r1
+    ST [goal_said], r1
+    ST [wheel_d], r1
+    ST [combo_show_t], r1
+    ST [lv_stars], r1
+    ST [lv_part], r1
+    ST [bub_t], r1
+    ST [banner_t], r1
+    LDI r1, 4095
+    ST [goal_col], r1
+    LD r1, [lv_start]
+    ST [cp_col], r1
     RET
 
 ; ---- load_step: one frame of loading -------------------------------------------------------------
@@ -104,7 +121,7 @@ ld_tiles2:
     RET
 
 ld_finish:
-    CALL bo_spawn
+    CALL bo_spawn_start
     CALL camera_snap
     LDI r0, M_PLAY
     ST [mode], r0
@@ -317,7 +334,7 @@ stamp_objects:
 
 .data
 obj_stamp: .word os_none, os_tile, os_rect, os_apples, os_box, os_star, os_part, os_flag, os_goal
-           .word os_none, os_none, os_ramp, os_raild, os_platform, os_sign, os_tile, os_prefab
+           .word os_none, os_fg, os_ramp, os_raild, os_platform, os_sign, os_tile, os_prefab
 .code
 
 ; set_cell: r6 = column, r7 = row, r0 = code (registers preserved)
@@ -332,6 +349,19 @@ set_cell:
 
 os_none:
     RET
+os_fg:                              ; foreground: remembered, drawn over Bo
+    LD r1, [fg_n]
+    CMP r1, MAX_FG
+    JGE @full
+    SHL r1, 2
+    ST [r1 + fg_list], r6
+    STB [r1 + fg_list + 2], r7
+    STB [r1 + fg_list + 3], r5
+    SHR r1, 2
+    ADD r1, 1
+    ST [fg_n], r1
+@full:
+    RET
 os_tile:
     MOV r0, r5
     JMP set_cell
@@ -345,13 +375,24 @@ os_star:
 os_part:
     LDI r0, T_PART
     JMP set_cell
-os_flag:
+os_flag:                            ; a checkpoint: remembered for respawning
+    LD r1, [cp_n]
+    CMP r1, MAX_CP
+    JGE @full
+    SHL r1, 1
+    ST [r1 + cp_cols], r6
+    ST [r1 + cp_rows], r7
+    SHR r1, 1
+    ADD r1, 1
+    ST [cp_n], r1
+@full:
     LDI r0, T_POLE
     CALL set_cell
     SUB r7, 1
     LDI r0, T_FLAG_TOP
     JMP set_cell
 os_goal:
+    ST [goal_col], r6
     LDI r0, T_POLE
     CALL set_cell
     SUB r7, 1

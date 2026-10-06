@@ -2,9 +2,10 @@
 ; Positions and speeds in 1/16 px. Bo's point is the centre of his feet: x = centre, y = the first pixel row
 ; of the ground under him (when grounded, exactly the surface height).
 
-; ---- bo_spawn: stand at the level's start column ---------------------------------------------------
-bo_spawn:
+; ---- bo_spawn: stand at column r1 (on the topmost surface there) ------------------------------------
+bo_spawn_start:
     LD r1, [lv_start]
+bo_spawn:
     SHL r1, 3
     ADD r1, 4
     MOV r0, r1
@@ -26,6 +27,11 @@ bo_spawn:
     ST [bo_fric_t], r0
     ST [bo_air_t], r0
     ST [bo_bump], r0
+    ST [bo_idle_t], r0
+    ST [bo_look_t], r0
+    ST [bo_lip_t], r0
+    ST [trick], r0
+    CALL combo_reset
     LDI r0, 1
     ST [bo_dir], r0
     RET
@@ -70,7 +76,7 @@ speed_split:
     ST [t_sg], r1
     RET
 
-; slope_info: r0 = attribute -> r1 = downhill direction (+1 right, -1 left, 0 flat or not a slope/ramp),
+; slope_info: r0 = attribute -> r1 = downhill direction (+1 right, -1 left, 0 flat or not height-mapped),
 ; r2 = 1 for 22.5°, 2 for 45° (0 if flat)
 slope_info:
     MOV r1, r0
@@ -92,7 +98,7 @@ slope_info:
     LDI r2, 0
     RET
 
-; feet: r2 = feet y px (from bo_y), r1 = centre x px (from bo_x)
+; feet: r1 = centre x px, r2 = feet y px
 feet:
     LD r1, [bo_x]
     SHR r1, 4
@@ -121,11 +127,61 @@ move_x:
     ST [bo_vx], r0
     RET
 
+; cap_speed: clamp r0 (signed speed) to ± the speed cap (pommes: POMMES_CAP)
+cap_speed:
+    LD r1, [PH_SPEED_CAP]
+    LD r2, [pw_kind]
+    CMP r2, PW_POMMES
+    JNE @cap
+    LD r1, [PH_POMMES_CAP]
+@cap:
+    CMP r0, r1
+    JLE @hi
+    MOV r0, r1
+@hi:
+    NEG r1
+    CMP r0, r1
+    JGE @lo
+    MOV r0, r1
+@lo:
+    RET
+
 ; ---- bo_update ------------------------------------------------------------------------------------
 bo_update:
+    LDI r0, 0
+    ST [f_push], r0
+    ST [f_brake], r0
+    LD r0, [goal_t]                 ; after the goal flag Bo brakes by himself
+    CMP r0, 0
+    JEQ @state
+    LD r1, [bo_vx]
+    LDI r0, 0
+    CMP r1, 0
+    JEQ @gbtn
+    LDI r0, BTN_LEFT
+    JGT @gbtn
+    LDI r0, BTN_RIGHT
+@gbtn:
+    ST [btn], r0
+    LDI r0, 0
+    ST [btnp], r0
+@state:
     LD r0, [bo_state]
-    CMP r0, ST_AIR
-    JEQ bo_air
+    SHL r0, 1
+    LD r0, [r0 + bo_states]
+    CALL r0
+    LD r0, [bo_state]
+    CMP r0, ST_DEAD
+    JGE @posed
+    CALL touch
+    CALL checkpoints
+@posed:
+    CALL pose_update
+    RET
+
+.data
+bo_states: .word bo_ground, bo_air, bo_grind, bo_dead, bo_over
+.code
 
 bo_ground:
     ; crouch (stand up only where there is room)
@@ -163,13 +219,19 @@ bo_ground:
     LD r0, [t_sg]
     CMP r0, r4
     JNE @brake
-    ; push
+    ; push (pommes: faster and harder, §5)
     ST [bo_dir], r4
-    LD r0, [t_s]
     LD r1, [PH_PUSH_MAX]
+    LD r2, [PH_PUSH_ACC]
+    LD r0, [pw_kind]
+    CMP r0, PW_POMMES
+    JNE @normal
+    LD r1, [PH_POMMES_MAX]
+    LD r2, [PH_POMMES_ACC]
+@normal:
+    LD r0, [t_s]
     CMP r0, r1
     JGT @coast                      ; faster than the push speed (downhill): rolls out
-    LD r2, [PH_PUSH_ACC]
     ADD r0, r2
     CMP r0, r1
     JLE @pushed
@@ -178,8 +240,12 @@ bo_ground:
     ST [t_s], r0
     LDI r0, 0
     ST [bo_fric_t], r0
+    LDI r0, 1
+    ST [f_push], r0
     JMP @slope
 @brake:
+    LDI r0, 1
+    ST [f_brake], r0
     LD r0, [bo_sattr]
     AND r0, 15
     CMP r0, C_ICE
@@ -229,7 +295,10 @@ bo_ground:
     LD r1, [PH_ROLL_FRIC]
 @period:
     CMP r1, 0
-    JEQ @slope
+    JNE @fric
+    ST [bo_fric_t], r1              ; no friction (ice): the brake starts afresh
+    JMP @slope
+@fric:
     LD r0, [bo_fric_t]
     ADD r0, 1
     ST [bo_fric_t], r0
@@ -262,16 +331,7 @@ bo_ground:
     MUL r3, r1
     LD r0, [bo_vx]
     ADD r0, r3
-    LD r1, [PH_SPEED_CAP]
-    CMP r0, r1
-    JLE @notfast
-    MOV r0, r1
-@notfast:
-    NEG r1
-    CMP r0, r1
-    JGE @notfastl
-    MOV r0, r1
-@notfastl:
+    CALL cap_speed
     ST [bo_vx], r0
 @capped:
     ; ollie (on an up-slope or a ramp the launch is added, DESIGN.md §3.5)
@@ -303,11 +363,15 @@ bo_ground:
     ST [bo_vy], r7
     LDI r0, 1
     ST [bo_jheld], r0
+    ST [bo_ollied], r0
     LDI r0, ST_AIR
     ST [bo_state], r0
     LDI r0, 0
     ST [bo_air_t], r0
     ST [bo_crouch], r0
+    ST [bo_lip_t], r0
+    LDI r0, SFX_POP
+    SYS SFX
     JMP air_frame
 @roll:
     ; move along the ground
@@ -361,12 +425,19 @@ bo_ground:
     JNE @launch
     LDI r7, 0
 @launch:
+    LDI r0, 0
+    CMP r7, 0
+    JEQ @nolip
+    LDI r0, LIP_GRACE               ; A in the next frames still adds the ollie
+@nolip:
+    ST [bo_lip_t], r0
     NEG r7
     ST [bo_vy], r7
     LDI r0, 0
     ST [bo_jheld], r0
     ST [bo_air_t], r0
     ST [bo_crouch], r0
+    ST [bo_ollied], r0
     LDI r0, ST_AIR
     ST [bo_state], r0
     JMP air_vert
@@ -382,31 +453,102 @@ bo_ground:
     ST [bo_sattr], r5
     SHL r7, 4
     ST [bo_y], r7
-    RET
+    MOV r0, r5
+    AND r0, 15
+    CMP r0, C_RAIL                  ; rolled onto a rail (from a slope or a platform): grind
+    JNE @rolled
+    CALL grind_start
+@rolled:
+    JMP wheel_roll
 @wall:
     LD r0, [t_old]
     ST [bo_x], r0
+    CALL speed_split                ; bumped into a wall: stops softly, a wobble at speed
     LDI r0, 0
     ST [bo_vx], r0
+    LD r0, [t_s]
+    CMP r0, BUMP_MIN
+    JLT @soft
+    LDI r0, BUMP_T
+    ST [bo_bump], r0
+    LDI r0, TX_OJ
+    CALL say
+    LDI r0, SFX_BUMP
+    SYS SFX
+@soft:
+    RET
+
+; wheel_roll: the wheels click every 16 px rolled on the ground (not on ice), DESIGN.md §15
+wheel_roll:
+    LD r0, [bo_sattr]
+    AND r0, 15
+    CMP r0, C_ICE
+    JEQ @done
+    LD r0, [bo_x]
+    LD r1, [t_old]
+    SUB r0, r1
+    JGE @pos
+    NEG r0
+@pos:
+    LD r1, [wheel_d]
+    ADD r1, r0
+    CMP r1, WHEEL_STEP
+    JLT @store
+    SUB r1, WHEEL_STEP
+    PUSH r1
+    LDI r0, SFX_CLICK
+    SYS SFX
+    POP r1
+@store:
+    ST [wheel_d], r1
+@done:
     RET
 
 ; ---- in the air -------------------------------------------------------------------------------------
 bo_air:
     LD r0, [bo_jheld]
     CMP r0, 0
-    JEQ @steer
+    JEQ @lip
     LD r0, [btn]
     AND r0, BTN_A
-    JNZ @steer
+    JNZ @lip
     LDI r0, 0
     ST [bo_jheld], r0
     LD r0, [PH_JUMP_CUT]
     NEG r0
     LD r1, [bo_vy]
     CMP r1, r0
-    JGE @steer
+    JGE @lip
     ST [bo_vy], r0
+@lip:
+    ; A just after leaving a ramp still adds the ollie (forgiving "A at the lip")
+    LD r0, [bo_lip_t]
+    CMP r0, 0
+    JEQ @steer
+    SUB r0, 1
+    ST [bo_lip_t], r0
+    LD r0, [btnp]
+    AND r0, BTN_A
+    JZ @steer
+    LD r0, [bo_vy]
+    LD r1, [PH_JUMP_V]
+    SUB r0, r1
+    LD r1, [PH_LAUNCH_MAX]
+    NEG r1
+    CMP r0, r1
+    JGE @lipv
+    MOV r0, r1
+@lipv:
+    ST [bo_vy], r0
+    LDI r0, 1
+    ST [bo_jheld], r0
+    ST [bo_ollied], r0
+    LDI r0, 0
+    ST [bo_lip_t], r0
+    LDI r0, SFX_POP
+    SYS SFX
 @steer:
+    CALL trick_air
     CALL input_dir
     CMP r4, 0
     JEQ air_frame
@@ -498,6 +640,7 @@ air_vert:
 @down:
     ; falling: land on the first surface crossed this frame
     CALL feet
+    ST [t_scol], r1
     MOV r3, r2
     LD r6, [t_foot]
     MOV r2, r6
@@ -507,26 +650,37 @@ air_vert:
     JNE land
     MOV r2, r6                      ; edge sensors: flat tops crossed this frame
     SUB r1, BOX_W_L
+    ST [t_scol], r1
     CALL surface
     CMP r0, NONE
     JNE land
     ADD r1, BOX_W_L + BOX_W_R
+    ST [t_scol], r1
     CALL surface
     CMP r0, NONE
     JNE land
 @out:
-    ; fell out of the level: back to the start (lives come in M20)
+    ; fell out of the level
     CALL feet
-    CMP r2, LV_ROWS * 8 + 32
+    CMP r2, LV_ROWS * 8 + 24
     JLT @alive
-    CALL bo_spawn
+    CALL bo_die
 @alive:
     RET
 
-; land: r0 = surface y, r5 = attribute
+; land: r0 = surface y, r5 = attribute, t_scol = x of the sensor that found it
 land:
-    SHL r0, 4
-    ST [bo_y], r0
+    MOV r7, r0
+    MOV r0, r5
+    AND r0, 15
+    CMP r0, C_BOUNCE
+    JEQ land_bounce
+    CMP r0, C_WEAK
+    JEQ land_break
+    CMP r0, C_BOX
+    JEQ land_break
+    SHL r7, 4
+    ST [bo_y], r7
     ST [bo_sattr], r5
     ; landing in a down-slope in the direction of travel: the fall becomes speed (vx += vy / 4, §3.5)
     MOV r0, r5
@@ -546,24 +700,352 @@ land:
     MUL r0, r7
     LD r1, [bo_vx]
     ADD r0, r1
-    LD r1, [PH_SPEED_CAP]
-    CMP r0, r1
-    JLE @c1
-    MOV r0, r1
-@c1:
-    NEG r1
-    CMP r0, r1
-    JGE @c2
-    MOV r0, r1
-@c2:
+    CALL cap_speed
     ST [bo_vx], r0
 @flat:
     LDI r0, 0
     ST [bo_vy], r0
     ST [bo_jheld], r0
     ST [bo_fric_t], r0
+    ST [bo_lip_t], r0
     LDI r0, ST_GROUND
     ST [bo_state], r0
+    LD r0, [bo_sattr]
+    AND r0, 15
+    CMP r0, C_RAIL
+    JNE @ground
+    CALL trick_land_rail
+    JMP grind_start
+@ground:
+    LDI r0, SFX_LAND
+    SYS SFX
+    LD r0, [bo_air_t]               ; a big landing: Bo looks back (signature)
+    CMP r0, LOOK_AIR
+    JLT @tricks
+    LDI r0, LOOK_T
+    ST [bo_look_t], r0
+@tricks:
+    JMP trick_land
+
+; a trampoline (or jelly): straight back up with BOUNCE_V
+land_bounce:
+    LD r0, [PH_BOUNCE_V]
+    NEG r0
+    ST [bo_vy], r0
+    LDI r0, 0
+    ST [bo_jheld], r0
+    LDI r0, SFX_BOING
+    SYS SFX
+    RET
+
+; a weak obstacle or a box: it breaks (exactly its cells), Bo bounces up a little (DESIGN.md §3.7)
+land_break:
+    MOV r1, r7                      ; the cell under the sensor
+    SHR r1, 3
+    LD r0, [t_scol]
+    SHR r0, 3
+    CALL break_at
+    LDI r0, STOMP_V
+    NEG r0
+    ST [bo_vy], r0
+    LDI r0, 0
+    ST [bo_jheld], r0
+    RET
+
+; ---- grind (DESIGN.md §3.6) ---------------------------------------------------------------------------
+grind_start:
+    LDI r0, ST_GRIND
+    ST [bo_state], r0
+    LDI r0, 0
+    ST [grind_t], r0
+    LDI r0, TR_GRIND
+    LDI r1, 0
+    CALL combo_add
+    LDI r0, SFX_GRIND
+    SYS SFX
+    RET
+
+; grind_end: a long enough grind says WIII! (at most every 5 s)
+grind_end:
+    LD r0, [grind_t]
+    CMP r0, GRIND_WIII
+    JLT @done
+    LD r0, [wiii_t]
+    CMP r0, 0
+    JNE @done
+    LDI r0, WIII_GAP
+    ST [wiii_t], r0
+    LDI r0, TX_WIII
+    CALL say
+@done:
+    RET
+
+bo_grind:
+    LD r0, [btnp]
+    AND r0, BTN_A
+    JZ @ride
+    CALL grind_end                  ; A: ollie off the rail (tricks can follow)
+    LD r0, [PH_JUMP_V]
+    NEG r0
+    ST [bo_vy], r0
+    LDI r0, 1
+    ST [bo_jheld], r0
+    LDI r0, ST_AIR
+    ST [bo_state], r0
+    LDI r0, 0
+    ST [bo_air_t], r0
+    ST [bo_ollied], r0
+    LDI r0, SFX_POP
+    SYS SFX
+    JMP air_frame
+@ride:
+    LD r0, [grind_t]                ; 10 points per 8 frames
+    ADD r0, 1
+    ST [grind_t], r0
+    AND r0, 7
+    JNZ @speed
+    LD r0, [combo_pts]
+    ADD r0, 10
+    ST [combo_pts], r0
+    LD r0, [grind_t]
+    AND r0, 31
+    JNZ @speed
+    LDI r0, SFX_GRIND
+    SYS SFX
+@speed:
+    LD r0, [bo_sattr]               ; no friction on a flat rail; a diagonal one accelerates like a 45° slope
+    CALL slope_info
+    CMP r1, 0
+    JEQ @move
+    LD r3, [PH_SLOPE_45]
+    MUL r3, r1
+    LD r0, [bo_vx]
+    ADD r0, r3
+    CALL cap_speed
+    ST [bo_vx], r0
+@move:
+    CALL feet
+    ST [t_foot], r2
+    ST [t_cx], r1
+    CALL move_x
+    CALL feet
+    MOV r3, r1
+    LD r0, [t_cx]
+    SUB r3, r0
+    JGE @dx
+    NEG r3
+@dx:
+    ADD r3, 1
+    ADD r3, r2
+    SUB r2, STEP_UP
+    MOV r6, r2
+    CALL surface
+    CMP r0, NONE
+    JEQ @off
+    MOV r7, r0
+    CALL feet
+    MOV r2, r7
+    CALL box_hit
+    CMP r0, 0
+    JNE @blocked
+    SHL r7, 4
+    ST [bo_y], r7
+    ST [bo_sattr], r5
+    MOV r0, r5
+    AND r0, 15
+    CMP r0, C_RAIL
+    JEQ @done
+    CALL grind_end                  ; the rail ended on the ground
+    LDI r0, ST_GROUND
+    ST [bo_state], r0
+    JMP trick_land
+@blocked:
+    LD r0, [t_old]
+    ST [bo_x], r0
+    LDI r0, 0
+    ST [bo_vx], r0
+@done:
+    RET
+@off:
+    ; the end of the rail: on through the air with the same velocity
+    CALL grind_end
+    CALL speed_split
+    LD r0, [bo_sattr]
+    CALL slope_info
+    LD r0, [t_s]
+    CMP r2, 0
+    JNE @diag
+    LDI r0, 0
+@diag:
+    LD r2, [t_sg]
+    CMP r1, r2
+    JEQ @downhill
+    NEG r0                          ; leaving an up-rail: upwards
+@downhill:
+    ST [bo_vy], r0
+    LDI r0, ST_AIR
+    ST [bo_state], r0
+    LDI r0, 0
+    ST [bo_air_t], r0
+    ST [bo_jheld], r0
+    JMP air_vert
+
+; ---- lives ---------------------------------------------------------------------------------------------
+bo_die:
+    LDI r0, ST_DEAD
+    ST [bo_state], r0
+    LDI r0, DEAD_T
+    ST [dead_t], r0
+    LDI r0, 0
+    ST [trick], r0
+    ST [bo_vx], r0
+    CALL combo_reset
+    LDI r0, TX_AJ
+    CALL say
+    LDI r0, SFX_AJ
+    SYS SFX
+    RET
+
+bo_dead:
+    LD r0, [dead_t]
+    SUB r0, 1
+    ST [dead_t], r0
+    JNZ @wait
+    LD r0, [lives]
+    SUB r0, 1
+    ST [lives], r0
+    JZ @over
+    LD r1, [cp_col]                 ; back to the last checkpoint
+    CALL bo_spawn
+    CALL camera_snap
+    RET
+@over:
+    LDI r0, ST_OVER
+    ST [bo_state], r0
+    LDI r0, OVER_T
+    ST [dead_t], r0
+    LDI r0, TX_FORSOK_IGEN
+    ST [banner_id], r0
+    LDI r0, OVER_T
+    ST [banner_t], r0
+@wait:
+    RET
+
+bo_over:                            ; game over: the level starts again from the beginning with 5 lives
+    LD r0, [dead_t]
+    SUB r0, 1
+    ST [dead_t], r0
+    JNZ @wait
+    LDI r0, 5
+    ST [lives], r0
+    LD r0, [level]
+    CALL level_start
+@wait:
+    RET
+
+; ---- the pose (signature, DESIGN.md §0.2): only what is drawn ------------------------------------------
+pose_update:
+    LD r0, [btn]                    ; any button cancels the idle tricks at once
+    CMP r0, 0
+    JNE @noidle
+    LD r0, [bo_vx]
+    CMP r0, 0
+    JNE @noidle
+    LD r0, [bo_state]
+    CMP r0, ST_GROUND
+    JNE @noidle
+    LD r0, [bo_idle_t]
+    CMP r0, IDLE_BAL
+    JGE @idled
+    ADD r0, 1
+    ST [bo_idle_t], r0
+    JMP @idled
+@noidle:
+    LDI r0, 0
+    ST [bo_idle_t], r0
+@idled:
+    LD r0, [bo_look_t]
+    CMP r0, 0
+    JEQ @nolook
+    SUB r0, 1
+    ST [bo_look_t], r0
+@nolook:
+    LD r0, [bo_bump]
+    CMP r0, 0
+    JEQ @nobump
+    SUB r0, 1
+    ST [bo_bump], r0
+@nobump:
+    LD r0, [bo_state]
+    LDI r1, P_GRIND
+    CMP r0, ST_GRIND
+    JEQ @set
+    LDI r1, P_HURT
+    CMP r0, ST_DEAD
+    JGE @set
+    CMP r0, ST_AIR
+    JNE @ground
+    LDI r1, P_AIR
+    LD r0, [trick]
+    CMP r0, 0
+    JEQ @set
+    LDI r1, P_TRICK
+    JMP @set
+@ground:
+    LDI r1, P_OJ
+    LD r0, [bo_bump]
+    CMP r0, 0
+    JNE @set
+    LDI r1, P_GOAL
+    LD r0, [goal_t]
+    CMP r0, 0
+    JNE @set
+    LDI r1, P_LOOK
+    LD r0, [bo_look_t]
+    CMP r0, 0
+    JNE @set
+    LDI r1, P_CROUCH
+    LD r0, [bo_crouch]
+    CMP r0, 0
+    JNE @set
+    LDI r1, P_BRAKE
+    LD r0, [f_brake]
+    CMP r0, 0
+    JNE @set
+    LDI r1, P_PUSH
+    LD r0, [f_push]
+    CMP r0, 0
+    JNE @set
+    LDI r1, P_BALANCE
+    LD r0, [bo_idle_t]
+    CMP r0, IDLE_BAL
+    JGE @set
+    LDI r1, P_POP
+    CMP r0, IDLE_POP
+    JLT @fast
+    CMP r0, IDLE_POP + POP_T
+    JLT @set
+@fast:
+    CALL speed_split
+    LDI r1, P_FAST
+    LD r0, [t_s]
+    CMP r0, 32
+    JGT @set
+    LDI r1, P_RIDE
+@set:
+    ST [bo_pose], r1
+    LD r0, [f_push]                 ; the push kick, in step with the acceleration (faster with pommes)
+    CMP r0, 0
+    JEQ @nokick
+    LD r0, [bo_kick_t]
+    ADD r0, 1
+    LD r2, [pw_kind]
+    CMP r2, PW_POMMES
+    JNE @k
+    ADD r0, 1
+@k:
+    ST [bo_kick_t], r0
+@nokick:
     RET
 
 .data

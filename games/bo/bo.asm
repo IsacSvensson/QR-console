@@ -4,9 +4,14 @@
 
 .include "tiles.gen.asm"
 .include "levels.gen.asm"
+.include "text.gen.asm"
 .include "defs.asm"
 .include "level.asm"
 .include "player.asm"
+.include "tricks.asm"
+.include "items.asm"
+.include "bubble.asm"
+.include "sound.asm"
 .include "draw.asm"
 .include "menu.asm"
 .include "gfx.asm"
@@ -16,6 +21,9 @@ init:
     LDI r5, T_APPLE
     LDI r7, NUM_COMMON
     CALL unpack_tiles
+    CALL font_unpack
+    LDI r0, 255
+    ST [bub_id], r0
     LDI r0, 5
     ST [lives], r0
     LDI r0, M_MENU
@@ -51,9 +59,36 @@ on_load:
     RET
 
 on_play:
+    CALL timers
     CALL bo_update
     CALL camera_update
     CALL draw_play
+    RET
+
+; timers that count down by themselves
+timers:
+    LDI r1, wiii_t
+    CALL @down
+    LDI r1, apple_chain_t
+    CALL @down
+    LDI r1, inv_t
+    CALL @down
+    LD r0, [pw_t]                   ; the power-up runs out
+    CMP r0, 0
+    JEQ @nopw
+    SUB r0, 1
+    ST [pw_t], r0
+    JNZ @nopw
+    ST [pw_kind], r0
+@nopw:
+    RET
+@down:
+    LD r0, [r1]
+    CMP r0, 0
+    JEQ @z
+    SUB r0, 1
+    ST [r1], r0
+@z:
     RET
 
 .data

@@ -176,6 +176,7 @@ Testerna i M19–M20 mäter de här värdena i VM:en och jämför med tabellen.
 | Rulla ut från 1,5 px/bildruta | 96 bildrutor, 74 px (9 tiles) |
 | Broms från 1,5 / från 2,5 px/bildruta | 8 bildrutor, 5 px / 14 bildrutor, 15 px |
 | Broms på **is** från 2,5 px/bildruta | **80 bildrutor, 100 px (12,5 tiles)**: "svårt att bromsa" |
+| Rulla ut på **sand** från 1,5 px/bildruta | 24 bildrutor, 17 px: "trögt" |
 | Nedför 22,5° / 45° från stillastående till maxfart | 56 bildrutor (100 px) / 28 bildrutor (51 px) |
 | Ramp 45° utan ollie, farten vid krönet 1,5 / 2,5 / 3,5 px/bildruta | 5 / 15 / **31 px högt**, 2,8 / 8,1 / **16,2 tiles** långt |
 | Ramp 45° **med ollie** vid krönet, farten där 2,5 / 3,5 px/bildruta | 64 px högt (tak), 53 bildrutor, **16,6 / 23,2 tiles**: "jättelångt hopp" |
