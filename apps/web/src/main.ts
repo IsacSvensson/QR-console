@@ -1,6 +1,6 @@
 import './style.css';
-import { CartridgeError, parseCartridge, toHex } from '@qrc/cartridge';
-import { VMError } from '@qrc/vm';
+import { CartridgeError, parseCartridge, parseHeader, toHex } from '@qrc/cartridge';
+import { ISA_VERSION, VMError, isaSupported } from '@qrc/vm';
 import { AudioBackend } from './audio';
 import { deleteCartridge, getCartridge, listCartridges, saveCartridge } from './db';
 import { Player } from './player';
@@ -49,6 +49,15 @@ async function renderLibrary() {
       play.className = 'primary';
       play.textContent = 'Play';
       play.onclick = () => playStored(c.id);
+      const need = needsUpdate(c.bytes);
+      if (need) {
+        li.classList.add('unsupported');
+        const warn = document.createElement('span');
+        warn.className = 'hint needs-update';
+        warn.textContent = need;
+        meta.append(warn);
+        play.disabled = true;
+      }
       const del = document.createElement('button');
       del.textContent = 'Delete';
       del.onclick = async () => {
@@ -63,7 +72,14 @@ async function renderLibrary() {
   $('library-empty').hidden = items.length > 0;
 }
 
-/** Verify (magic, versions, sizes, body hash, ISA) and store. Returns the cartridge id. */
+/** A message if this app's VM cannot run the cartridge's declared ISA (it is still stored), else null. */
+function needsUpdate(bytes: Uint8Array): string | null {
+  const isa = parseHeader(bytes).isaVersion;
+  if (isaSupported(isa)) return null;
+  return isa > ISA_VERSION ? `Needs a newer QR Console (ISA ${isa}; this app runs up to ${ISA_VERSION}) — update the app` : `Unsupported ISA ${isa}`;
+}
+
+/** Verify (magic, versions, sizes, body hash) and store. Returns the cartridge id. */
 async function importCartridge(bytes: Uint8Array): Promise<string> {
   const cart = await parseCartridge(bytes);
   const id = toHex(cart.id);
@@ -135,8 +151,9 @@ async function onScanComplete(bytes: Uint8Array) {
     const cart = await getCartridge(id);
     bar.value = 1;
     scannedId = id;
-    $('scan-status').textContent = `Received and verified: ${cart!.title} (${bytes.length} bytes)`;
-    $('scan-play').hidden = false;
+    const need = needsUpdate(bytes);
+    $('scan-status').textContent = `Received and verified: ${cart!.title} (${bytes.length} bytes)${need ? ` — ${need}` : ''}`;
+    $('scan-play').hidden = need !== null;
     await renderLibrary();
   } catch (e) {
     $('scan-status').textContent = `${describe(e)} — scan again.`;

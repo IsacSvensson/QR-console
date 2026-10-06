@@ -1,4 +1,4 @@
-# QR Console VM — ISA version 1
+# QR Console VM — ISA versions 1 and 2
 
 > Practical guide with examples, idioms and traps: `docs/PROGRAMMING.md`. This file is the terse reference.
 
@@ -15,7 +15,7 @@ are backends in `apps/web`.
 | Address space | 64 KB, byte addressed, addresses wrap at 0x10000 |
 | Display | 128×128, 4-bit palette indices (fixed DawnBringer-16 palette, `src/palette.ts`) |
 | Frame rate | fixed 60 Hz; one call of the cartridge's `update` entry per frame |
-| Cycle budget | 50 000 cycles per entry call; 1 per instruction, 8 per `SYS` |
+| Cycle budget | 50 000 cycles per entry call; 1 per instruction, 8 per `SYS` (+ a per-byte cost for the ISA 2 block syscalls) |
 | Arithmetic | integer only; no floats, no clock; RNG only via `SYS RND` (seeded by the host) |
 
 ## Memory map
@@ -116,6 +116,9 @@ Coordinates and sizes are interpreted as **signed** 16-bit; drawing is clipped t
 | 14 | `SOUND` | r0 channel (0,1 square; 2 noise), r1 freq Hz, r2 duration (frames), r3 volume 0–15 | |
 | 15 | `SFX` | r0 sound-definition id | |
 | 16 | `FRAME` | | r0 = frame counter (low 16 bits) |
+| 17 | `COPY` *(ISA 2)* | r0 destination, r1:r2 far source (hi, lo), r3 length | |
+| 18 | `FILL` *(ISA 2)* | r0 destination, r1 value, r2 length | |
+| 19 | `UNPACK` *(ISA 2)* | r0 destination, r1:r2 far source of a packed block | r0 = unpacked length |
 
 Buttons: `LEFT 1, RIGHT 2, UP 4, DOWN 8, A 16, B 32`.
 
@@ -126,6 +129,33 @@ transparent. **Tilemaps** are `columns × rows` bytes of tile indices; tile `t` 
 
 **RNG**: xorshift32 (`x ^= x<<13; x ^= x>>>17; x ^= x<<5`), state seeded by the host (`seed || 0x9E3779B9`).
 `RND n` returns `state % n`.
+
+## ISA 2: extended data and block syscalls
+
+ISA 2 adds three syscalls and the optional **xdata** cartridge section (`packages/cartridge/FORMAT.md`);
+nothing else changes. xdata (≤ 256 KB) is **not** in the address space: code and ROM stay ≤ 32 KB at
+`0x0000–0x7FFF`, and a game copies or unpacks what it needs from xdata into RAM.
+
+- **Far address**: a 32-bit value passed as two registers, *hi* and *lo*. hi = 0: the memory address lo
+  (ROM or RAM). hi ≥ 1: xdata offset `(hi − 1) · 65536 + lo`. The assembler gives xdata labels the value
+  `0x10000 + offset`, so `MOV r1, label >> 16` / `MOV r2, label & 0xFFFF` work for any label.
+- `COPY` and `FILL` write bytes in increasing address order through the normal store path (writes to ROM
+  are ignored, addresses wrap at 64 KB); reads past the end of xdata give 0. Cost: 8 + ⌈n/8⌉ cycles.
+- `UNPACK` decodes a packed block (below) to the destination and returns its length. Cost: 8 + ⌈n/4⌉
+  cycles, n = unpacked length.
+- In an ISA 1 cartridge, syscalls 17–19 are unknown (a fault), exactly as before ISA 2 existed.
+
+**Packed format** (encoder: `packages/asm/src/pack.ts`, used by `.pack` in the assembler):
+
+```
+u16 n                unpacked length (little-endian), then tokens until n bytes are written:
+0lllllll             literals: the next l+1 bytes (1..128)
+10llllll d           match: copy l+3 bytes (3..66) starting d+1 bytes back (1..256)
+11llllll dd dd       match: copy l+3 bytes starting (u16 dd)+1 bytes back (1..65536)
+```
+
+Matches copy byte by byte from `destination + o − distance`, so they may overlap their own output; a
+token that would pass n stops at n.
 
 ## Sound
 
@@ -143,5 +173,7 @@ counter and framebuffer after every frame. `VM.stateHash()` fingerprints exactly
 
 ## Cartridge requirements
 
-The VM accepts only cartridges with ISA version 1 (`VMError: unsupported ISA version …` otherwise),
-ROM (code + rodata + sound) ≤ 32 KB and a code section of at least 4 bytes (vector table).
+A cartridge declares the **lowest** ISA it needs; this VM runs ISA 1 and 2 (each version runs every older
+one) and refuses others with `VMError: unsupported ISA version …` (for a newer one: "the cartridge needs a
+newer QR Console"). Also required: ROM (code + rodata + sound) ≤ 32 KB, a code section of at least 4 bytes
+(vector table), an xdata section only with ISA ≥ 2 and at most 256 KB.

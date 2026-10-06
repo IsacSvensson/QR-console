@@ -36,8 +36,10 @@ N ×  { u8 type, u32 length }        section table
 | 1 | code | VM bytecode (see `packages/vm/VM.md` for how it is mapped) |
 | 2 | rodata | read-only data: sprites, tilemaps, strings, tables |
 | 3 | sound | sound definitions |
+| 4 | xdata | **optional** (ISA 2): extended data outside the address space, read with `SYS COPY` / `SYS UNPACK` |
 
-All three sections are required (they may be empty). Duplicate types, sections running past the end,
+Sections 1–3 are required (they may be empty). `xdata` is written only when it is non-empty, so a cartridge
+without it is byte-identical to one written before the section existed. Unknown section types are ignored. Duplicate types, sections running past the end,
 and trailing bytes after the last section are rejected.
 
 ## Hashes (SPEC §4)

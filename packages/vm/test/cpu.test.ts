@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MEMORY, VMError, VM } from '../src';
+import { ISA_VERSION, MEMORY, VMError, VM } from '../src';
 import { ins, insRel, vmFor } from './helpers';
 
 /** Runs body + RET for one frame, returns the VM. Registers are reset each frame, so results are stored in RAM. */
@@ -163,7 +163,7 @@ describe('CPU opcodes', () => {
 
 describe('cartridge acceptance', () => {
   it('rejects unsupported ISA versions', () => {
-    for (const v of [0, 2, 0xffff]) {
+    for (const v of [0, ISA_VERSION + 1, 0xffff]) {
       expect(() => new VM({ isaVersion: v, code: new Uint8Array(8), rodata: new Uint8Array(), sound: new Uint8Array() })).toThrow(VMError);
       expect(() => new VM({ isaVersion: v, code: new Uint8Array(8), rodata: new Uint8Array(), sound: new Uint8Array() })).toThrow(/unsupported ISA version/);
     }

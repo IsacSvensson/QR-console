@@ -6,7 +6,7 @@ human or handed to a later AI session as the single reference.
 
 Normative references (if this guide and they disagree, they win, and this guide has a bug):
 
-- `packages/vm/VM.md` — ISA version 1: opcodes, encoding, memory map, syscalls
+- `packages/vm/VM.md` — ISA versions 1 and 2: opcodes, encoding, memory map, syscalls
 - `packages/asm/ASM.md` — assembler syntax reference
 - `packages/cartridge/FORMAT.md` — cartridge file format
 - Source of truth: `packages/vm/src/vm.ts`, `packages/vm/src/isa.ts`, `packages/asm/src/assembler.ts`
@@ -255,7 +255,8 @@ Addresses and values that can exceed 32767 → `JB/JAE`.
 Arguments go in `r0`… in order. A syscall that returns something writes it to **`r0`**; **every other
 register is left unchanged** (so you can keep loop counters in `r4`–`r7` across drawing calls).
 Coordinates and sizes are signed; everything is clipped to the screen, so drawing partly off-screen is fine.
-Each `SYS` costs 8 cycles regardless of how many pixels it draws.
+Each `SYS` costs 8 cycles regardless of how many pixels it draws (the ISA 2 block syscalls add a small
+per-byte cost, §7.10).
 
 | Syscall | Arguments | Returns |
 |---|---|---|
@@ -276,6 +277,9 @@ Each `SYS` costs 8 cycles regardless of how many pixels it draws.
 | `SOUND` | r0 channel (0, 1 square; 2 noise), r1 Hz, r2 frames, r3 volume 0–15 | |
 | `SFX` | r0 sound id (from `.sfx`) | |
 | `FRAME` | – | r0 frame counter (wraps at 65536) |
+| `COPY` *(ISA 2)* | r0 destination, r1:r2 far source, r3 length | |
+| `FILL` *(ISA 2)* | r0 destination, r1 value, r2 length | |
+| `UNPACK` *(ISA 2)* | r0 destination, r1:r2 far source of a `.pack` block | r0 unpacked length |
 
 ### Colours (DawnBringer 16)
 
@@ -530,6 +534,104 @@ fix it), so runs are reproducible. Never try to get randomness any other way —
 
 ---
 
+### 7.10 Large games: packed data and xdata (ISA 2)
+
+ROM is 32 KB for code and data together. Two ISA 2 tools stretch it; using either makes the assembler mark
+the cartridge ISA 2 (it needs a QR Console from M22b on — older apps show "needs a newer QR Console"):
+
+- **`.pack` … `.endpack`** stores the data between them packed (typically 40–70 % of its size for levels and
+  tables). `SYS UNPACK` writes it out to RAM. Only plain data inside: no labels, no instructions, only
+  values known at that point.
+- **`.xdata`** is a section outside the address space (up to 256 KB). Its labels are *far addresses*
+  (`0x10000 + offset`); pass them as two registers, `label >> 16` and `label & 0xFFFF`. `SYS COPY` copies
+  from xdata (or any memory address, with hi = 0) into RAM; `SYS UNPACK` unpacks a `.pack` block from there.
+
+The pattern for a game with many levels: keep code, the font and shared graphics in ROM; put each level
+(or world) in xdata, packed; unpack the current one into a RAM buffer when it starts. `SPR` and `MAP` read
+RAM as happily as ROM. Costs: `COPY`/`FILL` 8 + n/8 cycles, `UNPACK` 8 + n/4 (n = bytes written), so even
+a 12 KB level unpacks in ~3 000 cycles.
+
+```asm
+; ISA 2: two levels in xdata, packed; B switches level
+.title "XDATA DEMO"
+.var level
+.var buf, 64                      ; RAM: the current level (an 8x8 tilemap)
+
+init:
+    CALL load
+    RET
+
+update:
+    SYS BTNP
+    AND r0, BTN_B
+    JZ @draw
+    LD r0, [level]
+    XOR r0, 1
+    ST [level], r0
+    CALL load
+@draw:
+    MOV r0, 0
+    SYS CLS
+    MOV r0, buf
+    MOV r1, tiles
+    MOV r2, 8
+    MOV r3, 8
+    MOV r4, 32
+    MOV r5, 32
+    SYS MAP
+    RET
+
+; unpack level [level] from xdata into buf
+load:
+    LD r1, [level]
+    SHL r1, 2                     ; 4 bytes per entry: hi, lo
+    LD r2, [r1 + levels + 2]
+    LD r1, [r1 + levels]
+    MOV r0, buf
+    SYS UNPACK
+    RET
+
+.data
+levels:
+    .word level0 >> 16, level0 & 0xFFFF
+    .word level1 >> 16, level1 & 0xFFFF
+tiles:
+    .fill 32                      ; tile 0: empty
+.sprite
+88888888
+8......8
+8......8
+8......8
+8......8
+8......8
+8......8
+88888888
+
+.xdata
+level0:
+.pack
+.byte 1,1,1,1,1,1,1,1
+.byte 1,0,0,0,0,0,0,1
+.byte 1,0,0,0,0,0,0,1
+.byte 1,0,0,1,1,0,0,1
+.byte 1,0,0,1,1,0,0,1
+.byte 1,0,0,0,0,0,0,1
+.byte 1,0,0,0,0,0,0,1
+.byte 1,1,1,1,1,1,1,1
+.endpack
+level1:
+.pack
+.byte 1,0,1,0,1,0,1,0
+.byte 0,1,0,1,0,1,0,1
+.byte 1,0,1,0,1,0,1,0
+.byte 0,1,0,1,0,1,0,1
+.byte 1,0,1,0,1,0,1,0
+.byte 0,1,0,1,0,1,0,1
+.byte 1,0,1,0,1,0,1,0
+.byte 0,1,0,1,0,1,0,1
+.endpack
+```
+
 ## 8. Complete example: tables, tilemap, text, numbers, jump table
 
 ```asm
@@ -731,7 +833,8 @@ dot: .sprite
 9. **Tile 0 in a map is never drawn.**
 10. **Uppercase ASCII only** in text.
 11. **ROM limit 32 KB** (code + data + sfx, uncompressed). Every instruction is 4 bytes, so 1000
-    instructions = 4 KB. Put repetitive behaviour in data tables rather than code.
+    instructions = 4 KB. Put repetitive behaviour in data tables rather than code; for more data, pack it
+    and/or move it to xdata (ISA 2, §7.10).
 12. **RAM:** `.var` grows up from 0x8000, the stack grows down from 0xFFFF. Deep recursion into your variables
     is possible in theory; in practice keep call depth small.
 13. **Cycle budget 50 000 per frame.** Per-pixel loops over the whole screen (16 384 pixels × several
@@ -828,6 +931,8 @@ version field must be 1 for this VM.
 
 The instruction set, syscalls, memory map and cycle budget are shared by the VM (`packages/vm/src/isa.ts`)
 and the assembler (`packages/asm/src/isa.ts`, a copy guarded by `test/isa-sync.test.ts`). Any change to them
-is an **ISA change**: bump `ISA_VERSION`, keep old cartridges' behaviour in mind, update `VM.md`, this guide
-and the tests, and record the decision in `DECISIONS.md`. SPEC L2 still applies: new syscalls must be
+is an **ISA change**: bump `ISA_VERSION`, update `VM.md`, this guide and the tests, and record the decision
+in `DECISIONS.md`. The rule since ISA 2: a new version only **adds** (every VM runs all older ISAs, a cartridge
+declares the lowest ISA it needs, and features newer than a cartridge's ISA behave as if they did not exist);
+`test/isa2.test.ts` proves that every committed ISA 1 game still builds to the identical cartridge. SPEC L2 still applies: new syscalls must be
 generic (useful to any game), never game-specific.

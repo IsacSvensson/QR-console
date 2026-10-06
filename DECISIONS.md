@@ -571,3 +571,40 @@ on (3 levels + boss; World 1 keeps its four FIRST10 levels), cuts (3) and (4) ar
 written, and before M23 a code-size pass targets the code overrun (20 KB against DESIGN's 11-13 KB estimate:
 the largest routines are bo_ground 1.2 KB, draw_actor 0.7, b_boss1 0.6, on_map 0.6, pose_update 0.5) and the test
 levels leave the final ROM (-0.6 KB). Cut (2) waits for the human because it contradicts their request.
+
+## D-034 - ISA 2: extended data and block syscalls instead of mapped ROM banks (M22b)
+Date: 2026-10-06 - Milestone: M22b (human decision after D-033: extend the VM, keep old cartridges working;
+also: a standard set of generic syscalls; the app should say which version a cartridge needs; double
+resolution not now)
+Decision:
+- **No mapped bank window.** The 16-bit address space is full (ROM 0x0000-0x7FFF, RAM 0x8000-0xFFFF), and
+  banked code would need far calls and bank bookkeeping in every game. Instead: an optional **xdata** section
+  (type 4, at most 256 KB) that is not in the address space at all, plus `SYS COPY` / `SYS UNPACK` to bring
+  parts of it into RAM. Code and resident data stay in the 32 KB ROM; a game like Bo already builds each
+  level in a RAM buffer, and `SPR`/`MAP` read RAM. One mechanism, no new addressing modes.
+- **Far addresses** are two registers (hi, lo): hi 0 = memory, hi >= 1 = xdata offset. The assembler gives
+  xdata labels the value 0x10000 + offset, so `label >> 16` / `label & 0xFFFF` work for every label and a
+  ROM address passes as hi 0 (so `COPY` is also a plain memcpy).
+- **Syscalls 17-19**: `COPY` (dest, far src, len), `FILL` (dest, value, len), `UNPACK` (dest, far src ->
+  length). Generic (SPEC L2). Costs 8 + n/8 and 8 + n/4 cycles, so block work is cheap but not free.
+  Considered and left out for now: a tile-lookup syscall and `TEXT` with a cartridge font (smaller wins,
+  ~0.5 KB each for Bo).
+- **Packed format**: byte-oriented LZ (literal runs up to 128, matches 3-66 with 1- or 2-byte distance),
+  chosen over deflate because the VM decoder is ~20 lines and needs no tables or bit reader. The encoder
+  does an optimal parse over hash-chain matches. Measured on rodata: Breakout 378 -> 156 B (41 %), BLACKBOX
+  15 536 -> 11 743 B (76 %), Bo 7 073 -> 5 236 B (74 %); deflate gets Bo to 63 %. Encoding Bo takes 6 ms.
+- **The version rule**: the VM runs ISA 1..2; a cartridge declares the lowest ISA it needs (the assembler
+  picks it: 2 only with xdata or an ISA 2 syscall); features newer than the cartridge's ISA behave as if
+  they did not exist (an ISA 1 cartridge calling syscall 17 faults exactly as before). The cartridge format
+  is unchanged (format version 1): xdata is written only when non-empty, unknown section types are ignored,
+  so an old app parses an ISA 2 cartridge and refuses it at the ISA check. Compatibility data lives in the
+  existing header field, not in ROM.
+- **App**: the library reads the header's ISA and marks a cartridge it cannot run ("Needs a newer QR
+  Console (ISA n; this app runs up to 2) - update the app"), with Play disabled; the scan result says the
+  same. Old installed apps show their existing "unsupported ISA version" error when Play is pressed.
+- **Double resolution** (256x256) is not part of ISA 2: it changes locked decision L3 and would roughly
+  quadruple graphics bytes, the opposite of what Bo needs. Noted under *Ideas for later*.
+- New built-in assembler names `COPY`, `FILL`, `UNPACK`: no committed game used them as symbols.
+Measurement: every committed game (hello, Breakout, Pong, BLACKBOX, Bo) rebuilds to its committed `.qrc`
+byte for byte as ISA 1 (`test/isa2.test.ts`); replay hash suites unchanged. e2e also needed
+`shell: true` on Windows for the fixture step (tooling only).

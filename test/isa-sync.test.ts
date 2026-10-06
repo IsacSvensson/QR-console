@@ -9,5 +9,7 @@ describe('ISA tables', () => {
     expect(asm.SYSCALLS).toEqual(vm.SYSCALLS);
     expect(asm.BUTTONS).toEqual(vm.BUTTONS);
     expect(asm.MEMORY).toEqual(vm.MEMORY);
+    expect(asm.MIN_ISA_VERSION).toBe(vm.MIN_ISA_VERSION);
+    expect(asm.SYSCALL_SINCE).toEqual(vm.SYSCALL_SINCE);
   });
 });

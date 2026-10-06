@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M23 (Worlds 2 and 3)
+**Current milestone:** M23 (Worlds 2 and 3), first moving Bo's world data to ISA 2 xdata
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) in progress: M19-M22 done; the M22 budget gate projects over 32 KB (flagged).
 **Last updated:** 2026-10-06
@@ -38,6 +38,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M20 Skate mechanics and the feel prototype
 - [x] M21 Enemies, power-ups, items, HUD, Bo's voice
 - [x] M22 World 1 and the game around it (budget gate)
+- [x] M22b ISA 2: xdata + COPY/FILL/UNPACK (human decision after the budget gate)
 - [ ] M23 Worlds 2 and 3
 - [ ] M24 Worlds 4 and 5, the theft and the ending
 - [ ] M25 Picture codes, music, delivery
@@ -58,11 +59,15 @@ sequencer with a World 1 loop, the bubble font with ÅÄÖ checked byte for byte
 M22 done — title, intro, picture-code screen (test levels via the code of four Bos), world map, level cards,
 tally, after-boss scene; levels 1-1..1-4 and Stora Måsen (1-5); replays from the title to the World 2 map, every
 star and part of World 1, the boss pattern and a retry, FIRST10 §8 rules, all 71 apple patterns followed (D-032).
-**Budget gate: ROM 27.1 KB after World 1 (code 20.1 KB); five worlds projected 41-43 KB, 35-37 KB after the whole
-cut list** — flagged below (D-033). Human request (2026-10-06): the worlds must look clearly
+**Budget gate: ROM 27.1 KB after World 1 (code 20.1 KB); five worlds projected 41-43 KB** (D-033). The human
+chose to extend the VM: **M22b = ISA 2** (D-034) — an optional xdata section (256 KB, outside the address
+space) and `COPY`/`FILL`/`UNPACK`; every ISA 1 game is byte-identical; the app marks cartridges that need a
+newer ISA. Next: Bo moves its per-world data to xdata (packed), then M23 with 5 levels per world.
+**Runtime baseline for M23-M25 = the M22b commit.** Human request (2026-10-06): the worlds must look clearly
 different (own sky, parallax, ground/structure colours, decor) — added to DESIGN §14.4, done in M23–M24.
-DESIGN §17 defaults apply (only question 1 answered). **Part 3 runtime baseline = the M19 commit** — from it on
-`git diff <M19> -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
+DESIGN §17 defaults apply (only question 1 answered). Part 3 runtime baseline was the M19 commit (394e012) until
+M22b; from the M22b commit on
+`git diff <M22b> -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
 
 Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.md *Manual acceptance*). **M12 baseline commit: 5a7ca7d** — from here on
 `git diff 5a7ca7d -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
@@ -93,11 +98,6 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 ## Blocked / needs human
 
-- **Bo does not fit 32 KB (M22 budget gate, D-033).** Measured after World 1: ROM 27.1 KB (code 20.1, data 7.1).
-  Projection for five worlds 41-43 KB; after DESIGN §16.1 cuts 1-4 still ~35-37 KB. Step 5 (ROM banking or a
-  larger ROM) is an ISA change and the runtime is frozen. Meanwhile: 3 levels + boss from World 2 on, a code-size
-  pass, test levels out of the final ROM; cut 2 (less parallax/decor) not applied because it contradicts the
-  request for clearly different worlds. Human: choose between a larger ROM / banking, fewer worlds, or cut 2.
 - **`npm run test:e2e:offline` (M10) is flaky: 3 of 8 runs pass.** Every failure is one browser-initiated
   `GET /sw.js` (the service-worker update check on reload) reaching the server ~2 s after going offline; the
   app itself makes no requests. Fixing it needs a change in `apps/web` (frozen in Part 2) or a decision on what
@@ -107,6 +107,9 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 - Calibrate the distortion simulator with real camera captures of the demo GIFs.
 - APNG output; Raptor-style precode for K ≫ 256; a `--scale` auto-choice from screen size.
+- Double resolution (256×256) as a later ISA: needs a human decision to change L3, and graphics grow ~4×
+  (considered with ISA 2 on 2026-10-06, D-034). Also generic syscalls for tile lookup and `TEXT` with a
+  cartridge font (~0.5 KB each for Bo).
 - (From planning Part 3) a generic save area persisted per cartridge id by the web app, which would replace picture
   codes (runtime + app change); UTF-8 in `.title` (the cartridge format already allows it); Gamepad API input in
   the web player for fast games.

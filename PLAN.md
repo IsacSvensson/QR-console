@@ -293,9 +293,10 @@ Breakout, Pong nor BLACKBOX needed. The design is the **specification** for thes
 
 Rules for M19–M25 (in addition to CLAUDE.md, same spirit as Part 2):
 
-- **The runtime does not change.** From the M19 commit on,
-  `git diff <M19 commit> -- packages/vm packages/cartridge packages/transport packages/qr apps` stays **empty**
-  through M25. Wiring Bo into the existing scripts (the demo list, e2e fixtures, a Vitest project) is expected; any
+- **The runtime does not change**, except in M22b (ISA 2, decided by the human on 2026-10-06 after the M22
+  budget gate). From the M22b commit on,
+  `git diff <M22b commit> -- packages/vm packages/cartridge packages/transport packages/qr apps` stays **empty**
+  through M25 (before M22b the baseline was the M19 commit). Wiring Bo into the existing scripts (the demo list, e2e fixtures, a Vitest project) is expected; any
   other change to `packages/asm` or `packages/tools` must be generic, needs a `DECISIONS.md` entry, and every other
   game must still assemble to identical sections. If something seems to need a runtime change (ROM over 32 KB, a
   save feature), record the measurement, flag it under *Blocked / needs human*, and continue within the limits.
@@ -389,6 +390,32 @@ milestone adds to it and never removes earlier checks.
   its apples and loses no life (DESIGN §8.4)
 - **budget gate:** code bytes, World 1 data bytes and ROM size are measured and a projection for five worlds is
   recorded in `DECISIONS.md`. If it exceeds 32 KB, apply DESIGN §16.1's cut list in order and flag it for a human
+
+## M22b — ISA 2: extended data and block syscalls (human decision, 2026-10-06)
+
+The M22 budget gate projected Bo at 41–43 KB (D-033). The human chose a generic VM extension over cutting
+content, with the rule that old cartridges keep working unchanged:
+
+- ISA 2 = ISA 1 + an optional **xdata** cartridge section (≤ 256 KB, outside the address space) + three
+  generic syscalls: `COPY` and `FILL` (block copy/fill, far source) and `UNPACK` (a simple LZ format).
+  The VM runs ISA 1 and 2; a cartridge declares the lowest ISA it needs; features newer than a cartridge's
+  ISA behave as if they did not exist. The assembler picks the ISA itself (`.xdata`, `.pack`/`.endpack`).
+- The app marks a stored cartridge that needs a newer ISA ("needs a newer QR Console") and disables Play.
+- Double resolution was considered and **not** done (it would change locked decision L3 and quadruple
+  graphics data): *Ideas for later* in `PROGRESS.md`.
+
+**Accept:** `npm run check` (with `test/isa2.test.ts`), `npm run test:games`, `npm run test:blackbox`,
+`npm run test:bo`, `npm run test:e2e`
+- every committed ISA 1 game (hello, Breakout, Pong, BLACKBOX, and Bo until it moves) still assembles to its
+  committed `.qrc`, byte for byte, and its replay hashes are unchanged
+- the VM runs ISA 1 and 2 and refuses 0 and 3 with a clear message; an xdata section needs ISA 2; in an ISA 1
+  cartridge syscalls 17–19 fault exactly like any unknown syscall
+- `COPY`/`FILL`/`UNPACK` semantics and cycle costs as in `VM.md`; the encoder (asm) and the VM decoder agree on
+  seeded random data of several kinds (the seed is printed on failure)
+- the assembler chooses ISA 1 or 2 as `ASM.md` says; `.pack` rejects labels, instructions and late values
+- e2e: an ISA 2 cartridge (xdata + UNPACK) plays in the app; an ISA 3 cartridge is stored but marked and
+  cannot be started
+- `VM.md`, `ASM.md`, `FORMAT.md` and `docs/PROGRAMMING.md` (§7.10, with a tested example) describe ISA 2
 
 ## M23 — Worlds 2 and 3
 
