@@ -2,7 +2,7 @@
 ; text as glyph indices (index = position in the font table); 255 ends a text, 254 starts its second row.
 
 FONT_GLYPHS = 48
-NUM_TEXTS = 66
+NUM_TEXTS = 67
 TX_SKRIII = 0   ; SKRIII!
 TX_NEJ_MINA_POMMES = 1   ; NEJ! MINA POMMES!
 TX_VANTA_MASEN = 2   ; VÄNTA, MÅSEN!
@@ -69,6 +69,7 @@ TX_TROTTOAREN = 62   ; TROTTOAREN
 TX_TRAPPORNA = 63   ; TRAPPORNA
 TX_BUSSEN = 64   ; BUSSEN
 TX_TORGET = 65   ; TORGET
+TX_BYGGARBETSPLATSEN = 66   ; BYGGARBETSPLATSEN
 
 .data
 font1:
@@ -129,7 +130,7 @@ text_table:
     .word tx_40, tx_41, tx_42, tx_43, tx_44, tx_45, tx_46, tx_47
     .word tx_48, tx_49, tx_50, tx_51, tx_52, tx_53, tx_54, tx_55
     .word tx_56, tx_57, tx_58, tx_59, tx_60, tx_61, tx_62, tx_63
-    .word tx_64, tx_65
+    .word tx_64, tx_65, tx_66
 tx_0: .byte 19, 11, 18, 9, 9, 9, 40, 255   ; SKRIII!
 tx_1: .byte 14, 5, 10, 40, 0, 13, 9, 14, 1, 0, 16, 15, 13, 13, 5, 19, 40, 255   ; NEJ! MINA POMMES!
 tx_2: .byte 22, 28, 14, 20, 1, 43, 0, 13, 27, 19, 5, 14, 40, 255   ; VÄNTA, MÅSEN!
@@ -196,5 +197,6 @@ tx_62: .byte 20, 18, 15, 20, 20, 15, 1, 18, 5, 14, 255   ; TROTTOAREN
 tx_63: .byte 20, 18, 1, 16, 16, 15, 18, 14, 1, 255   ; TRAPPORNA
 tx_64: .byte 2, 21, 19, 19, 5, 14, 255   ; BUSSEN
 tx_65: .byte 20, 15, 18, 7, 5, 20, 255   ; TORGET
+tx_66: .byte 2, 25, 7, 7, 1, 18, 2, 5, 20, 19, 16, 12, 1, 20, 19, 5, 14, 255   ; BYGGARBETSPLATSEN
 level_names:   ; text id of every level, in the level table order
-    .byte 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65
+    .byte 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66

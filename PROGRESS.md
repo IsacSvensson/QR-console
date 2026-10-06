@@ -2,9 +2,9 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M23 (Worlds 2 and 3)
+**Current milestone:** M24 (Worlds 4 and 5, the theft and the ending)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
-Part 3 (Bo's Skateäventyr) in progress: M19-M22 done; the M22 budget gate projects over 32 KB (flagged).
+Part 3 (Bo's Skateäventyr) in progress: M19-M23 done; the M22 budget gate projects over 32 KB (flagged).
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -39,7 +39,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M21 Enemies, power-ups, items, HUD, Bo's voice
 - [x] M22 World 1 and the game around it (budget gate)
 - [x] M22b ISA 2: xdata + COPY/FILL/UNPACK (human decision after the budget gate)
-- [ ] M23 Worlds 2 and 3
+- [x] M23 Worlds 2 and 3
 - [ ] M24 Worlds 4 and 5, the theft and the ending
 - [ ] M25 Picture codes, music, delivery
 
@@ -62,8 +62,9 @@ star and part of World 1, the boss pattern and a retry, FIRST10 §8 rules, all 7
 **Budget gate: ROM 27.1 KB after World 1 (code 20.1 KB); five worlds projected 41-43 KB** (D-033). The human
 chose to extend the VM: **M22b = ISA 2** (D-034) — an optional xdata section (256 KB, outside the address
 space) and `COPY`/`FILL`/`UNPACK`; every ISA 1 game is byte-identical; the app marks cartridges that need a
-newer ISA. Bo is now ISA 2: levels packed in xdata, ROM 25.6 KB (D-035); per-world tiles, boss sprites and music follow
-in M23. **Runtime baseline for M23-M25 = 932e534 (M22b).** Human request (2026-10-06): the worlds must look clearly
+newer ISA. Bo is now ISA 2: levels packed in xdata, ROM 25.6 KB (D-035). M23 done — Worlds 2 (Skogen) and 3 (Staden): each
+world looks clearly different (own sky, parallax, colours, decor; world blocks in xdata), moving platforms (logs, the
+bus), the rabbit chase, the bulldozer, world music; one replay from the title to the World 4 map (D-036). ROM 28.1 KB. **Runtime baseline for M23-M25 = 932e534 (M22b).** Human request (2026-10-06): the worlds must look clearly
 different (own sky, parallax, ground/structure colours, decor) — added to DESIGN §14.4, done in M23–M24.
 DESIGN §17 defaults apply (only question 1 answered). Part 3 runtime baseline was the M19 commit (394e012) until
 M22b; from the M22b commit on
@@ -107,6 +108,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 - Calibrate the distortion simulator with real camera captures of the demo GIFs.
 - APNG output; Raptor-style precode for K ≫ 256; a `--scale` auto-choice from screen size.
+- A really giant Jättekaninen (32×24 sprites; it is Bo's size now), from the world assets.
 - Double resolution (256×256) as a later ISA: needs a human decision to change L3, and graphics grow ~4×
   (considered with ISA 2 on 2026-10-06, D-034). Also generic syscalls for tile lookup and `TEXT` with a
   cartridge font (~0.5 KB each for Bo).

@@ -12,6 +12,7 @@
 .include "items.asm"
 .include "actors.asm"
 .include "boss.asm"
+.include "dozer.asm"
 .include "bubble.asm"
 .include "sound.asm"
 .include "draw.asm"
@@ -19,6 +20,7 @@
 .include "screens.asm"
 .include "gfx.asm"
 .include "gfx_enemies.asm"
+.include "wassets.asm"
 
 init:
     LDI r4, ts_common               ; the common tiles (apples, stars, signs ...) never change

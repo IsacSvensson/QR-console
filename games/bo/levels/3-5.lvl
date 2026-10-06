@@ -1,0 +1,27 @@
+# 3-5 BYGGARBETSPLATSEN — BOSS: Bulldozern (DESIGN §10.3). The arena: a kicker on the left, scaffolding planks
+# in the middle (the upper one above the raised bucket), the crane arm high up to grind, the bulldozer's home on
+# the right. (1) from the kicker onto the STOP button; (2) up the scaffolding, step off onto the button (the
+# bulldozer stops right under Bo); (3) grind the crane arm and roll off it with a trick onto the button.
+name  BYGGARBETSPLATSEN
+world 3
+music 3
+rows  16
+start 2
+
+terrain
+h 4
+flat 40         # 0-39
+
+objects
+6   ramp45 1
+9   tile CONE g
+16  platform g+2 4
+16  apples g+3 4
+17  tile SCAFF_POST g 1 2
+21  platform g+4 4
+21  apples g+5 4
+24  tile SCAFF_POST g 1 4
+25  tile CRANE g+6 8 1
+25  apples g+7 8
+33  tile SCAFF_POST g 1 6
+36  enemy dozer g

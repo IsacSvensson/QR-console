@@ -140,6 +140,8 @@ music_step:
 ; A track is two voices; a voice is a list of (Hz word, frames byte) notes, Hz 0 = rest, frames 0 = loop.
 MUS_NONE  = 0
 MUS_HEMMA = 1
+MUS_SKOGEN = 2
+MUS_STADEN = 3
 MUSIC_VOL = 4
 
 .macro N hz, frames
@@ -154,49 +156,9 @@ MUSIC_VOL = 4
 .data
 tracks:                     ; per track: melody, bass
     .word 0, 0
-    .word hem_mel, hem_bass
+    .word RA_HEM_MEL, RA_HEM_BASS   ; in the world's assets (wassets.asm)
+    .word RA_SKO_MEL, RA_SKO_BASS
+    .word RA_STA_MEL, RA_STA_BASS
 
-; World 1, HEMMA: happy and simple, C major, a skipping rhythm
-hem_mel:
-    N 523, 12
-    N 659, 12
-    N 784, 12
-    N 659, 12
-    N 698, 12
-    N 880, 12
-    N 784, 24
-    N 659, 12
-    N 587, 12
-    N 523, 12
-    N 587, 12
-    N 659, 24
-    N 0, 12
-    N 784, 12
-    N 880, 12
-    N 784, 12
-    N 659, 12
-    N 698, 12
-    N 659, 12
-    N 587, 12
-    N 494, 12
-    N 523, 36
-    N 0, 12
-    LOOP
-hem_bass:
-    N 131, 24
-    N 196, 24
-    N 175, 24
-    N 196, 24
-    N 131, 24
-    N 196, 24
-    N 147, 24
-    N 196, 24
-    N 131, 24
-    N 165, 24
-    N 175, 24
-    N 147, 24
-    N 196, 24
-    N 147, 24
-    N 131, 48
-    LOOP
+
 .code

@@ -23,7 +23,7 @@ export const SIGN_KIND: Record<string, number> = { right: 0, a: 1, b: 2, down: 3
 export const RAMP_KIND: Record<string, number> = { ramp45: 0, ramp45l: 1, ramp22: 2, ramp22l: 3 };
 export const ENEMY_TYPE: Record<string, number> = {
   snail: 1, gull: 2, hedgehog: 3, wasp: 4, ball: 5, teddy: 6, squirrel: 7, pigeon: 8, snowman: 9, sled: 10, jelly: 11, blob: 12, cannon: 13,
-  boss1: 17, log: 18, bus: 19, rabbit: 20,
+  boss1: 17, log: 18, bus: 19, rabbit: 20, dozer: 21, sand: 22,
 };
 export const PREFAB_IDS = Object.keys(PREFABS);
 

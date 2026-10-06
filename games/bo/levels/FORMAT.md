@@ -69,14 +69,15 @@ Each line: `<column> <kind> <arguments>`. Objects are drawn over the terrain in 
 | `pickup` | `pommes\|godis y` | a power-up lying in the level |
 | `prefab` | `name [y]` | a multi-tile pattern from `tools/prefabs.ts` (bottom-left at the column and y) |
 | `fg` | `name y` | a foreground pattern drawn over Bo (sparse hedges hiding secrets); not part of the grid |
-| `enemy` | `type [y]` | an enemy spawned when the camera comes near |
+| `enemy` | `type [y]` | an enemy spawned when the camera comes near. Special types: `log`, `bus` (moving platforms; `y` is the height of their top), `rabbit` (the chase of 2-5: the object marks where the rabbit stops; it comes on from behind by itself), `dozer` (an arena boss: comes on at once) |
 
 Apples (from any apple object) are only placed in cells that are still empty.
 
 ## ROM format (`levels.gen.asm`)
 
-`level_table` has 12 bytes per level: terrain pointer, object pointer, width (words), start height, rows,
-world, start column, music, 0.
+`level_table` (ROM) has 14 bytes per level: the far address of the level's data in xdata (hi, lo words; ISA 2),
+the offset of the objects in the unpacked data, width (words), start height, rows, world, start column, music, 0.
+The level's data is one `.pack` block: the terrain bytes, then the object list. `level_start` unpacks it into RAM.
 
 **Terrain:** one byte per segment, `type << 5 | (length − 1)`: 0 flat, 1 up22 (length in steps), 2 down22,
 3 up45, 4 down45, 5 gap, 6 liquid (longer segments are split). Type 7 is special, by its low 5 bits:

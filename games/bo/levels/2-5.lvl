@@ -25,11 +25,11 @@ liquid 4        # 167-170 the brook: the rabbit stops at its edge (a slowed-down
 flat 41         # 171-211 the goal
 
 objects
-4   apples g 4
-10  sign right
+8   apples g 4
+12  sign right
 14  prefab spruce g
 20  apples g 8
-36  apples g 4
+31  apples g 4
 43  apples g 4
 52  prefab stump2 g
 52  apple g+2
@@ -49,7 +49,7 @@ objects
 118 apples g 4
 126 flag
 130 prefab spruce g
-136 apples g 4
+131 apples g 4
 144 apples g 6
 160 prefab carrots g
 166 ramp45 1

@@ -621,3 +621,46 @@ Measurement: ROM 27 133 -> 25 609 B (code 20 098, data 5 511); cartridge 15.2 KB
 with that plan: code 24.5-25.5 KB + resident data ~5.5 KB = 30-31 KB of 32 KB; xdata ~12-15 KB packed. The
 code-size pass stays on the list as the safety margin; DESIGN 16.1 cuts are no longer needed (5 levels per
 world, distinct world graphics as the human asked).
+
+## D-036 - Bo Worlds 2 and 3 (M23)
+Date: 2026-10-06 - Milestone: M23
+Decision:
+- **World look (human request, DESIGN 14.4)**: every world block (xdata) has its own sky, parallax strip, symbolic
+  colours for the structural tiles (ground, slopes, ramps, planks, blocks), optional own art for structural shapes
+  (Staden draws 45-degree slopes as stairs) and 32 own tiles. Skogen: warm evening sky, dark spruce parallax,
+  moss and brown earth, fresh-cut wood. Staden: navy dusk sky, a skyline with lit windows, light pavement, brick,
+  blue metal ramps. Patterns used by one world only live in its block (World 1's moved out of ROM too). A tile name
+  means the same code in every world that has it; the generator rejects a tile or prefab the level's world lacks.
+- **World assets** (D-035 plan): each world's music and boss sprites are raw xdata blocks copied into RAM
+  (`wasset`, 1 KB) with the world; the code reaches them through RA_* addresses. Not packed, so labels work.
+- **Moving platforms**: actors with F_PLAT whose top `surface()` also finds (one-way); the platform Bo stands on
+  carries him (bo_plat). Log: drifts right over 10 columns and back at 6/16 px per frame; bus: waits until Bo stands
+  on its roof, then drives 160 columns at 1 px per frame and stops. Drawn with world tiles (MAP). The test oracle has
+  its own platform spec (frames.ts PLATFORMS) and checks both the motion and Bo standing on them.
+- **Jättekaninen**: not in the enemy list; its object marks where it stops (the brook). It appears at the left
+  screen edge 1 s after the start (2.5 s after a lost life: "further back"), never despawns, and aims every hop to
+  land 24 px behind where Bo will be at his current speed (speeds 8..36), so it stays in sight and reaches a Bo who
+  stops. Each landing shakes the ground: a grounded Bo loses a quarter of his speed (half was tried: it made
+  every hop and the last kicker fail; not on a kicker). In the chase level there are no jump arcs (the shake makes
+  speeds unpredictable, so arcs would lie): an apple on a stump means "up here".
+- **Bulldozern**: drives towards Bo between its home and 21 columns left of it; the press counts only while it
+  drives (not while backing off after a press or waiting at home); a landing on the roof beside the button bounces
+  Bo off towards the open side; while Bo's feet are at or above the roof he is never hurt by the body. Phase 2: the
+  raised bucket (front, 16 px above the roof) hurts; Bo drops onto the button from the high plank (it stops right
+  under Bo). Phase 3: the bucket is down again (it dumps sand piles: actors that slow Bo), it parks at home under
+  the end of the crane arm while Bo is up high, and a press needs a trick in that airtime (grind + one more, or a
+  trick in progress). F_BOSS: an arena boss comes on at once wherever the camera is.
+- **Pigeon**: flies up when Bo *rolls* within 48 px (was 24 px and any grounded Bo): at 24 px riding at push speed
+  always ran into it during its flap, contradicting DESIGN 9 ("flyger upp när Bo kommer"). T5's second pigeon moved
+  to column 59 so it is not scared by the first station.
+- **Level design rules learned**: from a standstill Bo cannot push up a 45-degree slope (push 1 < slope 2) nor
+  gain speed on a 22.5-degree one, so hills that must be climbed are 22.5 degrees with a run-up; a grind combo adds
+  TRICK_BOOST per trick at the landing, so Bo is fast after rails (levels leave room, routes brake); arcs slower
+  than push speed must be followed without steering in the air (the generator keeps vx constant).
+- **Map music**: the map plays the current world's track (the World 1 tune id would point into another world's
+  assets once they are loaded).
+Measurement: ROM 28 073 B (code 22 774, data 5 299; was 25 609 after M22b), xdata ~6 KB, cartridge 19.6 KB.
+m23-worlds (title to the World 4 map, all 15 levels) 26 195 frames; max 4 004 cycles in a play frame, 15.1k while
+loading. 154 apple patterns in Worlds 2-3, all followed. Projection for M24: code +2-3 KB (lift, ice, Backhoppet,
+theft, final boss, ending, SUPERBOSSE, golden board), world assets and levels in xdata: about 31 KB of 32 KB, so a
+code-size pass comes first in M24.

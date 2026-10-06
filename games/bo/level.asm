@@ -121,6 +121,15 @@ ld_tiles:                           ; the world's structural tiles (one frame), 
     LD r2, [r6 + world_blocks + 2]
     LDI r0, wblk
     SYS UNPACK
+    MOV r1, r6                      ; and copy its assets (music, boss sprites)
+    SHR r1, 2
+    MUL r1, 6
+    ADD r1, world_assets
+    LD r3, [r1 + 4]
+    LD r2, [r1 + 2]
+    LD r1, [r1]
+    LDI r0, wasset
+    SYS COPY
     LDI r4, wblk                    ; entries: struct codes 1..26, then world codes 64..95
     LDI r5, 1
     LDI r7, NUM_STRUCT

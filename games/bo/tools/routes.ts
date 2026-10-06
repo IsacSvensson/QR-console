@@ -346,6 +346,73 @@ const chaseRun = (b: Bot, stumps: number[], toEnd = true) => {
   kickA(b, 'the last kicker over the brook');
 };
 
+/** The bulldozer of 3-5: its state (DZ_*) and x px. */
+const DZ = { DRIVE: 0, BACK: 1, WAIT: 2, DONE: 3 };
+const dozer = (b: Bot) => {
+  const base = b.S('actors');
+  for (let i = 0; i < 12; i++) {
+    const a = base + i * 22;
+    if (b.vm.read16(a) === 21) return { x: b.vm.read16(a + 2) >> 4, sub: b.vm.read16(a + 20) };
+  }
+  return undefined;
+};
+const stop = (x: Bot) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0);
+const presses = (b: Bot) => b.u('boss_hits');
+/** Up the two scaffolding planks of 3-5 (from the ground left of them). */
+const scaffold = (b: Bot, sweepLow = false) => {
+  b.until((x) => (x.x < px(14) ? B.R : x.x > px(14) + 4 ? B.L : stop(x)), (x) => Math.abs(x.x - px(14) - 2) <= 2 && x.vx === 0 && x.grounded, 600, 'to the scaffolding');
+  ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 3), 'onto the low plank');
+  b.brakeToStop();
+  // its last apple (only with the bucket down: in phase 2 the raised bucket reaches up to the low plank)
+  if (sweepLow) b.until((x) => (x.x < px(19) + 2 ? (x.vx < 4 ? B.R : 0) : stop(x)), (x) => x.x >= px(19) + 2 && x.vx === 0, 200, 'to the end of the low plank');
+  ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 5), 'onto the high plank');
+  b.brakeToStop();
+};
+/** 3-5: the three STOP presses. */
+const fightDozer = (b: Bot) => {
+  const lives = b.u('lives');
+  // (1) wait at the left wall until it has come to its left limit, then the kicker with A onto the button
+  b.until((x) => (x.x > px(1) ? B.L : stop(x)), (x) => x.x <= px(1) + 2 && x.vx === 0, 600, 'to the left wall');
+  b.until(0, (x) => dozer(x) !== undefined && dozer(x)!.x <= 36 * 8 + 4 - 21 * 8 + 1, 1500, 'the bulldozer comes');
+  b.search(
+    (k) => {
+      b.hold(0, k);
+      b.until(B.R, (x) => x.onRamp, 200);
+      b.until(B.R, (x) => !x.grounded, 30);
+      b.step(B.A);
+      b.until((x) => (x.vx > 0 && x.x > (dozer(x)?.x ?? 999) ? B.L : 0) | B.A, (x) => x.grounded || presses(x) === 1, 200);
+    },
+    (x) => presses(x) === 1 && x.u('lives') === lives,
+    120,
+    'press 1: from the kicker',
+  );
+  b.land();
+  // (2) up the scaffolding to the right end of the high plank; when it stands under Bo, step off onto the button
+  scaffold(b);
+  b.until((x) => (x.x < px(24) + 5 ? B.R : stop(x)), (x) => x.x >= px(24) + 5 && x.vx === 0, 200, 'the end of the high plank');
+  b.until(0, (x) => { const d = dozer(x); return !!d && d.sub === DZ.DRIVE && Math.abs(d.x - x.x) <= 1; }, 1500, 'it stops under Bo');
+  b.until(B.R, (x) => presses(x) === 2 || (x.grounded && x.foot > px(32 - 4 - 5)), 120, 'press 2: step off onto the button');
+  if (presses(b) !== 2) throw new Error('press 2 missed');
+  b.land();
+  // (3) up again, onto the crane arm, grind to its end, roll off it with a kickflip onto the button
+  scaffold(b, true);
+  b.until((x) => (x.x < px(24) + 2 ? (x.vx < 4 ? B.R : 0) : stop(x)), (x) => x.x >= px(24) + 2 && x.vx === 0, 200, 'slowly to the end of the high plank');
+  b.search(
+    (k) => {
+      b.hold(0, k * 4); // wait for the bulldozer to come to a good place
+      b.step(B.A | B.R);
+      b.until(B.R | B.A, (x) => x.state === 2 || x.grounded, 120); // up onto the crane arm: grind
+      if (b.state !== 2) throw new Error('not on the crane arm');
+      b.until(0, (x) => x.state !== 2, 300); // to its end, rolling off (no ollie)
+      b.step(B.B); // a kickflip on the way down
+      b.until(0, (x) => x.grounded || presses(x) === 3, 200);
+    },
+    (x) => presses(x) === 3 && x.u('lives') === lives,
+    100,
+    'press 3: off the crane arm with a trick',
+  );
+};
+
 const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
   '1-1': (b) => {
     followArc(b, 42); // over the first bin
@@ -709,6 +776,7 @@ const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
     b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
     b.land(B.R);
   },
+  '3-5': (b) => fightDozer(b),
   // the chase: keep pushing, every hop where the apples show it, A at the last kicker
   '2-5': (b) => chaseRun(b, [52, 68, 112]),
 
@@ -771,6 +839,35 @@ export const ROUTES: Record<string, Route> = {
       b.hold(0, 60);
     },
   },
+  // M23: from the title through Worlds 1, 2 and 3 (every level from its start, every star and part) to the World 4
+  // map; the part from the World 2 map to the World 4 map is the M23 acceptance
+  'm23-worlds': {
+    seed: 1,
+    run: (b) => {
+      fromTitle(b);
+      LEVEL_RUNS['1-1']!(b);
+      finish(b);
+      for (const id of ['1-2', '1-3', '1-4']) {
+        fromMap(b);
+        LEVEL_RUNS[id]!(b);
+        finish(b);
+      }
+      fromMap(b);
+      b.hold(0, 20);
+      fightBoss1(b);
+      finish(b);
+      for (const w of ['2', '3']) {
+        b.until(0, (x) => x.mode === x.S('M_MAP'), 900, `the scene, then the World ${w} map`);
+        for (const n of ['1', '2', '3', '4', '5']) {
+          fromMap(b);
+          LEVEL_RUNS[`${w}-${n}`]!(b);
+          finish(b);
+        }
+      }
+      b.until(0, (x) => x.mode === x.S('M_MAP'), 900, 'the scene, then the World 4 map');
+      b.hold(0, 60);
+    },
+  },
   // M22: the boss's dive costs a life; the fight starts again and is won
   'm22-boss-retry': {
     seed: 3,
@@ -809,7 +906,28 @@ export const ROUTES: Record<string, Route> = {
   'm23-3-2': levelRoute('3-2'),
   'm23-3-3': levelRoute('3-3'),
   'm23-3-4': levelRoute('3-4'),
+  'm23-dozer': levelRoute('3-5'),
   'm23-chase': levelRoute('2-5'),
+  // M23: the patterns that are alternatives to the main path (apples never lie): 2-3's giant jump without A (the
+  // low arc that still clears the brook)
+  'm23-alts': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('2-3');
+      const top = 32 - 22;
+      standBefore(b, 14);
+      hopOnto(b, (x) => x.grounded && x.foot === px(top - 2), 'onto the low stump');
+      b.brakeToStop();
+      ollieOnto(b, (x) => x.grounded && x.foot === px(top - 3), 'onto the high stump');
+      b.until(B.R, (x) => x.onRamp, 1200, 'down the big hill to the big kicker');
+      b.until(B.R, (x) => !x.grounded, 60, 'off its lip, no A');
+      b.land(0);
+      b.brakeToStop();
+      stompEnemy(b, 1, [EV.STOMP], 'the snail');
+      b.until(B.R, (x) => x.u('goal_t') > 0, 3000, 'to the goal');
+      b.hold(0, 60);
+    },
+  },
   // M23: the rabbit catches Bo standing still after flag 1; the chase starts again from the flag and is won
   'm23-chase-caught': {
     seed: 1,

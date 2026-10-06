@@ -31,6 +31,8 @@ B_BOSS1  = 8
 B_PLAT   = 9                        ; a moving platform drifting back and forth (log)
 B_BUS    = 10                       ; a moving platform that drives off when Bo stands on it (the bus)
 B_RABBIT = 11                       ; Jättekaninen: hops after Bo (the chase of 2-5), spawned by boss_step
+B_DOZER  = 12                       ; Bulldozern (3-5), dozer.asm
+B_STILL  = 13                       ; does nothing (the bulldozer's sand piles)
 ; stomp outcomes
 O_APPLE  = 0
 O_AWAY   = 1
@@ -50,6 +52,7 @@ F_WIDE  = 4                         ; 16 x 8
 F_RIGHT = 8                         ; the sprite faces right
 F_BIG   = 16                        ; 16 x 16 (four sprites)
 F_PLAT  = 32                        ; a moving platform: its top carries Bo, no contact (drawn from world tiles)
+F_BOSS  = 64                        ; comes on at once, wherever the camera is (an arena boss)
 ; events (for the tests): what happened at a contact
 EV_STOMP  = 1
 EV_HIT    = 2
@@ -88,11 +91,14 @@ en_table:
     .byte B_PLAT,  24, 6, 6, O_STAND, F_PLAT, 255, 10               ; 18 log: back and forth over 10 columns
     .byte B_BUS,   48, 16, 16, O_STAND, F_PLAT, 255, 160            ; 19 bus: drives 160 columns once Bo is on
     .byte B_RABBIT, 14, 14, 8, O_STAND, F_BIG | F_RIGHT, 255, 36    ; 20 Jättekaninen: hop speed 8..36 (boss.asm)
+    .byte B_DOZER, 32, 16, 0, O_STAND, F_RIGHT | F_BOSS, 255, 21             ; 21 Bulldozern: drives up to 21 columns left of home
+    .byte B_STILL, 8, 5, 0, O_STAND, 0, 255, 0                      ; 22 sand pile (slows Bo)
 en_sprites:
     .word 0, spr_en_snail, spr_en_gull, spr_en_hedgehog, spr_en_wasp, spr_en_ball, spr_en_teddy, spr_en_squirrel
     .word spr_en_pigeon, spr_en_snowman, spr_en_sled, spr_en_jelly, spr_en_blob, spr_en_cannon, spr_en_cone
-    .word spr_en_snowball, spr_en_popcorn, spr_boss_gull, plat_log, plat_bus, spr_rabbit
+    .word spr_en_snowball, spr_en_popcorn, RA_BOSS_GULL, plat_log, plat_bus, RA_RABBIT, RA_DOZER, RA_SANDPILE
 behaviours: .word b_walk, b_dive, b_fly, b_bounce, b_throw, b_proj, b_roll, b_pigeon, b_boss1, b_plat, b_bus, b_rabbit
+            .word b_dozer, b_still
 ; platform pictures (instead of a sprite): columns, rows, then world tile codes row by row
 plat_log:   .byte 3, 1, TW_LOG_L, TW_LOG_M, TW_LOG_R
 plat_bus:   .byte 6, 2, TW_BUS_R, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_F
@@ -215,6 +221,11 @@ actors_update:
     LD r1, [r1 + en_col]
     SHL r1, 3
     ADD r1, 4
+    LDB r0, [r6 + en_type]          ; an arena boss comes on at once
+    SHL r0, 3
+    LDB r0, [r0 + en_table + 5]
+    AND r0, F_BOSS
+    JNZ @boss
     LD r0, [cam_x]
     SUB r0, 8
     CMP r1, r0
@@ -222,6 +233,7 @@ actors_update:
     ADD r0, 144
     CMP r1, r0
     JGT @nexten
+@boss:
     CALL act_free_slot
     CMP r7, 0
     JEQ @move
@@ -281,8 +293,10 @@ act_step:
     CMP r0, 0
     JEQ @done                       ; the behaviour removed it
 @far:
-    LD r0, [r7 + AC_TYPE]           ; the rabbit stays, however far behind
+    LD r0, [r7 + AC_TYPE]           ; the rabbit stays, however far behind; so does the bulldozer
     CMP r0, EN_RABBIT
+    JEQ act_touch
+    CMP r0, EN_DOZER
     JEQ act_touch
     LD r1, [r7 + AC_X]
     SHR r1, 4
@@ -363,6 +377,9 @@ dir_to_bo:
     RET
 
 ; ---- behaviours (r7 = actor) -----------------------------------------------------------------------------
+b_still:
+    RET
+
 ; plat_move: r7 = platform, r0 = dx this frame (1/16 px): move it, and Bo with it if he stands on it
 plat_move:
     ST [r7 + AC_VX], r0
@@ -938,6 +955,10 @@ contact:
     JEQ boss1_contact
     CMP r0, EN_RABBIT
     JEQ rabbit_contact
+    CMP r0, EN_DOZER
+    JEQ dozer_contact
+    CMP r0, EN_SAND
+    JEQ sand_contact
     LD r0, [r7 + AC_TYPE]
     CMP r0, 2                       ; a seagull takes the pommes, no damage (§5)
     JNE @godis
@@ -1169,6 +1190,9 @@ draw_actors:
     RET
 
 draw_actor:                         ; r7 = actor
+    LD r0, [r7 + AC_TYPE]
+    CMP r0, EN_DOZER
+    JEQ draw_dozer
     CALL en_row_of
     MOV r6, r1
     LDB r0, [r6 + 5]

@@ -144,6 +144,8 @@ NONE = $7FFF
 .var lvl, MAX_COLS * LV_ROWS    ; the level, column-major: lvl[col * 32 + row] = tile code
 .var tilebank, NUM_CODES * 32   ; unpacked tiles (4 bits per pixel), tile t at tilebank + 32 * t
 .var attr_tab, NUM_CODES        ; attribute of every tile code in the current world
+WASSET_MAX = 1024                   ; the largest world asset block (test/bo/engine.test.ts checks it)
+.var wasset, WASSET_MAX          ; the current world's assets (music, boss sprites; wassets.asm)
 .var wblk, WBLK_MAX              ; the current world's block (tile entries, attributes, strip, sky, own patterns)
 
 .var mode

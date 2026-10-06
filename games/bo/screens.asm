@@ -399,7 +399,7 @@ to_map:
     ST [mode], r0
     LDI r0, 0
     ST [scene_t], r0
-    LDI r0, MUS_HEMMA
+    LD r0, [lv_music]               ; the world's own tune (its assets are the ones loaded)
     JMP set_music
 
 on_map:
