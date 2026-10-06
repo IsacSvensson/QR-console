@@ -108,6 +108,7 @@ draw_play:
     SYS CLS
     CALL draw_strip
     CALL draw_level
+    CALL draw_actors
     CALL draw_bo
     CALL draw_fg
     CALL draw_combo

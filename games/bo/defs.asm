@@ -79,7 +79,7 @@ GOAL_T    = 150                 ; frames from the goal flag until the level ends
 BUB_T     = 90                  ; a bubble shows for 1.5 s
 COMBO_T   = 60                  ; the combo name shows for 1 s
 WHEEL_STEP = 16 * 16            ; a click every 16 px (1/16 px units)
-MAX_CP    = 4                   ; checkpoint flags per level
+MAX_CP    = 12                  ; checkpoint flags per level
 
 ; modes
 M_MENU = 0
@@ -271,3 +271,28 @@ MAX_FG = 8
 .var lv_part
 .var apple_chain                ; consecutive apples: rising pitch
 .var apple_chain_t
+
+; music
+.var music_track
+.var voice_t, 4
+.var voice_p, 4
+.var voice_s, 4
+.var sfx_busy, 6
+
+; enemies (actors.asm)
+.var en_n
+.var en_col, 80
+.var en_row, 40
+.var en_type, 40
+.var en_st, 40                  ; 0 can appear, 1 on screen, 2 defeated (until Bo falls)
+.var actors, 12 * 22
+.var t_act
+.var t_atop
+.var bo_pfoot                   ; Bo's feet at the start of the frame
+.var ev_n                       ; contact events (for the tests)
+.var ev_kind
+.var ev_type
+.var joke_id
+.var joke_t
+.var joke_x
+.var joke_y

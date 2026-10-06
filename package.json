@@ -33,7 +33,7 @@
     "blackbox:record": "tsx games/blackbox/tools/record.ts && tsx games/blackbox/tools/pick-frames.ts",
     "test:bo": "vitest run --project bo --reporter=verbose",
     "bo:gen": "tsx games/bo/tools/tiles.ts && tsx games/bo/tools/levels.ts",
-    "bo:record": "tsx games/bo/tools/record.ts"
+    "bo:record": "tsx games/bo/tools/record.ts && tsx games/bo/tools/pick-frames.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

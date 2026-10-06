@@ -489,3 +489,33 @@ Measurement (m20-t3): launches 45 degrees without ollie at 1.5/2.5/3.5: 5.25/15.
 tiles; with ollie at 2.5/3.5: 64.19 px, 53 frames, 16.56/23.19 tiles; 22.5 degrees with ollie at 1.5/2.5:
 40.69/51.75 px, 7.88/15.00 tiles; ice brake from 2.5: 80 frames, 100 px; sand: 24 frames, 17.25 px. ROM 16.1 KB
 (code 12.1 KB), max 15.1k cycles per frame (loading), play frames under 2k.
+
+## D-031 - Bo enemies, power-ups and voice (M21)
+Date: 2026-10-06 - Milestone: M21
+Decision:
+- **Actors**: 12 slots, spawned from the level's enemy list when their column comes into view, freed when far away
+  (they come back when in view again unless defeated); defeated enemies stay away until Bo loses a life. Nine
+  behaviours: walk, dive (seagull: hovers, warns with SKRIII and blinking for 40 frames, dives at where Bo was
+  in 24 frames, rises back to its own home), fly (wasp: loops), bounce (ball; the candy blob hops towards Bo),
+  throw (squirrel, snowman, popcorn cannon: aimed arcs when Bo is 12..48 px away, first throw after 1.5 s),
+  projectile, roll (sled: starts when Bo is 56 px away), pigeon (walks; startled by Bo *rolling* within 24 px it
+  flaps for 12 frames, then flies off harmless). Follow and platform behaviours come with the bosses and moving
+  platforms (M22-M23).
+- **Contact**: Bo's contact box includes the board (feet up 16 px). A landing (falling, feet at most 4 px below
+  the enemy's top at the start of the frame) is the row's joke from DESIGN 9; otherwise a hit if the body hurts.
+  The throwers' bodies are harmless (their projectiles hit), the cannon cannot be landed on usefully (Bo bounces
+  off), hedgehog and sled hurt from above too (DESIGN: "traff" / "hoppa over"), the jelly man and the ball throw Bo
+  up with BOUNCE_V. A joke apple (snail, candy blob) goes into the enemy's cell if empty. The godissnurr knocks
+  enemies away; a seagull touching Bo while he has pommes takes them (no damage). Contact events (kind, enemy type)
+  are kept in RAM for the tests.
+- **Hits**: the apple helmet takes one hit and gives 120 frames of blinking with no contact; otherwise a life.
+  Losing a life also loses pommes and godis.
+- **Music**: a two-voice sequencer as in BLACKBOX, a World 1 loop; with pommes every note lasts 2/3 of its frames.
+  Effects take their channel for their length and the music resumes.
+- **Test levels T4 and T5** (the zoo): stations of flag, helmet box, an enemy to land on, one to touch from the
+  side; T4 also has 100 apples, T5 pommes (stolen, then a hit with pommes, then one that runs out) and godis.
+  Station spacing and the reach of divers, throwers and sleds were tuned together so a station's enemies do not
+  reach the next station.
+Measurement: m21-zoo1 2727 frames, m21-zoo2 4697 frames, max 15.1k cycles per frame (loading), play frames under
+3k; melody note lengths 12/24/36 frames, with pommes 8/16/24. ROM 21.7 KB (code 16.1 KB, data 5.4 KB):
+code is well above the DESIGN 16 estimate (11-13 KB for the whole game); the M22 budget gate must deal with it.

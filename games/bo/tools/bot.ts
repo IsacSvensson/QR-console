@@ -177,6 +177,24 @@ export class Bot {
     );
   }
 
+  /** x px of the first live actor of `type` (undefined if none) */
+  actorX(type: number): number | undefined {
+    const base = this.S('actors');
+    for (let i = 0; i < 12; i++) {
+      const a = base + i * 22;
+      if (this.vm.read16(a) === type && this.vm.read16(a + 10) === 0) return this.vm.read16(a + 2) >> 4;
+    }
+    return undefined;
+  }
+  /** vx (1/16 px) of the first live actor of `type` */
+  actorVX(type: number): number {
+    const base = this.S('actors');
+    for (let i = 0; i < 12; i++) {
+      const a = base + i * 22;
+      if (this.vm.read16(a) === type && this.vm.read16(a + 10) === 0) return (this.vm.read16(a + 6) << 16) >> 16;
+    }
+    return 0;
+  }
   /** tile code of a level cell in RAM */
   cell(col: number, row: number) {
     return this.vm.read8(this.S('lvl') + col * 32 + row);

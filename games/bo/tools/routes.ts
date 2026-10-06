@@ -36,7 +36,195 @@ const ollieOnto = (b: Bot, ok: (x: Bot) => boolean, note: string, btn = B.R) =>
     note,
   );
 
+// ---- enemies (M21) ----
+const EV = { STOMP: 1, HIT: 2, HELMET: 3, BOUNCE: 4, POMMES: 5, KNOCK: 6, SPIKY: 7 };
+const ENEMIES = ['snail', 'gull', 'hedgehog', 'wasp', 'ball', 'teddy', 'squirrel', 'pigeon', 'snowman', 'sled', 'jelly', 'blob', 'cannon'];
+const PROJECTILE: Record<string, number> = { squirrel: 14, snowman: 15, cannon: 16 };
+
+/** Holds `buttons` until a contact event of one of `kinds` with enemy `type` happens. */
+const waitEvent = (b: Bot, buttons: number | ((x: Bot) => number), kinds: number[], type: number, max: number, note: string) => {
+  const n0 = b.u('ev_n');
+  const lives = b.u('lives');
+  b.until(
+    buttons,
+    (x) => {
+      if (x.u('lives') < lives) throw new Error(`${note}: lost a life`);
+      return x.u('ev_n') !== n0 && kinds.includes(x.u('ev_kind')) && x.u('ev_type') === type;
+    },
+    max,
+    note,
+  );
+};
+
+/** Gets the apple helmet from the box at `col` (rides there, stops, hops onto it). */
+const getHelmet = (b: Bot, col: number) => {
+  b.until((x) => (x.x < px(col) - 10 ? B.R : x.x > px(col) - 6 ? B.L : 0), (x) => Math.abs(x.x - (px(col) - 8)) <= 2 && x.vx === 0, 400, 'to the box');
+  hopOnto(b, (x) => x.u('helmet') === 1 && x.cell(col, 27) === 0, `helmet from the box at ${col}`);
+};
+
+/** Lands on an enemy of `type`: tries jumping k frames from now (pushing right) until the event comes. */
+const stompEnemy = (b: Bot, type: number, kinds: number[], note: string) => {
+  const n0 = b.u('ev_n');
+  const lives = b.u('lives');
+  // try: wait w frames (0..39), jump, steer right for s frames in the air (0, 4, 8, 16, 24, 32); or run up first
+  const STEER = [0, 4, 8, 16, 24, 32];
+  const attempt = () =>
+    b.search(
+    (k) => {
+      const run = k >= 240;
+      const w = run ? k - 240 : Math.floor(k / STEER.length);
+      const steer = run ? 20 : STEER[k % STEER.length]!;
+      b.hold(run ? B.R : 0, w);
+      b.step(B.A | (run ? B.R : 0));
+      for (let i = 0; i < 80 && !(b.u('ev_n') !== n0 && b.u('ev_type') === type); i++) {
+        b.step(B.A | (i < steer ? B.R : 0));
+        if (process.env.BO_DEBUG2 && process.env.BO_DEBUG2 === `${note}:${k}`) {
+          const base = b.S('actors');
+          const acts = Array.from({ length: 12 }, (_, j) => base + j * 22).filter((a) => b.vm.read16(a) === type).map((a) => `${b.vm.read16(a + 2) >> 4},${(b.vm.read16(a + 4) << 16 >> 16) >> 4} st${b.vm.read16(a + 10)}`);
+          console.log(i, 'bo', b.x, b.foot, b.vy, acts.join(' '));
+        }
+      }
+      if (b.u('ev_n') !== n0 && !kinds.includes(EV.SPIKY)) b.until(B.L, (x) => x.grounded || x.state > 1, 120); // steer back
+      if (process.env.BO_DEBUG) console.log(note, k, 'x', b.x, 'ev', b.u('ev_n') - n0, b.u('ev_kind'), b.u('ev_type'), 'state', b.state, 'helmet', b.u('helmet'), 'foot', b.foot, 'vy', b.vy, 'pfoot', b.w('bo_pfoot'), 'atop', b.w('t_atop'), 'ax', b.actorX(type));
+      b.land();
+    },
+    (x) => x.u('ev_n') === n0 + 1 && kinds.includes(x.u('ev_kind')) && x.u('ev_type') === type && x.state < 3 && x.u('lives') === lives,
+    300,
+    note,
+  );
+  try {
+    attempt();
+  } catch {
+    // from further away: stand 40..72 px left of it while it comes closer (or stands)
+    b.until(
+      (x) => {
+        const ax = x.actorX(type);
+        if (ax === undefined) return B.R;
+        const dx = ax - x.x;
+        if (dx > 72) return B.R;
+        if (dx < 40) return B.L;
+        return x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0;
+      },
+      (x) => {
+        const ax = x.actorX(type);
+        return ax !== undefined && x.vx === 0 && ax - x.x >= 40 && ax - x.x <= 72;
+      },
+      1200,
+      `${note}: into position`,
+    );
+    attempt();
+  }
+};
+
+/** One station per enemy (T4/T5): helmet from the box, land on the first one, touch the second one from the side. */
+const stations = (b: Bot, list: string[], c0: number) => {
+  let c = c0;
+  for (const e of list) {
+    const type = ENEMIES.indexOf(e) + 1;
+    getHelmet(b, c + 2);
+    const harmType = PROJECTILE[e] ?? type;
+    const kinds = e === 'hedgehog' || e === 'sled' ? [EV.SPIKY] : e === 'jelly' || e === 'cannon' ? [EV.BOUNCE] : [EV.STOMP];
+    stompEnemy(b, type, kinds, `${e}: landing on it`);
+    if (e === 'hedgehog' || e === 'sled') {
+      // blinking after the spiky landing: past the other one to the second box
+      b.until(B.R, (x) => x.x >= px(c + 22) - 12, 200, 'past it while blinking');
+      getHelmet(b, c + 22);
+    }
+    // the other one, from the side (waiting near a seagull or a thrower, running into the others)
+    const stand = e === 'gull' || !!PROJECTILE[e];
+    const home = px(c + 19);
+    waitEvent(
+      b,
+      (x) => {
+        const ax = x.actorX(type) ?? home;
+        const dx = ax - x.x;
+        if (stand && Math.abs(dx) < 32) return x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0;
+        return dx > 0 ? B.R : B.L;
+      },
+      [EV.HELMET],
+      harmType,
+      900,
+      `${e}: side`,
+    );
+    b.until(B.R, (x) => x.u('inv_t') === 0, 200);
+    b.until(B.R, (x) => x.x >= px(c + 26) - 4, 600, 'to the next station');
+    b.brakeToStop();
+    c += 26;
+  }
+  return c;
+};
+
 export const ROUTES: Record<string, Route> = {
+  // M21, T4: 100 apples (a life), then snail, seagull, hedgehog, wasp, ball, teddy: each landed on and touched
+  // from the side (the helmet takes the hit)
+  'm21-zoo1': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('T4');
+      b.until(B.R, (x) => x.x >= px(62), 1200, 'through the apples');
+      b.brakeToStop();
+      stations(b, ['snail', 'gull', 'hedgehog', 'wasp', 'ball', 'teddy'], 62);
+      b.until(B.R, (x) => x.u('goal_t') > 0, 600, 'to the goal');
+      b.until(0, (x) => x.mode === x.S('M_MENU'), 400);
+      b.hold(0, 10);
+    },
+  },
+  // M21, T5: squirrel, pigeon, snowman, sled, jelly man, candy blob, popcorn cannon; pommes and the seagull that
+  // takes them; godis and its one extra jump per airtime
+  'm21-zoo2': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('T5');
+      const c = stations(b, ['squirrel', 'pigeon', 'snowman', 'sled', 'jelly', 'blob', 'cannon'], 10);
+      b.until(B.R, (x) => x.u('pw_kind') === 1, 300, 'pommes');
+      b.until(B.R, (x) => x.vx === 40, 100, 'pommes speed');
+      b.hold(B.R, 10);
+      b.brakeToStop();
+      waitEvent(
+        b,
+        (x) => {
+          const d = (x.actorX(2) ?? px(c + 14)) - 24 - x.x; // stand a little left of the seagull
+          return d > 4 ? B.R : d < -4 ? B.L : x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0;
+        },
+        [EV.POMMES],
+        2,
+        500,
+        'the seagull takes the pommes',
+      );
+      // pommes again, and a snail touched from the side with pommes: still a hit (pommes changes nothing else)
+      b.until(B.R, (x) => x.u('pw_kind') === 1, 300, 'pommes again');
+      const n0 = b.u('ev_n');
+      b.until(B.R, (x) => x.u('ev_n') !== n0, 600, 'into the snail with pommes');
+      if (b.u('ev_kind') !== EV.HIT || b.u('ev_type') !== 1) throw new Error('expected a hit by the snail');
+      b.until(0, (x) => x.state === 0 && x.playing, 300, 'respawn');
+      b.rideTo(px(222));
+      b.brakeToStop();
+      b.jumpPast(px(233) + 6);
+      // pommes a third time: it runs out after 10 s
+      b.until(B.R, (x) => x.u('pw_kind') === 1, 400, 'pommes, third');
+      b.brakeToStop();
+      b.until(0, (x) => x.u('pw_kind') === 0, 700, 'pommes runs out');
+      b.until(B.R, (x) => x.u('pw_kind') === 2, 600, 'godis');
+      b.brakeToStop();
+      b.search(
+        (k) => {
+          b.hold(B.R, k);
+          b.step(B.R | B.A);
+          b.hold(B.R | B.A, 16);
+          b.step(B.B); // godissnurr (B alone)
+          b.hold(B.R, 26);
+          b.step(B.B); // a second B in the same airtime: a kickflip, not another jump
+          b.land(B.R);
+        },
+        (x) => x.foot === px(32 - 4 - 6),
+        80,
+        'up onto the platform with the godissnurr',
+      );
+      b.until(B.R, (x) => x.u('goal_t') > 0, 600, 'to the goal');
+      b.until(0, (x) => x.mode === x.S('M_MENU'), 400);
+      b.hold(0, 10);
+    },
+  },
   // M20, T3: idle signature, the seven kicker launches (with tricks in some flights), grind, sand, trampoline,
   // ice, a weak block, a box, the water (a life), the goal.
   'm20-t3': {

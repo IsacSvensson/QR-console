@@ -637,6 +637,10 @@ och två kantsensorer. Väggar kontrolleras med kroppsboxen (6 × 14, hukande 6 
 - **Världens tiles** (cirka 30 per värld) lagras med **2 bitar per pixel** och en fyrfärgspalett per tile
   (18 B i stället för 32). De packas upp till RAM när världen byts. `SPR` och `MAP` läser vilken adress som helst.
   Sprites (Bo, fiender, föremål) ligger i ROM med 4 bitar per pixel.
+- **Varje värld ska se tydligt olika ut** (önskemål 2026-10-06): egen himmelsfärg, egen parallaxremsa (hus, granar,
+  stadssiluett, snöberg, godisslott), egna färger på mark, backar, ramper, plattformar och block, och egna
+  dekor-tiles (världens 32 egna koder). Samma form får gärna återanvändas, men färgerna och detaljerna ska göra att
+  man ser vilken värld man är i på en enda skärm.
 - **Brädan** ritas med `RECTFILL` och `PSET`: däck i brädans färg, två uppvikta ändar och ljusa hjul. Mitt i en
   kickflip ritas den upp och ned med hjulen överst och träundersidan synlig. Shove-it är andra rektanglar. Nya
   brädor kostar en färg i en tabell.

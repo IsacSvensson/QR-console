@@ -148,6 +148,8 @@ cap_speed:
 
 ; ---- bo_update ------------------------------------------------------------------------------------
 bo_update:
+    CALL feet
+    ST [bo_pfoot], r2
     LDI r0, 0
     ST [f_push], r0
     ST [f_brake], r0
@@ -371,7 +373,7 @@ bo_ground:
     ST [bo_crouch], r0
     ST [bo_lip_t], r0
     LDI r0, SFX_POP
-    SYS SFX
+    CALL play_sfx
     JMP air_frame
 @roll:
     ; move along the ground
@@ -474,7 +476,7 @@ bo_ground:
     LDI r0, TX_OJ
     CALL say
     LDI r0, SFX_BUMP
-    SYS SFX
+    CALL play_sfx
 @soft:
     RET
 
@@ -497,7 +499,7 @@ wheel_roll:
     SUB r1, WHEEL_STEP
     PUSH r1
     LDI r0, SFX_CLICK
-    SYS SFX
+    CALL play_sfx
     POP r1
 @store:
     ST [wheel_d], r1
@@ -546,7 +548,7 @@ bo_air:
     LDI r0, 0
     ST [bo_lip_t], r0
     LDI r0, SFX_POP
-    SYS SFX
+    CALL play_sfx
 @steer:
     CALL trick_air
     CALL input_dir
@@ -718,7 +720,7 @@ land:
     JMP grind_start
 @ground:
     LDI r0, SFX_LAND
-    SYS SFX
+    CALL play_sfx
     LD r0, [bo_air_t]               ; a big landing: Bo looks back (signature)
     CMP r0, LOOK_AIR
     JLT @tricks
@@ -735,7 +737,7 @@ land_bounce:
     LDI r0, 0
     ST [bo_jheld], r0
     LDI r0, SFX_BOING
-    SYS SFX
+    CALL play_sfx
     RET
 
 ; a weak obstacle or a box: it breaks (exactly its cells), Bo bounces up a little (DESIGN.md §3.7)
@@ -762,7 +764,7 @@ grind_start:
     LDI r1, 0
     CALL combo_add
     LDI r0, SFX_GRIND
-    SYS SFX
+    CALL play_sfx
     RET
 
 ; grind_end: a long enough grind says WIII! (at most every 5 s)
@@ -796,7 +798,7 @@ bo_grind:
     ST [bo_air_t], r0
     ST [bo_ollied], r0
     LDI r0, SFX_POP
-    SYS SFX
+    CALL play_sfx
     JMP air_frame
 @ride:
     LD r0, [grind_t]                ; 10 points per 8 frames
@@ -811,7 +813,7 @@ bo_grind:
     AND r0, 31
     JNZ @speed
     LDI r0, SFX_GRIND
-    SYS SFX
+    CALL play_sfx
 @speed:
     LD r0, [bo_sattr]               ; no friction on a flat rail; a diagonal one accelerates like a 45° slope
     CALL slope_info
@@ -899,11 +901,13 @@ bo_die:
     LDI r0, 0
     ST [trick], r0
     ST [bo_vx], r0
+    ST [pw_kind], r0                ; pommes and godis are lost with the life
+    ST [pw_t], r0
     CALL combo_reset
     LDI r0, TX_AJ
     CALL say
     LDI r0, SFX_AJ
-    SYS SFX
+    CALL play_sfx
     RET
 
 bo_dead:
@@ -915,6 +919,7 @@ bo_dead:
     SUB r0, 1
     ST [lives], r0
     JZ @over
+    CALL actors_reset               ; the enemies come back
     LD r1, [cp_col]                 ; back to the last checkpoint
     CALL bo_spawn
     CALL camera_snap

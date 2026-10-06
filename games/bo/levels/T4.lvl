@@ -1,0 +1,43 @@
+# T4 - test level: the enemy zoo, part 1 (PLAN.md M21): a double row of 100 apples (a life), then a station per enemy
+# of DESIGN 9: a flag, a box with the apple helmet, an enemy to land on, one to touch from the side (spiky ones:
+# a second helmet box after it).
+name  TESTBANA 4
+world 1
+music 1
+rows  16
+start 3
+
+terrain
+h 4
+flat 226
+
+objects
+8   sign right
+10  apples g 50
+10  apples g+1 50
+62  flag
+64  box g apple
+74  enemy snail g
+81  enemy snail g
+88  flag
+90  box g apple
+100 enemy gull g+2
+107 enemy gull g+2
+114 flag
+116 box g apple
+126 enemy hedgehog g
+133 enemy hedgehog g
+136 box g apple
+140 flag
+142 box g apple
+152 enemy wasp g+1
+159 enemy wasp g+1
+166 flag
+168 box g apple
+178 enemy ball g
+185 enemy ball g
+192 flag
+194 box g apple
+204 enemy teddy g
+211 enemy teddy g
+218 goal

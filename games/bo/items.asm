@@ -110,11 +110,7 @@ t_apple:
     ST [apple_chain_t], r1
     SHL r0, 1
     LD r1, [r0 + apple_notes]
-    LDI r0, 1
-    LDI r2, 6
-    LDI r3, 9
-    SYS SOUND
-    RET
+    JMP apple_pling
 
 t_star:
     PUSH r3
@@ -132,7 +128,7 @@ t_star:
     LDI r0, TX_EN_STJARNA
     CALL say
     LDI r0, SFX_STAR
-    SYS SFX
+    CALL play_sfx
     RET
 
 t_pickup:
@@ -162,7 +158,7 @@ got_part:
     LDB r0, [r1 + part_lines]
     CALL say
     LDI r0, SFX_STAR
-    SYS SFX
+    CALL play_sfx
     RET
 
 got_pommes:
@@ -180,7 +176,7 @@ power_on:                           ; r0 = kind, r1 = frames, r2 = line (the new
     MOV r0, r2
     CALL say
     LDI r0, SFX_POWER
-    SYS SFX
+    CALL play_sfx
     RET
 got_apple_helmet:
     LDI r0, 1
@@ -188,7 +184,7 @@ got_apple_helmet:
     LDI r0, TX_APPELHJALM
     CALL say
     LDI r0, SFX_POWER
-    SYS SFX
+    CALL play_sfx
     RET
 
 ; godis_jump: the GODISSNURR is a new ollie in mid-air, once per airtime
@@ -244,7 +240,7 @@ break_at:
     LDI r0, 0
     CALL set_cell                   ; r6, r7 = the box cell
     LDI r0, SFX_BREAK
-    SYS SFX
+    CALL play_sfx
     SHL r5, 1
     LD r5, [r5 + box_content]
     JMP r5
@@ -296,7 +292,7 @@ break_at:
     SUB r3, 1
     JNZ @crow
     LDI r0, SFX_BREAK
-    SYS SFX
+    CALL play_sfx
 @none:
     RET
 
@@ -376,7 +372,7 @@ checkpoints:
     LDI r0, T_FLAG_DONE
     CALL set_cell
     LDI r0, SFX_FLAG
-    SYS SFX
+    CALL play_sfx
     CALL feet
 @goal:
     LD r0, [goal_t]
@@ -389,7 +385,7 @@ checkpoints:
     LDI r0, 1                       ; at the goal: Bo brakes in by himself
     ST [goal_t], r0
     LDI r0, SFX_FLAG
-    SYS SFX
+    CALL play_sfx
 @done:
     RET
 @counting:

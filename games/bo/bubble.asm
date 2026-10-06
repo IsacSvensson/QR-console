@@ -150,7 +150,7 @@ draw_bubble:
     MOV r1, r5
     ADD r1, 3
     MOV r2, r6
-    SUB r2, 1                       ; glyph rows 0-1 are the diacritic space
+    ADD r2, 1                       ; glyph rows 0-1 are the diacritic space (for the dots and rings)
     CALL draw_text
 @none:
     RET

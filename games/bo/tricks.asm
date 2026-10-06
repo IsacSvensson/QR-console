@@ -48,7 +48,7 @@ trick_air:
     CALL godis_jump
 @sound:
     LDI r0, SFX_TRICK
-    SYS SFX
+    CALL play_sfx
 @done:
     RET
 @active:
@@ -142,7 +142,7 @@ sloppy:
     LDI r0, TX_OJ
     CALL say
     LDI r0, SFX_BUMP
-    SYS SFX
+    CALL play_sfx
     RET
 clean:
     LD r7, [combo_n]
@@ -181,7 +181,7 @@ clean:
     CALL say
 @small:
     LDI r0, SFX_COMBO
-    SYS SFX
+    CALL play_sfx
     JMP combo_reset
 
 ; score_add: r0 = points

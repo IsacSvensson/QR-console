@@ -21,7 +21,9 @@ export const OT = {
 export const BOX_CONTENT: Record<string, number> = { apples: 0, apple: 1, pommes: 2, godis: 3 };
 export const SIGN_KIND: Record<string, number> = { right: 0, a: 1, b: 2, down: 3 };
 export const RAMP_KIND: Record<string, number> = { ramp45: 0, ramp45l: 1, ramp22: 2, ramp22l: 3 };
-export const ENEMY_TYPE: Record<string, number> = { snail: 1 };
+export const ENEMY_TYPE: Record<string, number> = {
+  snail: 1, gull: 2, hedgehog: 3, wasp: 4, ball: 5, teddy: 6, squirrel: 7, pigeon: 8, snowman: 9, sled: 10, jelly: 11, blob: 12, cannon: 13,
+};
 export const PREFAB_IDS = Object.keys(PREFABS);
 
 // terrain segment encoding: type << 5 | (n - 1); type 7 = special

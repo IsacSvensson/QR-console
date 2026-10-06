@@ -2,38 +2,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { CLASS } from '../../games/bo/tools/tiles';
-import { boView, frameProblems, gridOf } from './frames';
-import { type Bo, CONSTS, GAME_DIR, HMAP, LEVEL_IDS, ROWS, type RefGrid, buildBo, derivedNumbers, readRefLevel, runReplay, s16, symbol } from './oracle';
+import { gridOf } from './frames';
+import { type Bo, CONSTS, GAME_DIR, HMAP, LEVEL_IDS, ROWS, buildBo, derivedNumbers, readRefLevel, s16, symbol } from './oracle';
+import { type F, play } from './play';
 
 // M20 acceptance: skate mechanics and the feel prototype (PLAN.md Part 3).
 let bo: Bo;
 const A_BTN = 16;
 
-interface F {
-  input: number;
-  level: string;
-  playing: boolean;
-  x16: number;
-  y16: number;
-  cx: number;
-  foot: number;
-  vx: number;
-  vy: number;
-  state: number;
-  grounded: boolean;
-  crouch: boolean;
-  sattr: number;
-  pose: number;
-  trick: number;
-  comboPts: number;
-  comboN: number;
-  score: number;
-  lives: number;
-  bub: number;
-  bubT: number;
-  mode: number;
-  clicks: number;
-}
 const runs = new Map<string, F[]>();
 const problems = new Map<string, string[]>();
 const S = (n: string) => symbol(bo.sym, n);
@@ -49,79 +25,11 @@ const TRICKS: Record<string, { frames: number; points: number }> = (() => {
   return out;
 })();
 
-/** Replays a run, with the per-frame reference checks against a live reference grid: the only changes the
- * engine may make to a level in RAM are taken collectibles, flags turning green and breakables vanishing whole. */
-function play(name: string) {
-  const out: F[] = [];
-  const probs: string[] = [];
-  let live: RefGrid | null = null;
-  let liveLevel = '';
-  let prev: Uint8Array | null = null;
-  const lvl = S('lvl');
-  const tab = S('attr_tab');
-  const run = runReplay(bo, name, (v) => {
-    const b = boView(bo, v);
-    const mode = v.vm.read16(S('mode'));
-    if (!b.playing) {
-      prev = null;
-    } else {
-      if (b.level !== liveLevel || !prev) {
-        const g = gridOf(b.level);
-        live = { ...g, attr: g.attr.slice(), used: g.used.slice() };
-        liveLevel = b.level;
-      }
-      const W = live!.level.width;
-      const now = v.vm.mem.slice(lvl, lvl + W * ROWS);
-      if (prev) {
-        for (let i = 0; i < now.length; i++) {
-          if (now[i] === prev[i]) continue;
-          const was = v.vm.read8(tab + prev[i]!) & 15;
-          const c = Math.floor(i / ROWS);
-          const r = i % ROWS;
-          if ((was === CLASS.APPLE || was === CLASS.STAR || was === CLASS.PICKUP) && now[i] === 0) {
-            live!.attr[i] = 0;
-            continue;
-          }
-          if (was === CLASS.WEAK || was === CLASS.BOX) {
-            const br = live!.breakables.find((k) => c >= k.col && c < k.col + k.w && r <= k.row && r > k.row - k.h);
-            if (!br) {
-              probs.push(`frame ${v.f + 1}: ${b.level} breakable cell ${c},${r} changed but no breakable there`);
-              continue;
-            }
-            // exactly its cells, in this frame
-            for (let cc = br.col; cc < br.col + br.w; cc++)
-              for (let rr = br.row; rr > br.row - br.h; rr--) {
-                const ii = cc * ROWS + rr;
-                const cls = v.vm.read8(tab + now[ii]!) & 15;
-                if (br.kind === 'weak' && now[ii] !== 0) probs.push(`frame ${v.f + 1}: weak ${cc},${rr} not cleared`);
-                if (br.kind === 'box' && now[ii] !== 0 && cls !== CLASS.PICKUP && cls !== CLASS.APPLE) probs.push(`frame ${v.f + 1}: box ${cc},${rr} left ${now[ii]}`);
-                live!.attr[ii] = v.vm.read8(tab + now[ii]!);
-              }
-            continue;
-          }
-          const nowCls = v.vm.read8(tab + now[i]!) & 15;
-          if (was === CLASS.EMPTY && nowCls === CLASS.EMPTY) continue; // decor (a flag turning green)
-          if (was === CLASS.EMPTY && (nowCls === CLASS.APPLE || nowCls === CLASS.PICKUP)) {
-            live!.attr[i] = v.vm.read8(tab + now[i]!); // a box's content
-            continue;
-          }
-          probs.push(`frame ${v.f + 1}: ${b.level} cell ${c},${r} changed from class ${was} to ${nowCls}`);
-        }
-      }
-      prev = now;
-      probs.push(...frameProblems(b, v.f, live!));
-    }
-    const clicks = v.audio.filter((a) => a.channel === 2 && a.freq === 2400 && a.duration === 2).length;
-    out.push({
-      input: v.input, level: b.level, playing: b.playing, x16: b.x16, y16: b.y16, cx: b.cx, foot: b.foot, vx: b.vx, vy: b.vy,
-      state: b.state, grounded: b.grounded, crouch: b.crouch, sattr: b.sattr, pose: v.w('bo_pose'), trick: v.w('trick'),
-      comboPts: v.w('combo_pts'), comboN: v.w('combo_n'), score: v.vm.read16(S('score_hi')) * 10000 + v.vm.read16(S('score_lo')),
-      lives: v.w('lives'), bub: v.vm.read16(S('bub_id')), bubT: v.w('bub_t'), mode, clicks,
-    });
-  });
-  runs.set(name, out);
-  problems.set(name, probs);
-  return run;
+function playRun(name: string) {
+  const r = play(bo, name);
+  runs.set(name, r.frames);
+  problems.set(name, r.problems);
+  return r.run;
 }
 
 beforeAll(async () => {
@@ -131,7 +39,7 @@ beforeAll(async () => {
 for (const name of ['m20-t3', 'm20-gameover']) {
   describe(`replay ${name} (M20)`, () => {
     it('matches the committed per-frame hashes; budgets; reference grid checks (live: breakables vanish whole)', () => {
-      const run = play(name);
+      const run = playRun(name);
       expect(run.hashMismatch, 'first frame whose state hash differs').toBe(-1);
       expect(run.expectedFrames).toBe(run.rf.frames);
       expect(problems.get(name)!.slice(0, 10)).toEqual([]);

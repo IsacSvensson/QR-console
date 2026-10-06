@@ -2,9 +2,9 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M21 (Enemies, power-ups, items, HUD, Bo's voice)
+**Current milestone:** M22 (World 1 and the game around it, budget gate)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
-Part 3 (Bo's Skateäventyr) in progress: M19 and M20 done.
+Part 3 (Bo's Skateäventyr) in progress: M19, M20 and M21 done.
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -36,7 +36,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 
 - [x] M19 Engine: levels, scrolling, rolling
 - [x] M20 Skate mechanics and the feel prototype
-- [ ] M21 Enemies, power-ups, items, HUD, Bo's voice
+- [x] M21 Enemies, power-ups, items, HUD, Bo's voice
 - [ ] M22 World 1 and the game around it (budget gate)
 - [ ] M23 Worlds 2 and 3
 - [ ] M24 Worlds 4 and 5, the theft and the ending
@@ -52,8 +52,12 @@ M20 done — kickers, landing boost, rails and grind, tricks and combos, sloppy 
 weak blocks and boxes, water and pits, flags, lives, game over; Bo's signature poses, bubbles in the game's font
 (`tools/text.ts`), wheel clicks; test level T3; `demo/bo.gif` (starts in the test menu: the feel prototype for the
 human's first Bo test, PLAN *Manual acceptance* 1). All seven T3 kicker launches match DESIGN §3.3 (D-030).
-**Bo ROM 16.1 KB after M20 (code 12.1 KB)** — code is heavier than DESIGN §16 estimated; watch it before the M22
-budget gate.
+M21 done — the 13 enemies of DESIGN §9 (nine behaviours, every landing joke and side hit shown in the zoo test
+levels T4/T5), apple helmet, pommes (music 1.5× faster), godis (one extra jump), 100 apples = a life, a music
+sequencer with a World 1 loop, the bubble font with ÅÄÖ checked byte for byte against DESIGN §11–12 (D-031).
+**Bo ROM 21.7 KB after M21 (code 16.1 KB)** — code is far above DESIGN §16's 11–13 KB; the M22 budget gate must
+shrink it (shared helpers, tables) or apply the cut list. Human request (2026-10-06): the worlds must look clearly
+different (own sky, parallax, ground/structure colours, decor) — added to DESIGN §14.4, done in M23–M24.
 DESIGN §17 defaults apply (only question 1 answered). **Part 3 runtime baseline = the M19 commit** — from it on
 `git diff <M19> -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
 
@@ -75,6 +79,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
 | Bo mockup: full-screen draw cost | 1 356 cycles/frame (17 MAP columns + sprites + bubble + HUD); font 47 glyphs = 376 B | D-025–D-027 |
 | Bo ROM estimate | 23.5–29 KB of 32 KB (code 11–13 KB); measured at the M22 budget gate | DESIGN §16 |
+| Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
 | Bo ROM after M19 | 8.2 KB (code 5.8 KB, data 2.4 KB); cartridge 4.7 KB; play frames ~1.4k cycles, loading ≤ 15.1k | test:bo |
 

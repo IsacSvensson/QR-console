@@ -2,6 +2,7 @@
 # coasting and braking; then blocks of 1, 2, 3 and 5 tiles, steps up and down, a ceiling, a flag and water.
 name  TESTBANA 1
 world 1
+music 1
 rows  16
 start 3
 

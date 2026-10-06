@@ -4,6 +4,7 @@
 # a pit and the goal.
 name  TESTBANA 3
 world 1
+music 1
 rows  32
 start 3
 

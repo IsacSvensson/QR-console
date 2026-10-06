@@ -68,7 +68,7 @@ export interface RefLevel {
 }
 
 export const LEVEL_IDS: string[] = (() => {
-  const order = ['T1', 'T2', 'T3', ...[1, 2, 3, 4, 5].flatMap((w) => [1, 2, 3, 4, 5].map((l) => `${w}-${l}`))];
+  const order = ['T1', 'T2', 'T3', 'T4', 'T5', ...[1, 2, 3, 4, 5].flatMap((w) => [1, 2, 3, 4, 5].map((l) => `${w}-${l}`))];
   const have = new Set(readdirSync(join(GAME_DIR, 'levels')).filter((f) => f.endsWith('.lvl')).map((f) => f.slice(0, -4)));
   return order.filter((id) => have.has(id));
 })();

@@ -44,6 +44,7 @@ level_start:
     LDI r1, 0
     ST [cp_n], r1
     ST [fg_n], r1
+    ST [en_n], r1
     ST [cp_next], r1
     ST [goal_t], r1
     ST [goal_said], r1
@@ -121,6 +122,9 @@ ld_tiles2:
     RET
 
 ld_finish:
+    CALL actors_reset
+    LD r0, [lv_music]
+    CALL set_music
     CALL bo_spawn_start
     CALL camera_snap
     LDI r0, M_PLAY
@@ -334,7 +338,7 @@ stamp_objects:
 
 .data
 obj_stamp: .word os_none, os_tile, os_rect, os_apples, os_box, os_star, os_part, os_flag, os_goal
-           .word os_none, os_fg, os_ramp, os_raild, os_platform, os_sign, os_tile, os_prefab
+           .word os_enemy, os_fg, os_ramp, os_raild, os_platform, os_sign, os_tile, os_prefab
 .code
 
 ; set_cell: r6 = column, r7 = row, r0 = code (registers preserved)

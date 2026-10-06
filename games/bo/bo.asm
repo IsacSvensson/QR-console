@@ -10,11 +10,13 @@
 .include "player.asm"
 .include "tricks.asm"
 .include "items.asm"
+.include "actors.asm"
 .include "bubble.asm"
 .include "sound.asm"
 .include "draw.asm"
 .include "menu.asm"
 .include "gfx.asm"
+.include "gfx_enemies.asm"
 
 init:
     LDI r4, ts_common               ; the common tiles (apples, stars, signs ...) never change
@@ -50,6 +52,7 @@ update:
     SHL r0, 1
     LD r0, [r0 + mode_handlers]
     CALL r0
+    CALL music_step
     RET
 
 on_load:
@@ -61,6 +64,7 @@ on_load:
 on_play:
     CALL timers
     CALL bo_update
+    CALL actors_update
     CALL camera_update
     CALL draw_play
     RET

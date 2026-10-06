@@ -4,6 +4,7 @@
 # heights, a last 45° hill down and a run-out.
 name  TESTBANA 2
 world 1
+music 1
 rows  32
 start 3
 

@@ -34,7 +34,7 @@ export interface Lvl {
 }
 
 /** Level order in the ROM table: test levels first, then the 25 game levels as they exist. */
-export const LEVEL_ORDER = ['T1', 'T2', 'T3', ...[1, 2, 3, 4, 5].flatMap((w) => [1, 2, 3, 4, 5].map((l) => `${w}-${l}`))];
+export const LEVEL_ORDER = ['T1', 'T2', 'T3', 'T4', 'T5', ...[1, 2, 3, 4, 5].flatMap((w) => [1, 2, 3, 4, 5].map((l) => `${w}-${l}`))];
 
 export const LEVELS_DIR = join(GAME_DIR, 'levels');
 
