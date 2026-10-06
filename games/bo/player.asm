@@ -946,6 +946,8 @@ bo_dead:
     CALL camera_snap
     RET
 @over:
+    LDI r0, MUS_OVER
+    CALL set_music
     LDI r0, ST_OVER
     ST [bo_state], r0
     LDI r0, OVER_T

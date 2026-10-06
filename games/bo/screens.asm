@@ -330,6 +330,8 @@ on_code:
     STB [r1 + code_v], r3
     AND r0, BTN_A
     JZ @draw
+    CALL code_decode                ; a real code: back to that world (Z clear if it was one)
+    JNZ @done
     LDI r1, 0                       ; four Bos: the test levels
 @chk:
     LDB r0, [r1 + code_v]
@@ -390,6 +392,219 @@ on_code:
     LDI r2, 84
     CALL draw_text_id
 @done:
+    RET
+
+;; The picture code (DESIGN 7.3): 16 bits in four pictures of 4 bits, high to low:
+;;   world (3 bits: 1-5, or 6 = the game is done) | world boards (5 bits, world 1 = the lowest)
+;;   | worlds with all 12 stars (5 bits) | checksum (3 bits) = (3 * world + 5 * boards + 7 * full + 1) & 7.
+;; Boards and full worlds can only be worlds that are done (those before the code's world).
+; code_check: r0 = world, r1 = boards, r2 = full -> r3 = checksum
+code_check:
+    MOV r3, r0
+    MUL r3, 3
+    PUSH r1
+    MUL r1, 5
+    ADD r3, r1
+    POP r1
+    PUSH r2
+    MUL r2, 7
+    ADD r3, r2
+    POP r2
+    ADD r3, 1
+    AND r3, 7
+    RET
+
+; code_encode: the code of the current state -> map_code (the map shows it)
+code_encode:
+    LD r0, [map_world]              ; world: the map's (1-5), or 6 when the final is done
+    ADD r0, 1
+    LD r1, [super_ok]
+    CMP r1, 0
+    JEQ @w
+    LDI r0, 6
+@w:
+    LD r1, [boards]                 ; world boards: bits 1-5 of boards
+    SHR r1, 1
+    AND r1, 31
+    LDI r2, 0                       ; full worlds: all 12 stars of the four levels
+    LDI r4, 0
+@world:
+    MOV r5, r4
+    MUL r5, 5
+    LDI r6, 0
+    LDI r7, 0
+@level:
+    LDB r3, [r5 + progress]
+    AND r3, 7
+    CMP r3, 7
+    JNE @notall
+    ADD r7, 1
+@notall:
+    ADD r5, 1
+    ADD r6, 1
+    CMP r6, 4
+    JLT @level
+    CMP r7, 4
+    JLT @nf
+    LDI r3, 1
+    SHL r3, r4
+    OR r2, r3
+@nf:
+    ADD r4, 1
+    CMP r4, 5
+    JLT @world
+    MOV r3, r0                      ; only worlds that are done
+    SUB r3, 1
+    LDI r5, 1
+    SHL r5, r3
+    SUB r5, 1
+    AND r1, r5
+    AND r2, r5
+    CALL code_check
+    SHL r0, 13
+    SHL r1, 8
+    OR r0, r1
+    SHL r2, 3
+    OR r0, r2
+    OR r0, r3
+    ST [map_code], r0
+    RET
+
+; code_decode: the four pictures entered -> Z set if it is no code; else the game as the code says, and the map
+code_decode:
+    LDB r0, [code_v]                ; v = the four nibbles
+    SHL r0, 4
+    LDB r1, [code_v + 1]
+    OR r0, r1
+    SHL r0, 4
+    LDB r1, [code_v + 2]
+    OR r0, r1
+    SHL r0, 4
+    LDB r1, [code_v + 3]
+    OR r0, r1
+    MOV r6, r0                      ; r6 = v
+    SHR r0, 13                      ; world
+    CMP r0, 1
+    JLT @no
+    CMP r0, 6
+    JGT @no
+    MOV r1, r6
+    SHR r1, 8
+    AND r1, 31
+    MOV r2, r6
+    SHR r2, 3
+    AND r2, 31
+    MOV r5, r0                      ; boards and full worlds only among the worlds done
+    SUB r5, 1
+    LDI r4, 1
+    SHL r4, r5
+    SUB r4, 1
+    XOR r4, 31                      ; the worlds not done
+    MOV r5, r1
+    OR r5, r2
+    AND r5, r4
+    JNZ @no
+    CALL code_check
+    MOV r5, r6
+    AND r5, 7
+    CMP r3, r5
+    JNE @no
+    ; the game as the code says: progress, boards, the theft, SUPERBOSSE
+    ST [t_cw], r0
+    ST [t_cb], r1
+    ST [t_cf], r2
+    LDI r7, 0
+@clear:
+    LDI r3, 0
+    STB [r7 + progress], r3
+    ADD r7, 1
+    CMP r7, 25
+    JLT @clear
+    LD r0, [t_cw]                   ; the levels of the worlds done are done
+    SUB r0, 1
+    MUL r0, 5
+    CMP r0, 25
+    JLE @n
+    LDI r0, 25
+@n:
+    LDI r7, 0
+@done:
+    CMP r7, r0
+    JGE @worlds
+    LDI r3, PR_DONE
+    STB [r7 + progress], r3
+    ADD r7, 1
+    JMP @done
+@worlds:
+    LDI r4, 0                       ; per world: its board (the four parts), all 12 stars
+@wl:
+    MOV r5, r4
+    MUL r5, 5
+    LDI r6, 0
+@lv:
+    LDB r3, [r5 + progress]
+    LD r1, [t_cb]
+    SHR r1, r4
+    AND r1, 1
+    JZ @nopart
+    OR r3, PR_PART
+@nopart:
+    LD r1, [t_cf]
+    SHR r1, r4
+    AND r1, 1
+    JZ @nostars
+    OR r3, 7
+@nostars:
+    STB [r5 + progress], r3
+    ADD r5, 1
+    ADD r6, 1
+    CMP r6, 4
+    JLT @lv
+    ADD r4, 1
+    CMP r4, 5
+    JLT @wl
+    LDI r0, 1 << BD_OWN
+    ST [boards], r0
+    CALL boards_update
+    LDI r0, 0
+    ST [stolen], r0
+    ST [super_ok], r0
+    ST [board_sel], r0
+    LD r0, [t_cw]
+    CMP r0, 5
+    JLT @map
+    LD r1, [boards]                 ; World 5 or later: the theft has happened, the licorice board
+    OR r1, 1 << BD_LIQ
+    ST [boards], r1
+    CMP r0, 6
+    JEQ @end
+    LDI r1, 1
+    ST [stolen], r1
+    LDI r1, BD_LIQ
+    ST [board_sel], r1
+    JMP @map
+@end:
+    LDI r1, 1                       ; the game is done: SUPERBOSSE, his own board
+    ST [super_ok], r1
+    LDI r0, 5
+@map:
+    SUB r0, 1
+    ST [map_world], r0
+    MUL r0, 5
+    LD r1, [super_ok]
+    CMP r1, 0
+    JEQ @sel
+    LDI r0, 24
+@sel:
+    ST [map_sel], r0
+    ST [unlocked], r0
+    CALL to_map
+    LDI r0, 1
+    CMP r0, 0
+    RET
+@no:
+    LDI r0, 0
+    CMP r0, 0
     RET
 
 ; ---- the world map (FIRST10 §6) -------------------------------------------------------------------
@@ -554,6 +769,23 @@ on_map:
     LD r4, [board_sel]
     LDB r4, [r4 + board_colors]
     SYS RECTFILL
+    CALL code_encode                ; the picture code of this world (DESIGN 7.3), top right
+    LD r6, [map_code]
+    LDI r5, 3
+@pic:
+    MOV r0, r6
+    AND r0, 15
+    SHL r0, 1
+    LD r0, [r0 + code_pics]
+    MOV r1, r5
+    MUL r1, 10
+    ADD r1, 84
+    LDI r2, 4
+    LDI r3, 0
+    SYS SPR
+    SHR r6, 4
+    SUB r5, 1
+    JGE @pic
     ; the seagull with the world's food flies over to the boss's stop
     LD r1, [scene_t]
     CMP r1, 120
@@ -685,7 +917,8 @@ level_done:
     ST [mode], r0
     LDI r0, 0
     ST [scene_t], r0
-    RET
+    LDI r0, MUS_FANFARE             ; level done: the fanfare
+    JMP set_music
 
 on_tally:
     LD r0, [scene_t]
@@ -890,7 +1123,8 @@ on_cut:
     ST [super_ok], r1
     LDI r1, M_END
     ST [mode], r1
-    RET
+    LDI r0, MUS_END
+    JMP set_music
 @next:
     ADD r0, 1
     ST [map_world], r0

@@ -1163,6 +1163,41 @@ export const ROUTES: Record<string, Route> = {
       b.hold(0, 60);
     },
   },
+  // M25: from the title, B, the picture code of World 3 with the boards of Worlds 1-2 and all stars of World 1
+  // (DESIGN 7.3: ↑/↓ change a picture, ←/→ move, A); back in World 3: its map, then its first level
+  'm25-code': {
+    seed: 1,
+    run: (b) => {
+      const world = 3;
+      const boards = 0b11;
+      const full = 0b01;
+      const v = (world << 13) | (boards << 8) | (full << 3) | ((3 * world + 5 * boards + 7 * full + 1) & 7);
+      b.until(0, (x) => x.mode === x.S('M_TITLE') && x.inputs.length > 30, 600, 'title');
+      b.step(B.B);
+      b.step(0);
+      b.until(0, (x) => x.mode === x.S('M_CODE'), 30, 'the code screen');
+      for (let i = 0; i < 4; i++) {
+        const n = (v >> (12 - 4 * i)) & 15;
+        const [btn, times] = n <= 8 ? [B.U, n] : [B.D, 16 - n];
+        for (let k = 0; k < times; k++) {
+          b.step(btn);
+          b.step(0);
+        }
+        if (i < 3) {
+          b.step(B.R);
+          b.step(0);
+        }
+      }
+      b.hold(0, 30);
+      b.step(B.A);
+      b.step(0);
+      fromMap(b);
+      LEVEL_RUNS['3-1']!(b);
+      b.until(B.R, (x) => x.u('goal_t') > 0, 3000, 'to the goal');
+      b.until(0, (x) => x.mode === x.S('M_TALLY'), 600, 'the tally');
+      b.hold(0, 30);
+    },
+  },
   // M24: the whole game from the title, all 25 levels (every star and part), the theft, the final and the ending
   // with the statistics (the golden board with all 60 stars); then from the title to Backhoppet: SUPERBOSSE
   'm24-game': {

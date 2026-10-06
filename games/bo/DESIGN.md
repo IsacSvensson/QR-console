@@ -313,6 +313,10 @@ värld 1–5, eller 6 = spelet klart (3) + brädor upplåsta (5) + världar med 
 
 Värde 6 betyder att finalen är klar. Då är SUPERBOSSE upplåst (§4).
 
+Exakt format (M25): v = värld · 2¹³ + brädor · 2⁸ + fulla världar · 2³ + kontrollsumma, där brädor och fulla
+världar har värld 1 som lägsta bit. Kontrollsumman är (3 · värld + 5 · brädor + 7 · fulla + 1) mod 8. Brädor och
+fulla världar får bara gälla världar som är klara (de före kodens värld). Bilderna är v:s fyra hexsiffror, högst först.
+
 Koden skrivs in från titelskärmen med B: ↑/↓ byter bild, ←/→ flyttar och A bekräftar. Fel kod ger `FEL KOD`.
 En förälder kan ta en skärmbild av koden. Stjärnor i en värld som inte är helt klar sparas inte.
 

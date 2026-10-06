@@ -158,7 +158,7 @@ ld_finish:
     ST [cam_y], r0
     LDI r0, M_TITLE
     ST [mode], r0
-    LDI r0, MUS_HEMMA
+    LDI r0, MUS_TITLE
     JMP set_music
 @play:
     JMP play_loaded

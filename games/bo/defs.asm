@@ -283,6 +283,10 @@ PW_GODIS  = 2
 .var apples_total               ; apples taken in the whole game (at each tally)
 .var stolen                     ; the seagull has Bo's own board (from the theft in 4-5 to the final)
 .var super_ok                   ; SUPERBOSSE is unlocked (the final is done, DESIGN 4)
+.var t_cw
+.var t_cb
+.var t_cf
+.var map_code                   ; the picture code shown on the map (16 bits, DESIGN 7.3)
 .var super_seq                  ; SUPERBOSSE input: 1 after up, 2 after up then down
 .var launch_v                   ; |vx| when Bo last left the ground by a crest or a kicker (0 after an ollie)
 .var launch_cls                 ; the class of the surface he left then

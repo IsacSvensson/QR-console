@@ -91,7 +91,7 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run test:games` | every game with a `replay.json`: assemble, size, per-frame hash replay, `games/<g>/checks.ts` rules |
 | `npm run dev -w apps/web` | Vite dev server (no service worker in dev) |
 | `npm run build -w apps/web` | production build → `apps/web/dist` (incl. generated `sw.js`) |
-| `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scans of Breakout and BLACKBOX, Library persistence |
+| `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scans of Breakout, BLACKBOX and Bo, Library persistence |
 | `npm run test:e2e:offline` | production build, SW precache, offline reload, fake-camera scan of Pong, zero network requests |
 | `npm run demo` | build Breakout, Pong, BLACKBOX and Bo → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
 | `npm run preview` / `npm run preview:https` | serve the production build on :4173 (https: self-signed cert in `.tmp/cert`) |

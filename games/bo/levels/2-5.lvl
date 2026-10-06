@@ -5,7 +5,7 @@
 # carrots and eats. The `enemy rabbit` object marks where it stops (boss_step brings it on from behind).
 name  KANINJAKTEN
 world 2
-music 2
+music 7
 rows  16
 start 6
 

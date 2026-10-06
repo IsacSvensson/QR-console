@@ -104,7 +104,7 @@ level_table:
     .word lv_1_4 >> 16, lv_1_4 & $FFFF, 13, 270
     .byte 4, 16, 1, 4, 1, 0
     .word lv_1_5 >> 16, lv_1_5 & $FFFF, 6, 23
-    .byte 6, 16, 1, 5, 1, 0
+    .byte 6, 16, 1, 5, 7, 0
     .word lv_2_1 >> 16, lv_2_1 & $FFFF, 17, 230
     .byte 4, 16, 2, 4, 2, 0
     .word lv_2_2 >> 16, lv_2_2 & $FFFF, 20, 200
@@ -114,7 +114,7 @@ level_table:
     .word lv_2_4 >> 16, lv_2_4 & $FFFF, 10, 155
     .byte 4, 16, 2, 4, 2, 0
     .word lv_2_5 >> 16, lv_2_5 & $FFFF, 16, 212
-    .byte 4, 16, 2, 6, 2, 0
+    .byte 4, 16, 2, 6, 7, 0
     .word lv_3_1 >> 16, lv_3_1 & $FFFF, 15, 230
     .byte 4, 16, 3, 4, 3, 0
     .word lv_3_2 >> 16, lv_3_2 & $FFFF, 17, 155
@@ -124,7 +124,7 @@ level_table:
     .word lv_3_4 >> 16, lv_3_4 & $FFFF, 14, 199
     .byte 6, 16, 3, 4, 3, 0
     .word lv_3_5 >> 16, lv_3_5 & $FFFF, 3, 40
-    .byte 4, 16, 3, 2, 3, 0
+    .byte 4, 16, 3, 2, 7, 0
     .word lv_4_1 >> 16, lv_4_1 & $FFFF, 16, 199
     .byte 4, 16, 4, 4, 4, 0
     .word lv_4_2 >> 16, lv_4_2 & $FFFF, 14, 156
@@ -144,7 +144,7 @@ level_table:
     .word lv_5_4 >> 16, lv_5_4 & $FFFF, 17, 102
     .byte 4, 32, 5, 4, 5, 0
     .word lv_5_5 >> 16, lv_5_5 & $FFFF, 3, 40
-    .byte 4, 16, 5, 3, 5, 0
+    .byte 4, 16, 5, 3, 7, 0
 
 .xdata
 lv_T1:   ; T1 TESTBANA 1

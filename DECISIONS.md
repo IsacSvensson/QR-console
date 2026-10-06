@@ -700,3 +700,27 @@ Decision:
   Bo if he has all 60 stars; A goes back to the title.
 Measurement: ROM 30 301 B of 32 768 (code 24 588, data 5 713), cartridge 22.3 KB; the whole game from the title to the ending
 in one replay (m24-game, about 43 500 frames = 12 minutes of play, then SUPERBOSSE at Backhoppet).
+
+## D-038 - Bo picture codes, music, delivery (M25)
+Date: 2026-10-06 - Milestone: M25
+Decision:
+- **Picture code format** (written into DESIGN 7.3): 16 bits, v = world << 13 | boards << 8 | full << 3 | checksum,
+  world 1-5 or 6 (game done), boards and full worlds with World 1 as the lowest bit, checksum
+  (3 world + 5 boards + 7 full + 1) mod 8. The four pictures are v's hex digits, highest first. The map shows the
+  code of the current state (world boards and worlds with all 12 stars, masked to the worlds done).
+- **Impossible codes are rejected** like wrong checksums (FEL KOD): a board or full world for a world not yet
+  done. Of the 65 536 values, 1 365 are valid.
+- **Decoding** rebuilds the state: the levels of done worlds done, all stars of full worlds (others 0: DESIGN 7.3
+  says stars of incomplete worlds are not saved), the parts for world boards, then boards_update (so the golden
+  board follows from 60 stars). World 5 restores the theft (stolen, the licorice board selected); world 6
+  restores SUPERBOSSE and Bo's own board and opens the World 5 map.
+- **Music**: ten tracks (DESIGN 15): five world loops in the world assets (M23-M24), and in ROM the title, the
+  boss track (the four boss levels; Backhoppet keeps the Snö loop since it is a big level, not a boss), the
+  level-done fanfare, game over and the ending. Fanfare and game over play once and then rest. New effects: the
+  rabbit's landing thud (noise) and the STOP button.
+- **Bo's speech blips** (optional in PLAN M25 and DESIGN 15) are skipped: the bubbles already pop with an effect,
+  and ROM is 31.6 KB of 32 KB.
+- **Delivery**: e2e gets a Bo project (fake camera, `.tmp/e2e/bo.y4m`, like BLACKBOX); only the e2e wiring and the
+  `test:e2e` script change, the runtime does not.
+Measurement: ROM 31 608 B of 32 768 (code 25 404, data 6 043, sound 161), cartridge 22 945 B; `demo/bo.gif` 132
+frames (K=88), 19.8 s loop, 1.8 MB.

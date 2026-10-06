@@ -2,9 +2,9 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M25 (Picture codes, music, delivery)
+**Current milestone:** none — Parts 1–3 complete; awaiting the human's manual acceptance (PLAN.md)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
-Part 3 (Bo's Skateäventyr) in progress: M19-M24 done (the whole game is playable); the M22 budget gate projects over 32 KB (flagged).
+Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -41,7 +41,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M22b ISA 2: xdata + COPY/FILL/UNPACK (human decision after the budget gate)
 - [x] M23 Worlds 2 and 3
 - [x] M24 Worlds 4 and 5, the theft and the ending
-- [ ] M25 Picture codes, music, delivery
+- [x] M25 Picture codes, music, delivery
 
 ## Current work
 
@@ -68,7 +68,8 @@ bus), the rabbit chase, the bulldozer, world music; one replay from the title to
 Worlds 4 (Snö: ice, the ski lift, Backhoppet, the longest jump) and 5 (Godislandet: lollipops, chocolate and rafts,
 licorice, the cake mountain), the theft and the licorice board, the final (Stora Måsen in three phases), the ending
 with the statistics and the golden board, boards, SUPERBOSSE, the seagull's food; one replay plays the whole game
-(D-037). ROM 30.3 KB of 32 KB. **Runtime baseline for M23-M25 = 932e534 (M22b).** Human request (2026-10-06): the worlds must look clearly
+(D-037). M25 done — picture codes (all 1 365 valid codes round-trip, the rest rejected; a replay resumes from a
+code), ten music tracks, the Bo e2e scan, `games/bo/GUIDE.md`, REPORT Part 3 (D-038). ROM 31.6 KB of 32 KB. **Runtime baseline for M23-M25 = 932e534 (M22b).** Human request (2026-10-06): the worlds must look clearly
 different (own sky, parallax, ground/structure colours, decor) — added to DESIGN §14.4, done in M23–M24.
 DESIGN §17 defaults apply (only question 1 answered). Part 3 runtime baseline was the M19 commit (394e012) until
 M22b; from the M22b commit on
@@ -92,6 +93,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
 | Bo mockup: full-screen draw cost | 1 356 cycles/frame (17 MAP columns + sprites + bubble + HUD); font 47 glyphs = 376 B | D-025–D-027 |
 | Bo ROM estimate | 23.5–29 KB of 32 KB (code 11–13 KB); measured at the M22 budget gate | DESIGN §16 |
+| Bo ROM after M25 (final) | 31.6 KB (code 25.4 KB, data 6.0 KB), ISA 2; cartridge 22.9 KB; 132-frame GIF loop (19.8 s) | test:bo, npm run demo |
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
 | Bo ROM after M19 | 8.2 KB (code 5.8 KB, data 2.4 KB); cartridge 4.7 KB; play frames ~1.4k cycles, loading ≤ 15.1k | test:bo |

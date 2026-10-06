@@ -457,7 +457,7 @@ b_rabbit:
     ST [r7 + AC_VX], r0
     LDI r0, 8
     ST [r7 + AC_T], r0
-    LDI r0, SFX_BUMP
+    LDI r0, SFX_THUD
     CALL play_sfx
     LD r0, [bo_state]
     CMP r0, ST_GROUND

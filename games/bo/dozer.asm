@@ -243,7 +243,7 @@ dozer_contact:
 @press:
     LDI r0, EV_STOMP
     CALL event
-    LDI r0, SFX_POFF
+    LDI r0, SFX_STOP
     CALL play_sfx
     LD r0, [boss_hits]
     ADD r0, 1
