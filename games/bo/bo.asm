@@ -15,6 +15,7 @@
 .include "sound.asm"
 .include "draw.asm"
 .include "menu.asm"
+.include "screens.asm"
 .include "gfx.asm"
 .include "gfx_enemies.asm"
 
@@ -28,9 +29,7 @@ init:
     ST [bub_id], r0
     LDI r0, 5
     ST [lives], r0
-    LDI r0, M_MENU
-    ST [mode], r0
-    RET
+    JMP to_title
 
 update:
     LD r0, [tick]
@@ -44,6 +43,8 @@ update:
     CMP r0, 0
     JEQ @mode
     SUB r0, 1
+    LDI r1, 0
+    ST [ld_after], r1
     CALL level_start
     LDI r0, 0
     ST [dbg_level], r0
@@ -96,5 +97,5 @@ timers:
     RET
 
 .data
-mode_handlers: .word on_menu, on_load, on_play
+mode_handlers: .word on_menu, on_load, on_play, on_title, on_intro, on_code, on_map, on_tally, on_cut
 .code

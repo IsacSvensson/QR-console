@@ -2,7 +2,7 @@
 ; text as glyph indices (index = position in the font table); 255 ends a text, 254 starts its second row.
 
 FONT_GLYPHS = 48
-NUM_TEXTS = 52
+NUM_TEXTS = 53
 TX_SKRIII = 0   ; SKRIII!
 TX_NEJ_MINA_POMMES = 1   ; NEJ! MINA POMMES!
 TX_VANTA_MASEN = 2   ; VÄNTA, MÅSEN!
@@ -55,6 +55,7 @@ TX_TESTBANA_2 = 48   ; TESTBANA 2
 TX_TESTBANA_3 = 49   ; TESTBANA 3
 TX_TESTBANA_4 = 50   ; TESTBANA 4
 TX_TESTBANA_5 = 51   ; TESTBANA 5
+TX_UPPFARTEN = 52   ; UPPFARTEN
 
 .data
 font1:
@@ -113,7 +114,7 @@ text_table:
     .word tx_24, tx_25, tx_26, tx_27, tx_28, tx_29, tx_30, tx_31
     .word tx_32, tx_33, tx_34, tx_35, tx_36, tx_37, tx_38, tx_39
     .word tx_40, tx_41, tx_42, tx_43, tx_44, tx_45, tx_46, tx_47
-    .word tx_48, tx_49, tx_50, tx_51
+    .word tx_48, tx_49, tx_50, tx_51, tx_52
 tx_0: .byte 19, 11, 18, 9, 9, 9, 40, 255   ; SKRIII!
 tx_1: .byte 14, 5, 10, 40, 0, 13, 9, 14, 1, 0, 16, 15, 13, 13, 5, 19, 40, 255   ; NEJ! MINA POMMES!
 tx_2: .byte 22, 28, 14, 20, 1, 43, 0, 13, 27, 19, 5, 14, 40, 255   ; VÄNTA, MÅSEN!
@@ -166,5 +167,6 @@ tx_48: .byte 20, 5, 19, 20, 2, 1, 14, 1, 0, 32, 255   ; TESTBANA 2
 tx_49: .byte 20, 5, 19, 20, 2, 1, 14, 1, 0, 33, 255   ; TESTBANA 3
 tx_50: .byte 20, 5, 19, 20, 2, 1, 14, 1, 0, 34, 255   ; TESTBANA 4
 tx_51: .byte 20, 5, 19, 20, 2, 1, 14, 1, 0, 35, 255   ; TESTBANA 5
+tx_52: .byte 21, 16, 16, 6, 1, 18, 20, 5, 14, 255   ; UPPFARTEN
 level_names:   ; text id of every level, in the level table order
-    .byte 47, 48, 49, 50, 51
+    .byte 47, 48, 49, 50, 51, 52

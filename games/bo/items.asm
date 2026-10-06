@@ -77,6 +77,9 @@ t_apple:
     LD r0, [apples]
     ADD r0, 1
     ST [apples], r0
+    LD r0, [lv_apples]
+    ADD r0, 1
+    ST [lv_apples], r0
     LD r1, [apples_life]            ; 100 apples: one more life (at most 9)
     ADD r1, 1
     CMP r1, 100

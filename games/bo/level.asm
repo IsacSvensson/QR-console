@@ -52,6 +52,7 @@ level_start:
     ST [combo_show_t], r1
     ST [lv_stars], r1
     ST [lv_part], r1
+    ST [lv_apples], r1
     ST [bub_t], r1
     ST [banner_t], r1
     LDI r1, 4095
@@ -123,13 +124,21 @@ ld_tiles2:
 
 ld_finish:
     CALL actors_reset
-    LD r0, [lv_music]
-    CALL set_music
-    CALL bo_spawn_start
-    CALL camera_snap
-    LDI r0, M_PLAY
+    LD r0, [ld_after]
+    CMP r0, TITLE_LOAD
+    JNE @play
+    LDI r0, 0                       ; the title over 1-1's street
+    ST [ld_after], r0
+    ST [title_t], r0
+    ST [cam_x], r0
+    LDI r0, (LV_ROWS - 16) * 8
+    ST [cam_y], r0
+    LDI r0, M_TITLE
     ST [mode], r0
-    RET
+    LDI r0, MUS_HEMMA
+    JMP set_music
+@play:
+    JMP play_loaded
 
 ; ---- terrain: emit the next column -----------------------------------------------------------------
 ter_column:

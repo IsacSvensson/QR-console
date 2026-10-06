@@ -1,0 +1,75 @@
+# 1-1 UPPFARTEN — built column by column as FIRST10.md §5 describes. Heights: the street h0 = 4 tiles from the
+# bottom (rows 28-31), so h1 = 5, h-1 = 3, h2 = 6, h3 = 7.
+name  UPPFARTEN
+world 1
+music 1
+rows  16
+start 6
+
+terrain
+h 5
+mat alt
+flat 8          # 0-7     the lawn by the house (h1)
+mat normal
+down22 1        # 8-9     the driveway down to the street
+flat 18         # 10-27   the first roll
+down22 1        # 28-29   the dip in the street
+flat 4          # 30-33   (h-1)
+up22 1          # 34-35
+flat 75         # 36-110  first jumps, boxes, flag 1, the snails
+up22 2          # 111-114 the hill (h2)
+flat 4          # 115-118
+down45 2        # 119-120
+flat 16         # 121-136 the kicker at 125 and its landing
+down22 1        # 137-138
+flat 1          # 139     (h-1)
+up22 1          # 140-141
+flat 66         # 142-207 flag 2, the garage and the hedge, the run-in, the goal
+
+objects
+1   prefab house g
+2   apples g 2
+8   apple g
+9   apple g
+10  apple g
+11  sign right
+13  apples g 12
+16  prefab fence g
+28  apple g
+29  apple g
+30  apples g 4
+34  apple g
+35  apple g
+40  sign a
+42  arc 24 hold
+45  prefab bin g
+48  arc 24 hold
+51  prefab bin g
+54  arc 24 hold
+57  star g+5 1
+58  prefab bins2 g
+66  arc 24 hold
+72  box g apple
+80  box g apples
+85  flag
+91  arc 24 hold
+96  enemy snail g
+106 enemy snail g
+121 sign a
+125 ramp45 1
+125 arc 38 r45a
+125 arc 38 r45
+133 star g+9 2
+142 flag
+146 prefab bin g
+148 prefab garage g
+149 apples g+3 5
+154 apple g+4
+155 platform g+2 6
+155 fg hedge g+3
+157 star g+3 3
+159 part g+3
+175 apples g 10
+186 ramp45 1
+186 arc 24 r45
+200 goal

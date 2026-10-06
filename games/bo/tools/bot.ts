@@ -126,7 +126,22 @@ export class Bot {
   startLevel(id: string) {
     const idx = this.levels.indexOf(id);
     if (idx < 0) throw new Error(`no level ${id}`);
-    this.until(0, (b) => b.mode === b.S('M_MENU'), 600, 'waiting for the menu');
+    this.until(0, (b) => b.inputs.length > 0 && (b.mode === b.S('M_MENU') || b.mode === b.S('M_TITLE')), 600, 'title or menu');
+    if (this.mode !== this.S('M_MENU')) {
+      // from the title: B, the picture code of four Bos, A: the test menu
+      this.until(0, (b) => b.mode === b.S('M_TITLE'), 600, 'waiting for the title');
+      this.step(0);
+      this.step(B.B);
+      this.step(0);
+      for (let i = 0; i < 4; i++) {
+        this.step(B.D);
+        this.step(0);
+        this.step(B.R);
+        this.step(0);
+      }
+      this.step(B.A);
+      this.until(0, (b) => b.mode === b.S('M_MENU'), 10, 'the test menu');
+    }
     this.step(0);
     while (this.u('menu_sel') !== idx) {
       this.step(B.R);

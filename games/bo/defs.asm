@@ -82,9 +82,18 @@ WHEEL_STEP = 16 * 16            ; a click every 16 px (1/16 px units)
 MAX_CP    = 12                  ; checkpoint flags per level
 
 ; modes
-M_MENU = 0
-M_LOAD = 1
-M_PLAY = 2
+M_MENU  = 0
+M_LOAD  = 1
+M_PLAY  = 2
+M_TITLE = 3
+M_INTRO = 4
+M_CODE  = 5
+M_MAP   = 6
+M_TALLY = 7
+M_CUT   = 8
+; progress per game level (one byte): stars in bits 0-2
+PR_PART = 8
+PR_DONE = 16
 
 ; Bo's states
 ST_GROUND = 0
@@ -296,3 +305,17 @@ MAX_FG = 8
 .var joke_t
 .var joke_x
 .var joke_y
+
+; the game around the levels (screens.asm)
+.var ld_after                   ; what comes after loading (0 = play, TITLE_LOAD = the title)
+.var title_t
+.var scene_t
+.var first_done                 ; the intro has been seen
+.var code_pos
+.var code_v, 4
+.var code_bad
+.var map_world                  ; 0..4
+.var map_sel                    ; game level selected on the map
+.var unlocked                   ; highest game level that can be played
+.var progress, 25
+.var lv_apples                  ; apples of this level (for the tally)

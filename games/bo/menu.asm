@@ -47,8 +47,3 @@ on_menu:
 s_menu: .string "BO'S SKATEAVENTYR\n\n   TESTBANA  <    >\n\n\n  A = START"
 .code
 
-; level_done: the level is finished (until M22: back to the test menu)
-level_done:
-    LDI r0, M_MENU
-    ST [mode], r0
-    RET

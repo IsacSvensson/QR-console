@@ -31,6 +31,7 @@ bo_spawn:
     ST [bo_look_t], r0
     ST [bo_lip_t], r0
     ST [trick], r0
+    ST [bo_pose], r0
     CALL combo_reset
     LDI r0, 1
     ST [bo_dir], r0
