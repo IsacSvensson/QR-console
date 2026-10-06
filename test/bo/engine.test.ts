@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { unpack } from '@qrc/asm';
 import { BOX_CONTENT, ENEMY_TYPE, PREFAB_IDS, SIGN_KIND, generateLevels } from '../../games/bo/tools/levels';
-import { generateTiles, T, WTILE } from '../../games/bo/tools/tiles';
+import { generateTiles, T, WORLDS } from '../../games/bo/tools/tiles';
 import { boView, frameProblems, gridOf } from './frames';
 import { type Bo, CONSTS, GAME_DIR, LEVEL_IDS, ROWS, buildBo, derivedNumbers, ramAttrs, readRefLevel, runReplay, symbol, vmInLevel } from './oracle';
 
@@ -38,7 +38,8 @@ describe('Bo build', () => {
 // ---- the ROM level table, decoded independently (FORMAT.md, "ROM format") -----------------------------
 type Item = Record<string, string | number>;
 const name = (table: Record<string, number>, v: number) => Object.entries(table).find(([, x]) => x === v)?.[0] ?? `?${v}`;
-const tileName = (code: number) => name(T as unknown as Record<string, number>, code) ?? name(WTILE, code);
+/** world tile codes (64..95) mean a different tile in every world: named in the level's world */
+const tileName = (code: number, world: number) => (code < T.W0 ? name(T as unknown as Record<string, number>, code) : name(WORLDS[world - 1]!.names, code));
 const KIND_OF_CODE: Record<number, string> = { [T.BLOCK]: 'block', [T.WEAK]: 'weak', [T.BOUNCE]: 'bounce', [T.BAR]: 'bar', [T.RAIL]: 'rail' };
 const TERRAIN_OPS = ['flat', 'up22', 'down22', 'up45', 'down45', 'gap', 'liquid'];
 
@@ -99,7 +100,7 @@ function decodeRom(bo: Bo) {
           const kind = KIND_OF_CODE[param];
           if (kind === 'rail') items.push({ kind, col, y, w });
           else if (kind) items.push({ kind, col, y, w, h });
-          else items.push({ kind: 'tile', name: tileName(param), col, y, w, h });
+          else items.push({ kind: 'tile', name: tileName(param, head.world), col, y, w, h });
           break;
         }
         case 3: {

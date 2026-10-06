@@ -28,6 +28,8 @@ B_PROJ   = 5
 B_ROLL   = 6
 B_PIGEON = 7
 B_BOSS1  = 8
+B_PLAT   = 9                        ; a moving platform drifting back and forth (log)
+B_BUS    = 10                       ; a moving platform that drives off when Bo stands on it (the bus)
 ; stomp outcomes
 O_APPLE  = 0
 O_AWAY   = 1
@@ -46,6 +48,7 @@ F_TALL  = 2                         ; 8 x 16 (two sprites)
 F_WIDE  = 4                         ; 16 x 8
 F_RIGHT = 8                         ; the sprite faces right
 F_BIG   = 16                        ; 16 x 16 (four sprites)
+F_PLAT  = 32                        ; a moving platform: its top carries Bo, no contact (drawn from world tiles)
 ; events (for the tests): what happened at a contact
 EV_STOMP  = 1
 EV_HIT    = 2
@@ -80,11 +83,17 @@ en_table:
     .byte B_PROJ,   4, 4, 0, O_HIT,   F_HARM, 255, 0               ; 15 snowball
     .byte B_PROJ,   4, 4, 0, O_HIT,   F_HARM, 255, 0               ; 16 popcorn
     .byte B_BOSS1, 14, 12, 16, O_STAND, F_BIG | F_RIGHT, 255, 0     ; 17 Stora Måsen (boss of world 1)
+    .byte B_PLAT,  24, 6, 6, O_STAND, F_PLAT, 255, 10               ; 18 log: back and forth over 10 columns
+    .byte B_BUS,   48, 16, 16, O_STAND, F_PLAT, 255, 160            ; 19 bus: drives 160 columns once Bo is on
 en_sprites:
     .word 0, spr_en_snail, spr_en_gull, spr_en_hedgehog, spr_en_wasp, spr_en_ball, spr_en_teddy, spr_en_squirrel
     .word spr_en_pigeon, spr_en_snowman, spr_en_sled, spr_en_jelly, spr_en_blob, spr_en_cannon, spr_en_cone
-    .word spr_en_snowball, spr_en_popcorn, spr_boss_gull
-behaviours: .word b_walk, b_dive, b_fly, b_bounce, b_throw, b_proj, b_roll, b_pigeon, b_boss1
+    .word spr_en_snowball, spr_en_popcorn, spr_boss_gull, plat_log, plat_bus
+behaviours: .word b_walk, b_dive, b_fly, b_bounce, b_throw, b_proj, b_roll, b_pigeon, b_boss1, b_plat, b_bus
+; platform pictures (instead of a sprite): columns, rows, then world tile codes row by row
+plat_log:   .byte 3, 1, TW_LOG_L, TW_LOG_M, TW_LOG_R
+plat_bus:   .byte 6, 2, TW_BUS_R, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_F
+            .byte TW_BUS_WH, TW_BUS_B, TW_BUS_B, TW_BUS_B, TW_BUS_B, TW_BUS_WH
 sine32:     .byte 0, 2, 5, 7, 8, 10, 11, 12, 12, 12, 11, 10, 8, 7, 5, 2, 0, 254, 251, 249, 248, 246, 245, 244
             .byte 244, 244, 245, 246, 248, 249, 251, 254
 .code
@@ -218,6 +227,8 @@ actors_update:
     ADD r6, 1
     JMP @spawn
 @move:
+    LDI r0, 0
+    ST [t_pn], r0
     LDI r7, actors
 @act:
     LD r0, [r7 + AC_TYPE]
@@ -226,10 +237,20 @@ actors_update:
     PUSH r7
     CALL act_step
     POP r7
+    LD r0, [r7 + AC_TYPE]           ; count the moving platforms (surface() looks at them only if any)
+    SHL r0, 3
+    LDB r0, [r0 + en_table + 5]
+    AND r0, F_PLAT
+    JZ @nextact
+    LD r0, [t_pn]
+    ADD r0, 1
+    ST [t_pn], r0
 @nextact:
     ADD r7, ACT_SIZE
     CMP r7, actors + MAX_ACT * ACT_SIZE
     JLT @act
+    LD r0, [t_pn]
+    ST [plat_n], r0
     RET
 
 ; act_step: r7 = actor: behave, leave when far away, touch Bo
@@ -269,6 +290,11 @@ act_step:
 act_free:
     LDI r0, 0
     ST [r7 + AC_TYPE], r0
+    LD r1, [bo_plat]                ; a platform leaving takes nobody with it
+    CMP r1, r7
+    JNE @kept
+    ST [bo_plat], r0
+@kept:
     LD r1, [r7 + AC_EN]
     CMP r1, MAX_EN
     JGE @done
@@ -322,6 +348,97 @@ dir_to_bo:
     RET
 
 ; ---- behaviours (r7 = actor) -----------------------------------------------------------------------------
+; plat_move: r7 = platform, r0 = dx this frame (1/16 px): move it, and Bo with it if he stands on it
+plat_move:
+    ST [r7 + AC_VX], r0
+    LD r1, [r7 + AC_X]
+    ADD r1, r0
+    ST [r7 + AC_X], r1
+    LD r1, [bo_state]
+    CMP r1, ST_GROUND
+    JNE @off
+    LD r1, [bo_plat]
+    CMP r1, r7
+    JNE @off
+    LD r1, [bo_x]
+    ADD r1, r0
+    ST [bo_x], r1
+@off:
+    RET
+
+; plat_on: r7 = platform -> Z clear if Bo stands on it
+plat_on:
+    LDI r0, 0
+    LD r1, [bo_state]
+    CMP r1, ST_GROUND
+    JNE @no
+    LD r1, [bo_plat]
+    CMP r1, r7
+    JNE @no
+    LDI r0, 1
+@no:
+    CMP r0, 0
+    RET
+
+b_plat:                             ; drifts right over its range, then back to its home, and again
+    CALL en_row_of
+    LDB r2, [r1 + 7]                ; range in columns
+    SHL r2, 3
+    LD r3, [r7 + AC_HX]
+    ADD r2, r3                      ; the far end, px
+    LDB r0, [r1 + 3]                ; speed
+    LD r4, [r7 + AC_SUB]            ; 0 = going right, 1 = going back
+    CMP r4, 0
+    JEQ @right
+    NEG r0
+@right:
+    PUSH r2
+    PUSH r3
+    CALL plat_move
+    POP r3
+    POP r2
+    LD r1, [r7 + AC_X]
+    SHR r1, 4
+    LD r4, [r7 + AC_SUB]
+    CMP r4, 0
+    JNE @back
+    CMP r1, r2
+    JLT @done
+    LDI r4, 1
+    ST [r7 + AC_SUB], r4
+    RET
+@back:
+    CMP r1, r3
+    JGT @done
+    LDI r4, 0
+    ST [r7 + AC_SUB], r4
+@done:
+    RET
+
+b_bus:                              ; waits; once Bo stands on it, drives right until the end of its range
+    LD r0, [r7 + AC_SUB]
+    CMP r0, 0
+    JNE @driving
+    CALL plat_on
+    JZ @stand
+    LDI r0, 1
+    ST [r7 + AC_SUB], r0
+@driving:
+    CALL en_row_of
+    LDB r2, [r1 + 7]
+    SHL r2, 3
+    LD r3, [r7 + AC_HX]
+    ADD r2, r3
+    LD r3, [r7 + AC_X]
+    SHR r3, 4
+    CMP r3, r2
+    JGE @stand                      ; arrived: stands still
+    LDB r0, [r1 + 3]
+    JMP plat_move
+@stand:
+    LDI r0, 0
+    JMP plat_move
+
 b_walk:                             ; walks and turns at walls and edges
     LD r0, [r7 + AC_X]
     LD r1, [r7 + AC_VX]
@@ -743,6 +860,10 @@ b_roll:                             ; a sled: starts sliding at Bo when he is ne
 ; ---- contact with Bo ---------------------------------------------------------------------------------
 ; act_box: r7 -> r4..r7 = x, y, w, h of the actor's box (r7 is lost: kept in t_act)
 act_touch:
+    CALL en_row_of                  ; moving platforms never touch Bo
+    LDB r0, [r1 + 5]
+    AND r0, F_PLAT
+    JNZ @no
     LD r0, [bo_state]
     CMP r0, ST_DEAD
     JGE @no
@@ -1030,6 +1151,9 @@ draw_actors:
 draw_actor:                         ; r7 = actor
     CALL en_row_of
     MOV r6, r1
+    LDB r0, [r6 + 5]
+    AND r0, F_PLAT
+    JNZ draw_plat
     LD r5, [r7 + AC_TYPE]
     SHL r5, 1
     LD r0, [r5 + en_sprites]
@@ -1206,6 +1330,32 @@ draw_actor:                         ; r7 = actor
     RET
 
 .data
+; draw_plat: r7 = platform, r6 = its type's row: its picture of world tiles, top-left at (x - w/2, top)
+draw_plat:
+    LD r5, [r7 + AC_TYPE]
+    SHL r5, 1
+    LD r0, [r5 + en_sprites]        ; the picture: columns, rows, codes
+    LDB r2, [r0]
+    LDB r3, [r0 + 1]
+    ADD r0, 2
+    CALL act_pos
+    MOV r4, r1
+    LDB r1, [r6 + 1]
+    SHR r1, 1
+    SUB r4, r1
+    LD r1, [cam_x]
+    SUB r4, r1
+    MOV r5, r2
+    LD r2, [cam_y]
+    SUB r5, r2
+    LD r2, [r7 + AC_TYPE]           ; cols again (r2 was the foot y)
+    SHL r2, 1
+    LD r2, [r2 + en_sprites]
+    LDB r2, [r2]
+    LDI r1, tilebank
+    SYS MAP
+    RET
+
 dizzy_dx: .byte 0, 1, 2, 3, 4, 3, 2, 1
 s_zzz: .string "Z Z"
 .code

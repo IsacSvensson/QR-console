@@ -454,6 +454,8 @@ bo_ground:
     CMP r0, 0
     JNE @wall
     ST [bo_sattr], r5
+    LD r0, [t_plat]
+    ST [bo_plat], r0
     SHL r7, 4
     ST [bo_y], r7
     MOV r0, r5
@@ -680,6 +682,8 @@ air_vert:
 ; land: r0 = surface y, r5 = attribute, t_scol = x of the sensor that found it
 land:
     MOV r7, r0
+    LD r0, [t_plat]
+    ST [bo_plat], r0
     MOV r0, r5
     AND r0, 15
     CMP r0, C_BOUNCE

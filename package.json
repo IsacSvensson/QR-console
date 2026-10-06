@@ -32,7 +32,7 @@
     "blackbox:gen": "tsx games/blackbox/tools/gen.ts && tsx games/blackbox/tools/tiles.ts && tsx games/blackbox/tools/text.ts",
     "blackbox:record": "tsx games/blackbox/tools/record.ts && tsx games/blackbox/tools/pick-frames.ts",
     "test:bo": "vitest run --project bo --reporter=verbose",
-    "bo:gen": "tsx games/bo/tools/tiles.ts && tsx games/bo/tools/levels.ts",
+    "bo:gen": "tsx games/bo/tools/tiles.ts && tsx games/bo/tools/levels.ts && tsx games/bo/tools/text.ts",
     "bo:record": "tsx games/bo/tools/record.ts"
   },
   "devDependencies": {

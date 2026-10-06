@@ -1,0 +1,75 @@
+# 2-2 BÄCKEN — the brook (DESIGN §8.3): water as a hazard, wooden bridges, stepping stones (slow hops, the
+# apples show how slow), a hedgehog in a dip, a kicker over the widest brook; snails.
+name  BÄCKEN
+world 2
+music 2
+rows  16
+start 4
+
+terrain
+h 4
+flat 24         # 0-23    start, apples, a snail
+liq water
+liquid 6        # 24-29   brook 1: a bridge across
+flat 10         # 30-39
+step -1         #         the dip keeps the hedgehog in it
+flat 3          # 40-42   (h3)
+step 1
+flat 9          # 43-51   (h4)
+liquid 10       # 52-61   brook 2: two stepping stones
+flat 25         # 62-86   flag, the kicker
+liquid 5        # 87-91   brook 3: the kicker jump, star 2
+flat 33         # 92-124
+up22 2          # 125-128 (h6)
+flat 14         # 129-142 the bush: star 3 and the part
+down22 2        # 143-146 (h4)
+liquid 5        # 147-151 brook 4: a bridge
+flat 48         # 152-199 a snail, flag, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  prefab spruce g
+16  apples g 6
+24  tile BRIDGE 3 6 1
+24  tile BRIDGE_POST 2
+24  apples 4 6
+29  tile BRIDGE_POST 2
+32  tile FERN g
+36  arc 24 hold
+41  enemy hedgehog g
+48  tile MUSHROOM g
+50  arc 12 hold
+54  tile STONE 4 2 1
+54  apples 5 2
+55  arc 12 hold
+58  tile STONE 4 2 1
+58  apple 5
+59  star 8 1
+65  flag
+70  prefab spruce g
+72  apples g 6
+82  ramp45 1
+82  arc 24 r45a
+88  star 13 2
+100 apples g 6
+110 box g apples
+116 tile ROOT g
+126 apple g+1
+128 apple g+1
+133 apple g+4
+134 platform g+2 6
+134 fg bush g+3
+136 star g+3 3
+138 part g+3
+144 apple g+1
+146 apple g
+147 tile BRIDGE 3 5 1
+147 tile BRIDGE_POST 2
+147 apples 4 5
+151 tile BRIDGE_POST 2
+160 flag
+170 prefab spruce g
+172 enemy snail g
+176 apples g 10
+194 goal

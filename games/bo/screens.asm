@@ -114,8 +114,7 @@ on_title:
 
 ; draw_scene: the street of 1-1 (sky, parallax, level, Bo); used by the title and the intro
 draw_scene:
-    LD r1, [lv_world]
-    LDB r0, [r1 + world_sky - 1]
+    LDB r0, [wblk + WB_SKY]
     SYS CLS
     CALL draw_clouds
     CALL draw_strip

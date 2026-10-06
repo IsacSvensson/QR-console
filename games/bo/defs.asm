@@ -144,6 +144,7 @@ NONE = $7FFF
 .var lvl, MAX_COLS * LV_ROWS    ; the level, column-major: lvl[col * 32 + row] = tile code
 .var tilebank, NUM_CODES * 32   ; unpacked tiles (4 bits per pixel), tile t at tilebank + 32 * t
 .var attr_tab, NUM_CODES        ; attribute of every tile code in the current world
+.var wblk, WBLK_MAX              ; the current world's block (tile entries, attributes, strip, sky, own patterns)
 
 .var mode
 .var tick
@@ -226,6 +227,12 @@ NONE = $7FFF
 .var goal_t                     ; > 0 after the goal flag
 .var wheel_d                    ; distance rolled since the last wheel click (1/16 px)
 .var t_scol                     ; x of the sensor that found the landing surface
+.var t_plat                     ; surface(): the moving platform found (0 = the level)
+.var t_sy
+.var t_sattr
+.var bo_plat                    ; the platform Bo stands on (valid while grounded)
+.var plat_n                     ; live moving platforms (counted every frame)
+.var t_pn
 
 ; tricks and combos
 .var trick

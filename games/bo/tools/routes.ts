@@ -166,8 +166,10 @@ const followArc = (b: Bot, col: number, v = 24, brake = false) => {
   b.until((x) => (brake && x.vx > v + 1 ? B.L : x.vx < v ? B.R : 0), (x) => x.x + Math.max(1, x.vx >> 4) > x0 - 1 && x.vx >= v - 1, 1500, `to the arc at ${col}`);
   b.until(B.R, (x) => x.x >= x0, 4);
   if (b.inputs[b.inputs.length - 1]! & B.A) b.step(B.R); // A must be pressed afresh
-  b.step(B.R | B.A);
-  b.land(B.R | B.A);
+  // the arcs keep the takeoff speed: steering in the air would speed up a slow jump (AIR_ACC), so only at push speed
+  const air = v >= 24 ? B.R | B.A : B.A;
+  b.step(air);
+  b.land(air);
 };
 /** From the title: A (the intro the first time), skip it with A; returns when Bo can ride. */
 const fromTitle = (b: Bot) => {
@@ -258,6 +260,43 @@ const sweep = (b: Bot, colL: number, colR: number) => {
   b.brakeToStop();
   b.until((x) => (x.x < px(colR) + 3 ? B.R : 0), (x) => x.x >= px(colR) + 3, 200, `right end of ${colR}`);
   b.brakeToStop();
+};
+
+/** 2-3 after the giant jump: up the staircase of planks to the part in the bush at the top. */
+const climbCrowns = (b: Bot) => {
+  const g = 32 - 4;
+  b.until(B.R, (x) => x.x >= px(101) && x.grounded, 600, 'the apples after the landing');
+  b.brakeToStop();
+  for (const [col, h] of [[104, 3], [110, 6], [116, 9], [122, 12]] as const) {
+    ollieOnto(b, (x) => x.grounded && x.foot === px(g - h), `onto the plank at ${col}`);
+    b.until((x) => (x.x < px(col + 3) ? B.R : 0), (x) => x.x >= px(col + 3) || !x.grounded, 200, `along the plank at ${col}`);
+    b.brakeToStop();
+  }
+  b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'the part at the top');
+  b.land(B.R);
+  stompEnemy(b, 1, [EV.STOMP], 'the snail');
+};
+
+/** x px of every live actor of `type` */
+const actorsOf = (b: Bot, type: number) => {
+  const base = b.S('actors');
+  const out: number[] = [];
+  for (let i = 0; i < 12; i++) {
+    const a = base + i * 22;
+    if (b.vm.read16(a) === type && b.vm.read16(a + 10) === 0) out.push(b.vm.read16(a + 2) >> 4);
+  }
+  return out;
+};
+/** A river from column `river`, 13 columns wide, with a log (3 wide, drifting 10 columns): wait on the bank for the
+ *  log, roll onto it, stand still while it carries Bo across, roll off onto the far bank. */
+const rideLog = (b: Bot, river: number) => {
+  const home = px(river + 1) + 4;
+  const log = (x: Bot) => actorsOf(x, 18).find((lx) => lx >= home - 4 && lx <= home + 84);
+  standBefore(b, river);
+  b.until((x) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => Math.abs((log(x) ?? -99) - home) <= 2 && x.actorVX(18) >= 0, 900, `the log at ${river} comes home`);
+  b.until(B.R, (x) => x.x >= px(river) + 6 && x.grounded, 60, 'onto the log');
+  b.until((x) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => (log(x) ?? 0) >= home + 78, 400, 'carried across');
+  b.until(B.R, (x) => x.x >= px(river + 13) + 4 && x.grounded, 120, 'off onto the far bank');
 };
 
 const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
@@ -393,6 +432,96 @@ const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
     b.brakeToStop();
     followArc(b, 246);
   },
+  // ---- World 2 (M23) ----
+  '2-1': (b) => {
+    b.rideTo(px(2), -1); // the apples behind the start
+    b.brakeToStop();
+    standBefore(b, 48);
+    hopOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 2), 'onto the low stump');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 3), 'onto the high stump');
+    b.brakeToStop();
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(32 - 4 - 3), 'straight up: star 1');
+    b.until(B.R, (x) => x.x >= px(62) && x.grounded, 300, 'the apples after the stumps');
+    stompEnemy(b, 7, [EV.STOMP], 'the squirrel');
+    b.until(B.R, (x) => x.u('pw_kind') === 2, 900, 'godis from the basket');
+    standBefore(b, 110);
+    b.search(
+      (k) => {
+        b.hold(B.R, k % 12);
+        b.step(B.R | B.A);
+        b.hold(B.R | B.A, 14 + Math.floor(k / 12) * 2);
+        b.step(B.B); // the godissnurr (B alone; B with an arrow is a trick): a new ollie in mid-air
+        b.until(B.R, (x) => x.grounded || x.state > 1, 200);
+      },
+      (x) => x.grounded && x.foot === px(32 - 4 - 6),
+      120,
+      'up onto the high crown with the godissnurr',
+    );
+    b.until(B.R, (x) => (x.u('lv_stars') & 4) === 4, 200, 'star 3');
+    b.until(B.R, (x) => x.x >= px(124) && x.grounded && x.foot === px(28), 300, 'down again');
+    kickA(b, 'the kicker: star 2', () => 0, 24);
+    standBefore(b, 196); // under the second wasp
+    hopOnto(b, (x) => x.cell(196, 27) === 0 && x.grounded, 'the box with apples');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the bush');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'the part');
+    b.land(B.R);
+  },
+  '2-2': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    followArc(b, 36); // over the hedgehog's dip
+    followArc(b, 50, 12, true); // onto the first stepping stone
+    b.brakeToStop();
+    followArc(b, 55, 12, true); // onto the second
+    b.brakeToStop();
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(32 - 5), 'straight up from the stone: star 1');
+    b.jumpPast(px(62) + 4, { holdA: 20 });
+    kickA(b, 'the kicker over the wide brook: star 2', () => 0, 24);
+    standBefore(b, 110);
+    hopOnto(b, (x) => x.cell(110, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(131), 600, 'up the hill');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 6 - 3), 'onto the plank in the bush');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+    stompEnemy(b, 1, [EV.STOMP], 'the snail after the last bridge');
+  },
+  '2-3': (b) => {
+    const top = 32 - 22;
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    standBefore(b, 14);
+    hopOnto(b, (x) => x.grounded && x.foot === px(top - 2), 'onto the low stump');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(top - 3), 'onto the high stump');
+    b.brakeToStop();
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(top - 3), 'straight up: star 1');
+    kickA(b, 'down the big hill, A at the big kicker: the giant jump, star 2', () => B.R);
+    climbCrowns(b);
+  },
+  '2-4': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    rideLog(b, 22);
+    b.until(B.R, (x) => x.x >= px(44), 600, 'the apples after river 1'); // under the wasp
+    rideLog(b, 53);
+    standBefore(b, 70);
+    hopOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 2), 'onto the low stump');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 3), 'onto the high stump');
+    b.brakeToStop();
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(32 - 4 - 3), 'straight up: star 1');
+    rideLog(b, 82);
+    kickA(b, 'the kicker: star 2', () => 0, 24);
+    standBefore(b, 126);
+    hopOnto(b, (x) => x.cell(126, 27) === 0 && x.grounded, 'the box with apples');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the bush');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
 
 };
 
@@ -483,6 +612,10 @@ export const ROUTES: Record<string, Route> = {
   },
   'm22-1-3': levelRoute('1-3'),
   'm22-1-4': levelRoute('1-4'),
+  'm23-2-1': levelRoute('2-1'),
+  'm23-2-2': levelRoute('2-2'),
+  'm23-2-3': levelRoute('2-3'),
+  'm23-2-4': levelRoute('2-4'),
   'm22-1-2': {
     seed: 1,
     run: (b) => {

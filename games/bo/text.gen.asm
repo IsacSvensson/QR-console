@@ -2,7 +2,7 @@
 ; text as glyph indices (index = position in the font table); 255 ends a text, 254 starts its second row.
 
 FONT_GLYPHS = 48
-NUM_TEXTS = 57
+NUM_TEXTS = 62
 TX_SKRIII = 0   ; SKRIII!
 TX_NEJ_MINA_POMMES = 1   ; NEJ! MINA POMMES!
 TX_VANTA_MASEN = 2   ; VÄNTA, MÅSEN!
@@ -60,6 +60,11 @@ TX_TRADGARDEN = 53   ; TRÄDGÅRDEN
 TX_LEKPLATSEN = 54   ; LEKPLATSEN
 TX_CYKELVAGEN = 55   ; CYKELVÄGEN
 TX_SKATEPARKEN = 56   ; SKATEPARKEN
+TX_SKOGSSTIGEN = 57   ; SKOGSSTIGEN
+TX_BACKEN = 58   ; BÄCKEN
+TX_STORA_BACKEN = 59   ; STORA BACKEN
+TX_FLOTTLEDEN = 60   ; FLOTTLEDEN
+TX_TROTTOAREN = 61   ; TROTTOAREN
 
 .data
 font1:
@@ -119,7 +124,7 @@ text_table:
     .word tx_32, tx_33, tx_34, tx_35, tx_36, tx_37, tx_38, tx_39
     .word tx_40, tx_41, tx_42, tx_43, tx_44, tx_45, tx_46, tx_47
     .word tx_48, tx_49, tx_50, tx_51, tx_52, tx_53, tx_54, tx_55
-    .word tx_56
+    .word tx_56, tx_57, tx_58, tx_59, tx_60, tx_61
 tx_0: .byte 19, 11, 18, 9, 9, 9, 40, 255   ; SKRIII!
 tx_1: .byte 14, 5, 10, 40, 0, 13, 9, 14, 1, 0, 16, 15, 13, 13, 5, 19, 40, 255   ; NEJ! MINA POMMES!
 tx_2: .byte 22, 28, 14, 20, 1, 43, 0, 13, 27, 19, 5, 14, 40, 255   ; VÄNTA, MÅSEN!
@@ -177,5 +182,10 @@ tx_53: .byte 20, 18, 28, 4, 7, 27, 18, 4, 5, 14, 255   ; TRÄDGÅRDEN
 tx_54: .byte 12, 5, 11, 16, 12, 1, 20, 19, 5, 14, 255   ; LEKPLATSEN
 tx_55: .byte 3, 25, 11, 5, 12, 22, 28, 7, 5, 14, 255   ; CYKELVÄGEN
 tx_56: .byte 19, 11, 1, 20, 5, 16, 1, 18, 11, 5, 14, 255   ; SKATEPARKEN
+tx_57: .byte 19, 11, 15, 7, 19, 19, 20, 9, 7, 5, 14, 255   ; SKOGSSTIGEN
+tx_58: .byte 2, 28, 3, 11, 5, 14, 255   ; BÄCKEN
+tx_59: .byte 19, 20, 15, 18, 1, 0, 2, 1, 3, 11, 5, 14, 255   ; STORA BACKEN
+tx_60: .byte 6, 12, 15, 20, 20, 12, 5, 4, 5, 14, 255   ; FLOTTLEDEN
+tx_61: .byte 20, 18, 15, 20, 20, 15, 1, 18, 5, 14, 255   ; TROTTOAREN
 level_names:   ; text id of every level, in the level table order
-    .byte 47, 48, 49, 50, 51, 52, 53, 54, 55, 56
+    .byte 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61

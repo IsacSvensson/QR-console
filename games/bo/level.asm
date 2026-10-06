@@ -112,10 +112,14 @@ ld_tiles:                           ; the world's structural tiles (one frame), 
     JEQ @have
     LDI r0, 3
     ST [ld_phase], r0
-    LD r6, [lv_world]
+    LD r6, [lv_world]               ; unpack the world block from xdata (ISA 2)
     SUB r6, 1
-    SHL r6, 1
-    LD r4, [r6 + ts_worlds]
+    SHL r6, 2
+    LD r1, [r6 + world_blocks]
+    LD r2, [r6 + world_blocks + 2]
+    LDI r0, wblk
+    SYS UNPACK
+    LDI r4, wblk                    ; entries: struct codes 1..26, then world codes 64..95
     LDI r5, 1
     LDI r7, NUM_STRUCT
     CALL unpack_tiles
@@ -598,11 +602,7 @@ os_prefab:                          ; param = prefab id; (r6, r7) = bottom-left
 ; load_world_tiles: the world codes 64..95 and the attribute table of cur_world (the structural codes are
 ; unpacked by ld_tiles the frame before)
 load_world_tiles:
-    LD r6, [cur_world]
-    SUB r6, 1
-    SHL r6, 1
-    LD r4, [r6 + ts_worlds]         ; entries: struct codes 1..26, then world codes 64..95
-    ADD r4, NUM_STRUCT * 3
+    LDI r4, wblk + NUM_STRUCT * 3
     LDI r5, T_W0
     LDI r7, NUM_WTILES
     CALL unpack_tiles
@@ -614,10 +614,7 @@ load_world_tiles:
     ADD r1, 1
     CMP r1, 64
     JLT @fixed
-    LD r6, [cur_world]
-    SUB r6, 1
-    SHL r6, 1
-    LD r2, [r6 + attr_worlds]
+    LDI r2, wblk + WB_ATTR
     LDI r1, 0
 @world:
     LDB r0, [r2]
@@ -651,9 +648,15 @@ unpack_tiles:
     STB [pal4 + 3], r0
     SHL r0, 4
     STB [pal4h + 3], r0
-    LDB r1, [r4]                    ; pattern
+    LDB r1, [r4]                    ; pattern: shared (ROM) or the world block's own (>= LOCAL_PAT)
     SHL r1, 4
+    CMP r1, LOCAL_PAT * 16
+    JAE @own
     ADD r1, patterns
+    JMP @pat
+@own:
+    ADD r1, wblk + WB_PAT - LOCAL_PAT * 16
+@pat:
     MOV r2, r5
     SHL r2, 5
     ADD r2, tilebank                ; destination
@@ -718,8 +721,77 @@ cell_attr:
     RET
 
 ; surface: r1 = x px, r2 = ya, r3 = yb, r6 = lowest allowed y for one-way surfaces
-; -> r0 = y of the first surface in [ya, yb] scanning down (NONE if none), r5 = its attribute. r1-r3, r6, r7 kept.
+; -> r0 = y of the first surface in [ya, yb] scanning down (NONE if none), r5 = its attribute, t_plat = the
+; moving platform it belongs to (0: the level). r1-r3, r6, r7 kept.
 surface:
+    CALL surface_tiles
+    PUSH r0
+    LDI r0, 0
+    ST [t_plat], r0
+    LD r0, [plat_n]
+    CMP r0, 0
+    POP r0                          ; (POP keeps the flags)
+    JEQ @tiles
+    PUSH r4
+    PUSH r7
+    ST [t_sy], r0
+    LDI r7, actors
+@act:
+    LD r4, [r7 + AC_TYPE]
+    CMP r4, 0
+    JEQ @next
+    SHL r4, 3
+    LDB r5, [r4 + en_table + 5]
+    AND r5, F_PLAT
+    JZ @next
+    LD r5, [r7 + AC_Y]              ; the platform's top
+    SAR r5, 4
+    CMP r5, r2
+    JLT @next
+    CMP r5, r3
+    JGT @next
+    CMP r5, r6                      ; one-way: not above the allowed line
+    JLT @next
+    LD r0, [t_sy]
+    CMP r5, r0
+    JGE @next                       ; the level's surface is higher (NONE is larger than any y)
+    LDB r4, [r4 + en_table + 1]     ; width
+    LD r0, [r7 + AC_X]
+    SHR r0, 4
+    PUSH r4
+    SHR r4, 1
+    SUB r0, r4                      ; left edge
+    POP r4
+    CMP r1, r0
+    JLT @next
+    ADD r0, r4
+    CMP r1, r0
+    JGE @next
+    ST [t_sy], r5
+    ST [t_plat], r7
+@next:
+    ADD r7, ACT_SIZE
+    CMP r7, actors + MAX_ACT * ACT_SIZE
+    JLT @act
+    LD r0, [t_sy]
+    LD r5, [t_plat]
+    CMP r5, 0
+    JEQ @level
+    LDI r5, C_ONEWAY
+    POP r7
+    POP r4
+    RET
+@level:
+    POP r7
+    POP r4
+    CMP r0, NONE                    ; the level's attribute again (r5 was used)
+    JEQ @tiles
+    LD r5, [t_sattr]
+@tiles:
+    RET
+
+; surface_tiles: surface in the level grid only (same interface; also keeps its attribute in t_sattr)
+surface_tiles:
     PUSH r4
     PUSH r7
     LD r0, [lv_wpx]
@@ -774,6 +846,7 @@ surface:
     JLT @skip
 @found:
     MOV r0, r7
+    ST [t_sattr], r5
     POP r7
     POP r4
     RET

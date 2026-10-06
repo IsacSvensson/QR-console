@@ -8,7 +8,7 @@ import { PALETTE } from '@qrc/vm';
 import { type Lvl, LEVELS_DIR, groundHeights, levelIds, readLevel, resolveY } from './lvl';
 import { type ArcKind, flight } from './physics';
 import { PREFABS } from './prefabs';
-import { CLASS, T, WORLDS, WTILE, attrOf, tilePixels } from './tiles';
+import { CLASS, T, WORLDS, WTILE, attrOf, tilePixels, worldHasTile } from './tiles';
 import { isMain } from './util';
 
 export const ROWS = 32;
@@ -23,7 +23,7 @@ export const SIGN_KIND: Record<string, number> = { right: 0, a: 1, b: 2, down: 3
 export const RAMP_KIND: Record<string, number> = { ramp45: 0, ramp45l: 1, ramp22: 2, ramp22l: 3 };
 export const ENEMY_TYPE: Record<string, number> = {
   snail: 1, gull: 2, hedgehog: 3, wasp: 4, ball: 5, teddy: 6, squirrel: 7, pigeon: 8, snowman: 9, sled: 10, jelly: 11, blob: 12, cannon: 13,
-  boss1: 17,
+  boss1: 17, log: 18, bus: 19,
 };
 export const PREFAB_IDS = Object.keys(PREFABS);
 
@@ -189,6 +189,7 @@ export function buildLevel(lvl: Lvl): Built {
       case 'bounce':
       case 'bar':
       case 'tile': {
+        if (o.kind === 'tile' && !worldHasTile(lvl.world - 1, o.args[0]!)) throw new Error(`${lvl.file}:${o.line}: world ${lvl.world} has no tile ${o.args[0]}`);
         const code = o.kind === 'tile' ? tileCode(o.args[0]!) : { block: T.BLOCK, weak: T.WEAK, bounce: T.BOUNCE, bar: T.BAR }[o.kind]!;
         const a = o.kind === 'tile' ? 1 : 0;
         const y = Y(a);
@@ -297,6 +298,9 @@ export function buildLevel(lvl: Lvl): Built {
         if (id < 0) throw new Error(`${lvl.file}:${o.line}: unknown prefab ${o.args[0]}`);
         const y = Y(1);
         const rows = PREFABS[o.args[0]!]!;
+        for (const name of rows.flat()) {
+          if (name !== '.' && !worldHasTile(lvl.world - 1, name)) throw new Error(`${lvl.file}:${o.line}: prefab ${o.args[0]} uses ${name}, which world ${lvl.world} does not have`);
+        }
         if (o.kind === 'prefab') {
           rows.forEach((row, j) =>
             row.forEach((name, i) => {

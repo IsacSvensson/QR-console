@@ -103,8 +103,7 @@ camera_update:
 
 ; ---- the play screen ------------------------------------------------------------------------------
 draw_play:
-    LD r1, [lv_world]
-    LDB r0, [r1 + world_sky - 1]
+    LDB r0, [wblk + WB_SKY]
     SYS CLS
     CALL draw_strip
     CALL draw_level
@@ -120,10 +119,7 @@ draw_play:
 
 ; parallax strip: 16 x 3 tiles at half the camera speed, drawn twice to wrap
 draw_strip:
-    LD r1, [lv_world]
-    SUB r1, 1
-    SHL r1, 1
-    LD r0, [r1 + strips]
+    LDI r0, wblk + WB_STRIP
     LDI r1, tilebank
     LDI r2, 16
     LDI r3, 3

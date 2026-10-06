@@ -1,0 +1,76 @@
+# 2-1 SKOGSSTIGEN — the forest path (DESIGN §8.2-8.3): hills and roots, stumps as platforms, the first godis
+# path (an abandoned picnic basket; the high crown with star 3 cannot be reached with an ollie), wasps and a
+# squirrel that throws cones.
+name  SKOGSSTIGEN
+world 2
+music 2
+rows  16
+start 4
+
+terrain
+h 4
+flat 24         # 0-23    start, sign, apples
+up22 2          # 24-27   the first hill (h6)
+flat 10         # 28-37
+down22 2        # 38-41   (h4)
+flat 32         # 42-73   stumps 48 (2 high) and 53 (3 high), star 1 above; the squirrel
+up22 2          # 74-77   (h6)
+flat 12         # 78-89   a wasp
+down22 2        # 90-93   (h4)
+flat 46         # 94-139  flag; the basket with godis; the high crown with star 3
+up22 3          # 140-145 (h7)
+flat 6          # 146-151
+down22 3        # 152-157 (h4)
+flat 72         # 158-229 kicker with star 2, flag, the part behind the bush, the goal
+
+objects
+2   apples g 4
+8   sign right
+10  prefab spruce g
+14  apples g 8
+22  tile ROOT g
+25  apple g+1
+27  apple g+1
+29  apples g 6
+39  apple g+1
+41  apple g
+44  tile ROOT g
+48  prefab stump2 g
+48  apple g+2
+53  prefab stump3 g
+53  apple g+3
+53  star g+5 1
+57  apples g 6
+64  tile FERN g
+66  tile MUSHROOM g
+70  enemy squirrel g
+82  enemy wasp g+3
+86  tile FERN g
+96  flag
+100 prefab spruce g
+104 prefab basket g
+105 pickup godis g
+112 platform g+5 6
+112 apple g+6
+114 star g+6 3
+122 apples g 4
+126 tile ROOT g
+130 prefab spruce g
+141 apple g+1
+143 apple g+1
+147 apples g 4
+153 apple g+1
+155 apple g
+166 ramp45 1
+166 arc 24 r45a
+172 star g+8 2
+186 flag
+190 enemy wasp g+3
+196 box g apples
+202 apple g+4
+203 platform g+2 6
+203 fg bush g+3
+205 apples g+3 2
+207 part g+3
+214 apples g 8
+224 goal

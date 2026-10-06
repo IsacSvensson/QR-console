@@ -38,4 +38,33 @@ export const PREFABS: Record<string, string[][]> = {
     ['HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE'],
     ['HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE'],
   ],
+  // World 2 SKOGEN
+  stump2: [['STUMP_T'], ['STUMP']],
+  stump3: [['STUMP_T'], ['STUMP'], ['STUMP']],
+  spruce: [
+    ['.', 'SPRUCE_T', '.'],
+    ['.', 'SPRUCE', '.'],
+    ['SPRUCE_T', 'SPRUCE', 'SPRUCE_T'],
+    ['.', 'TRUNK', '.'],
+  ],
+  basket: [['BASKET']],
+  carrots: [['CARROTS', 'CARROTS', 'CARROTS', 'CARROTS']],
+  // World 3 STADEN
+  car: [
+    ['CARR_L', 'CARR_M', 'CARR_R'],
+    ['CARB_L', 'CARB_M', 'CARB_R'],
+  ],
+  shop: [
+    ['BRICK', 'LITWIN', 'BRICK', 'LITWIN', 'BRICK'],
+    ['BRICK', 'BRICK', 'BRICK', 'BRICK', 'BRICK'],
+    ['AWNING', 'AWNING', 'AWNING', 'AWNING', 'AWNING'],
+    ['SHOP_WIN', 'SHOP_WIN', 'SHOP_DOOR', 'SHOP_WIN', 'SHOP_WIN'],
+  ],
+  lamp: [['LAMP_T'], ['LAMP'], ['LAMP']],
+  scaffold: [
+    ['SCAFF', 'SCAFF', 'SCAFF', 'SCAFF'],
+    ['SCAFF_POST', '.', '.', 'SCAFF_POST'],
+    ['SCAFF', 'SCAFF', 'SCAFF', 'SCAFF'],
+    ['SCAFF_POST', '.', '.', 'SCAFF_POST'],
+  ],
 };
