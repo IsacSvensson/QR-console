@@ -743,3 +743,49 @@ Decision:
   app without demo GIFs. Accepted: the app is what matters, and the GIFs are not precached.
 Measurement: `check:console` 172 tests in 15 files, ~16 s locally; `check` 340 tests, green. The workflow itself
 runs only on GitHub (main) and is **not verified** here.
+
+## D-040 - Sixtens expedition planned: design, VM-rendered mockup, code overlays without a tool change (Part 4)
+Date: 2026-10-06 - Milestone: planning for Part 4 (human request: plan the next game from the human's 38-section
+draft and ten locked decisions; no implementation)
+Decision:
+- **The locked decisions win over the draft** where they disagree, and every conflict is written out in
+  `games/sixten/DESIGN.md` §1.2: top-down screen by screen plus short side views (not a side-scroller); **forest is
+  never shelter** (the draft listed it, decision 4 says it is dangerous in storms; shelter = ditch, hollow, solid
+  building; "under fixed structures" dropped, since wind is stronger under an overpass); 4 levels per world (1-4 and
+  1-5 merged); wood only; a letter code (not a picture code); choklad only resists wind and never protects from the
+  whirlwind.
+- **Safety facts are sourced and left for the human to tick** (DESIGN §1.3, §8.3): SMHI ("do not approach a
+  whirlwind", *Skydd mot blixten*: kneel in a hollow, not under a lone tree, not in water), Krisinformation/MCF and the
+  County Administrative Boards (avoid forest in storms and storm-felled forest). **Ditch/low spot as shelter from a
+  whirlwind** was found only at the US National Weather Service, not at SMHI or MCF: flagged (S3). MSB has been called
+  MCF (Myndigheten för civilt försvar) since 2026.
+- **Cell format**: one byte per cell, bits 0-4 type (20 used of 32), bit 5 mirrored variant, bit 6 covered by leaves,
+  bit 7 control. A screen is 4 x 3 cells (128 x 96) under a 32 px HUD; one 16-byte pattern per type; the map screen
+  reads the same byte through a fill-colour and a symbol table, so the map cannot disagree with the world. The course
+  is drawn in red: DawnBringer 16 has no magenta.
+- **The whirlwind** is data (waypoints, triggered by an event in the level), never follows Sixten, never uses RND;
+  warning >= 300 frames before strength 3 on Sixten's screen; movement per frame <= speed. These are PLAN M27 tests.
+- **Code overlays need no assembler change.** Instructions may be written in `.xdata`, and xdata labels are
+  `0x10000 + offset`, so `OVL_RAM + (target - overlay_start)` is an ordinary 16-bit value; a macro (`OJ op, target`)
+  writes every jump inside an overlay that way, calls into ROM are normal, `SYS COPY` copies the overlay to RAM
+  (0xE000) and `CALL 0xE000` runs it (the VM fetches from `mem[pc]` anywhere). Spiked first in a 130-byte test
+  cartridge (a relocated loop and an internal call, traced at 0xE000-0xE010), then in the mockup: two overlays swapped
+  at the same address. Costs: overlays cannot be `.pack`ed (labels), and `.lst`/`.sym` show xdata addresses, not run
+  addresses (`qrc run --trace` shows the real ones). **Open for the human (optional generic tool change, not needed):**
+  an `.overlay ADDR` / `.endoverlay` directive that gives the labels their run address while the bytes go to xdata
+  (automatic relocation, correct listings). Not done; flagged in PROGRESS.
+- **Budget** (DESIGN §12), calibrated from the listings of Bo (code 25.4 KB: actors 4.6, screens 4.3, player 3.8,
+  level 3.1 KB …) and BLACKBOX (room 1.0, player 1.2 KB): Sixten's code 17.8-22.0 KB; ROM 22-28 KB without overlays,
+  17-22 KB with the side-view engine and the screens as overlays; xdata 11-14 KB packed; cartridge 22-27 KB, so the
+  25 KB target, not ROM, is the main budget risk. RAM ~15 KB (4 KB overlay area).
+- **Mockup** (`games/sixten/mockup/`, Bo's technique: font with ÅÄÖ and every asset from `gen.ts`, column-major MAP,
+  drawing spread over frames; `measure.ts` builds, measures, writes the pictures to `games/sixten/docs/` and does the
+  QR round trip). Shown: 1-1's cell map packed in xdata and unpacked; one screen expanded and drawn, a strength-3
+  whirlwind with inflowing particles and grass bending towards it, HUD with the compass; the map screen from the same
+  360 bytes; the side view with the fallen tree over the ditch and Sixten in the lee; overlays A and B.
+- **CI** (D-039) gets a `sixten` matrix entry from M26 on (PLAN Part 4).
+Measurement (VM, `measure.ts`): cartridge 4 482 B (ISA 2; code 4 624, rodata 3 558, xdata 488 B: the packed cell
+map and two overlays of 164 and 116 B); 0 faults, 0 overruns. Max cycles per frame: top-down 10 895 (frame with the
+screen expansion, ~5 700 of it; other frames <= 4 853), map screen 8 067 (the symbols part), side view 2 793,
+overlays 9 900. Routine sizes: screen expansion 300 B, whirlwind + particles 1 048 B, map screen 1 376 B.
+`qrc encode` -> `mockup.gif` (27 frames, 4.0 s loop) -> `qrc decode`: identical SHA-256. Not verified on a phone.

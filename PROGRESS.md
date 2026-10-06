@@ -2,9 +2,11 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** none — Parts 1–3 complete; awaiting the human's manual acceptance (PLAN.md)
+**Current milestone:** none — Parts 1–3 complete; Part 4 (Sixtens expedition) planned, waiting for the human's review
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
+Part 4 (Sixtens expedition) planned on branch `claude/sixtens-expedition`: `games/sixten/DESIGN.md`, a VM-rendered mockup,
+PLAN.md Part 4 (M26–M32), D-040. Next: the human reviews the safety facts (DESIGN §1.3, §8.3) and the open questions (§11).
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -42,6 +44,16 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M23 Worlds 2 and 3
 - [x] M24 Worlds 4 and 5, the theft and the ending
 - [x] M25 Picture codes, music, delivery
+
+Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`; planned, not started)
+
+- [ ] M26 Engine: cells, screens, walking, map and compass
+- [ ] M27 The whirlwind and the wind
+- [ ] M28 Side view as a code overlay
+- [ ] M29 World 1 and the game around it (budget gate)
+- [ ] M30 Worlds 2 and 3
+- [ ] M31 Worlds 4 and 5 and the final
+- [ ] M32 Save code, music, delivery
 
 ## Current work
 
@@ -96,6 +108,8 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Bo ROM after M25 (final) | 31.6 KB (code 25.4 KB, data 6.0 KB), ISA 2; cartridge 22.9 KB; 132-frame GIF loop (19.8 s) | test:bo, npm run demo |
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
+| Sixten mockup (planning) | cartridge 4 482 B (ISA 2); max cycles/frame: top-down 10 895 (with screen expansion; else ≤ 4 853), map 8 067, side view 2 793, overlays 9 900; QR round trip identical | D-040, `games/sixten/mockup/measure.ts` |
+| Sixten projection | code 17.8–22.0 KB; ROM 22–28 KB (17–22 KB with overlays); cartridge 22–27 KB (target < 25 KB) | DESIGN §12 (sixten) |
 | Bo ROM after M19 | 8.2 KB (code 5.8 KB, data 2.4 KB); cartridge 4.7 KB; play frames ~1.4k cycles, loading ≤ 15.1k | test:bo |
 
 ## Known issues
@@ -110,7 +124,17 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
   app itself makes no requests. Fixing it needs a change in `apps/web` (frozen in Part 2) or a decision on what
   the criterion means. Measurement and options: DECISIONS.md D-021.
 
+- **Part 4 (Sixten) needs the human before M26/M29:** (1) tick or correct the safety rules and facts in
+  `games/sixten/DESIGN.md` §1.3 and §8.3. Rule S3 (a ditch or low spot as shelter from a whirlwind) has only a US
+  source (NWS), no Swedish one. (2) Answer or accept the defaults for the draft's open questions (§11). (3) Optional,
+  generic tool change: an `.overlay ADDR` directive in the assembler (labels at the run address, bytes in xdata).
+  Not needed: overlays already work with a relocation macro (D-040). Your decision.
+- **CI split (D-039) is not verified on GitHub:** `pages.yml` runs only on `main`; the first push there will show it.
+
 ## Ideas for later
+
+- (From planning Part 4) Sixten: a space world or bonus area, stone and iron as resources (the draft's §11, §17);
+  an `.overlay ADDR` assembler directive (see *Blocked / needs human*).
 
 - Calibrate the distortion simulator with real camera captures of the demo GIFs.
 - APNG output; Raptor-style precode for K ≫ 256; a `--scale` auto-choice from screen size.

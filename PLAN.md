@@ -464,3 +464,184 @@ STOP presses; replays from the World 2 map to the World 4 map.
    `FIRST10.md` §9. The answers go into `PROGRESS.md`; what they show is tuned before Worlds 2–5 are built.
 3. **After M25 (Bo test):** Bo plays. The tests cannot judge the one thing that matters: whether it is fun for a
    six-year-old, and whether he can read the bubbles and use the touch controls. Notes go into `PROGRESS.md`.
+
+---
+
+# Part 4 — SIXTENS EXPEDITION (planned 2026-10-06 at the human's request)
+
+An orienteering adventure for a nine-year-old: top-down, screen by screen (like BLACKBOX and Zelda), with short
+side-view action stretches (like Zelda II), a whirlwind that is weather and not an enemy, a map that *is* the world,
+and a nature book. It proves that the console can carry two engines in one cartridge — the second one as a **code
+overlay** copied from xdata into RAM — and a deterministic weather system whose fairness is tested. The design is
+the **specification** for these milestones:
+
+- `games/sixten/DESIGN.md` — the ten locked decisions (§1), the safety principle and its sources (§1.1–1.3), the two
+  views (§3), the cell format and map symbols (§4), compass (§5), the whirlwind system (§6), worlds and phenomena
+  (§7), power-ups, nature book, facts and wood (§8), controls per level (§9), HUD and the save code (§10), the
+  defaults for the draft's open questions (§11), budget (§12), the 1-1 sketch and its rules (§13).
+- `games/sixten/mockup/` — a VM-rendered spike of the top-down screen, the map screen, the side view and an overlay
+  swap (cycles measured, QR round trip tested; DECISIONS D-040).
+- `games/sixten/levels/*.map` — the level sources, written from M26 on (one per level: cell map as text, controls,
+  view transitions, whirlwind waypoints and cell changes, animals and nature-book objects; generator + preview PNG).
+- `games/sixten/NATURBOK.md` — the 40 entries with a source and a review box each, written before M29.
+
+Rules for M26–M32 (in addition to CLAUDE.md, same spirit as Parts 2 and 3):
+
+- **The runtime is frozen on ISA 2.** From the planning commit on,
+  `git diff 02d7058 -- packages/vm packages/cartridge packages/transport packages/qr apps` stays **empty** through
+  M32. Wiring Sixten into the existing scripts (the demo list, the CI game matrix, e2e fixtures, a Vitest project) is
+  expected. Any change to `packages/asm` or `packages/tools` must be generic, needs a `DECISIONS.md` entry and a human
+  decision, and every other game must still assemble to identical sections. The `.overlay` directive (DESIGN §12.4)
+  is such a change: optional, not needed, the human's decision. If something seems to need a runtime change, record
+  the measurement, flag it under *Blocked / needs human*, and continue within the limits.
+- **The design documents are the test oracle.** The tests read `DESIGN.md` (§4.1 cell table, §6 whirlwind rules,
+  §8.1 power-ups, §10.2 code layout, §13 rules for 1-1), `NATURBOK.md` and the `.map` sources; what the engine holds
+  in RAM or ROM is compared against them, never against itself.
+- **Safety is a test, not a hope.** Every safety rule (DESIGN §1.3) and every nature-book entry has a source and a
+  review box; from M29 on the tests require the human's tick on every row (an unticked row keeps the milestone open).
+- **All game code and data live in `games/sixten/`**; generators and the replay bot in `games/sixten/tools/`.
+- Every milestone has recorded replays (`games/sixten/replays/*.json`) with committed per-frame hashes from the VM,
+  recorded by a bot from RAM-driven routes ("go to cell", "wait for whirlwind phase", "take shelter", "press A here"),
+  and assertions in `test/sixten/**`.
+- **Budgets, asserted in every replay:** no fault, 0 cycle-budget overruns, max cycles per frame ≤ 25 000 (half the
+  budget); ROM size and cartridge size reported by `test:sixten` (ROM ≤ 32 KB; cartridge target < 25 KB, *measure*).
+
+The test command for all Part 4 milestones is `npm run test:sixten` (a Vitest project for `test/sixten/**`); each
+milestone adds to it and never removes earlier checks. From M26 on, the CI game matrix (`pages.yml`, D-039) gets a
+`sixten` entry.
+
+## M26 — Engine: cells, screens, walking, map and compass
+
+- `.map` source format; `games/sixten/tools/levels.ts` packs every cell map into xdata and writes a preview PNG (the
+  top-down view and the map side by side); the cell patterns and map-symbol tables of DESIGN §4.1; the cell map
+  unpacked into RAM at level start; one screen (4 × 3 cells) expanded into a column-major tile buffer and drawn with
+  one `MAP` per column; the screen slide; Sixten walks (4 directions, sliding round corners), collision by cell type;
+  HUD (DESIGN §10.1); the map screen (B, pauses) with the "you are here" rule of DESIGN §5; the compass with course
+  arrow and step counter. Test levels `T1` (every cell type once) and `T2` (a 6 × 5-screen maze of paths and forest).
+
+**Accept:** `npm run test:sixten`
+- **the map and the world agree cell for cell:** for every level, an independent TypeScript reader of the `.map`
+  source reproduces the RAM cell map after unpacking; for every screen of T1 and T2 the tile buffer equals the
+  reference expansion of those cells (patterns, mirrored variants), and the map screen's fill colour and symbol for
+  every cell equal the reference tables, read back from the framebuffer
+- after a cell change written into RAM by a test hook, the next screen expansion **and** the next map screen show the
+  new cell (the map is never stale)
+- replays on T1 and T2: in **every frame** Sixten's box overlaps no blocking cell of the reference grid; walking speed
+  per cell type matches DESIGN (path faster, dense forest slower) within ±1 px over a measured stretch
+- the map shows "you are here" in exactly the frames where Sixten stands on a control, a crossing or the start (or
+  has the cucumber), and never otherwise; the course arrow after setting a course points within one sixteenth of a
+  turn at the target control; the step counter equals the cells walked
+- budgets as above; ROM size reported
+
+## M27 — The whirlwind and the wind
+
+- The whirlwind object (DESIGN §6.1), waypoints and triggers from the `.map` source, the phases and warnings (§6.2),
+  the visual language for strength 1–5 (§6.3), cell changes at waypoints (§6.4), damage and shelter (§6.5), wind
+  particles and bending grass, falling branches in forest at wind ≥ 3, the whirlwind's sound language. Test level
+  `T3` (one whirlwind of each strength crossing open land, forest, a ditch, a hollow and a cabin).
+
+**Accept:** `npm run test:sixten`
+- **never random:** two runs of every whirlwind replay with different RNG seeds give identical whirlwind state (RAM)
+  in every frame; a route that takes a different path through the level gives the same whirlwind state in every
+  frame after the same trigger (the whirlwind does not follow Sixten)
+- **warning first:** for every whirlwind in every level, the first warning (phase 1) comes at least **300 frames**
+  (5 s, DESIGN §6.2) before its strength first reaches 3 on any cell of the screen where Sixten is in the replay; the
+  wind turns at least 120 frames before every change of direction
+- **no jumps:** in every frame, the whirlwind's movement is at most its speed (+1/16 px rounding); its strength
+  changes by at most one step per 60 frames
+- cell changes happen only at their waypoint and only within the whirlwind's radius; after them the RAM cell map
+  equals the `.map` source with the listed changes applied
+- **shelter is real:** a replay that stands still in a ditch, a hollow and the cabin while a strength-3 whirlwind
+  passes loses no heart; the same replay standing in forest or on open land inside the radius loses one (`AJ!`) and
+  returns to the last control; a choklad replay inside the radius still loses one (DESIGN §8.1)
+- budgets as above
+
+## M28 — Side view as a code overlay
+
+- The side-view engine (DESIGN §3.2): walk, variable jump, climb, crouch, horizontal wind force, lee; side-view levels
+  in xdata; transitions from transition cells and back (§3.3); the compass shows the facing direction. The side-view
+  engine (and the screens around the game, as far as they are written by now) is a **code overlay**: written in
+  `.xdata` with relocated internal jumps (the `OJ` macro of the mockup, DESIGN §12.4), copied to `0xE000` with
+  `SYS COPY` when the view changes. Test level `T4` (a cave, a ravine with a fallen tree, a cliff to climb).
+
+**Accept:** `npm run test:sixten`
+- every overlay is copied to RAM before its first instruction runs, and a trace of a side-view replay shows the PC in
+  the overlay area for the side-view frames and never there in top-down frames; entering and leaving a side view
+  twice gives the same state hashes both times
+- every jump target inside an overlay that the assembler emitted lies inside that overlay's RAM range (checked from
+  the listing: a relocation mistake fails here, not on the phone)
+- in every frame Sixten's box overlaps no solid tile of the reference side-view grid; with wind w and no shelter his
+  x speed changes by exactly w per frame; standing in the lee or with choklad it does not change
+- entering a transition cell and pressing A starts the right side view; its exit leaves Sixten on the right cell
+- ROM size reported, and how much ROM the overlays saved (code bytes in xdata)
+
+## M29 — World 1 and the game around it (budget gate)
+
+- Title, world map, level cards, tally, game over, the code screen; levels 1-1 to 1-4 (DESIGN §7); power-ups (§8.1),
+  the nature book with the World 1 entries (§8.2), wood and building sites (§8.4); the World 1 tileset, animals and
+  music. 1-1 is built exactly as DESIGN §13 describes.
+
+**Accept:** `npm run test:sixten`
+- **a safe route exists in every level:** for every World 1 level a bot replay follows the level's safe route from
+  start to goal, takes every obligatory control, loses no heart, uses no wood, no power-up and no compass course
+- for every World 1 level a replay that collects **every control and nature-book entry** of World 1 (checked against
+  the `.map` sources)
+- **1-1 rules** (DESIGN §13.2): no whirlwind before control 3; at least 300 frames of warning; a shelter cell at most
+  2 cells from every cell of the safe route while the whirlwind is active; the first control at most 6 cells from the
+  start; no forest cell inside the radius on the safe route
+- every building site is optional: the safe route never needs it, and each one leads to a shortcut, an optional
+  control or a nature-book entry
+- power-ups do what DESIGN §8.1 says, measured from replays (cucumber: "you are here" on; chips: 1.5× speed; choklad:
+  no wind push at strength 1–2, damage inside the radius unchanged)
+- **safety review:** every row of DESIGN §1.3 and every World 1 entry in `NATURBOK.md` has a source and the human's
+  tick; the texts in ROM/xdata equal `NATURBOK.md` byte for byte (glyph indices)
+- one replay plays from the title to the World 2 map
+- **budget gate:** code bytes (ROM and overlays), World 1 data bytes, ROM and cartridge size measured, and a
+  projection for five worlds recorded in `DECISIONS.md`. If it exceeds 32 KB ROM or 25 KB cartridge, apply DESIGN
+  §12.6's cut list in order and flag it for a human
+
+## M30 — Worlds 2 and 3
+
+- Levels 2-1 to 2-4 and 3-1 to 3-4 with their phenomena (falling trees and landslides; heavy rain/flooding and
+  currents, DESIGN §7), the World 2 and 3 tilesets, animals, nature-book entries and music.
+
+**Accept:** `npm run test:sixten` — as M29 for Worlds 2 and 3 (safe route, every control and entry, building sites
+optional, safety review ticked), plus: flooded cells follow their schedule from the `.map` source and the safe route
+never enters one; a landslide warns (trickling gravel) at least 120 frames before it changes cells; one replay from
+the World 2 map to the World 4 map.
+
+## M31 — Worlds 4 and 5 and the final
+
+- Levels 4-1 to 4-4 (thunder, fog) and 5-1 to 5-4 (the final: a strength-5 whirlwind, DESIGN §7), the ending
+  (`JAG FÖRSTÅR.`).
+
+**Accept:** `npm run test:sixten`
+- as M29 for Worlds 4 and 5; under thunder, no safe route passes a lone tree, a height or water while lightning is
+  active, and a replay crouching in a hollow loses no heart
+- in fog, a replay that follows the course arrow and the step counter reaches the control it set the course to
+- **one replay from the title to the end of the game** (all 20 levels, no code entry)
+- ROM ≤ 32 KB, or the overrun measured and flagged for a human; cartridge size reported against 25 KB
+
+## M32 — Save code, music, delivery
+
+- The save code (DESIGN §10.2), all music and sound effects (§15), Sixten delivered like the other games.
+
+**Accept:**
+- `npm run test:sixten`: every code round-trips (TypeScript reference encoder ⇄ VM decoder) for every world (1–6) ×
+  a seeded sample of nature-book sets (the seed printed on failure) plus the empty and the full book; wrong checksums
+  and impossible worlds are rejected; a replay enters a code and resumes in the right world with the right book
+- every world has its own track and every track is heard in the replays; the whirlwind's sound follows its strength
+- `npm run demo` writes and verifies `demo/sixten.gif`; `npm run test:e2e` scans it with the fake camera to 100 %,
+  presses PLAY and the first frame matches the VM reference; the CI game matrix publishes it
+- `games/sixten/GUIDE.md` (Swedish, for parents and Sixten); `REPORT.md` gains a Sixten section (tested / measured /
+  not verified); `npm run check` green
+
+## Manual acceptance for Part 4 (human only)
+
+1. **Before M29 (facts):** tick every row of DESIGN §1.3 and `NATURBOK.md`, or correct it. S3 (ditch as shelter from
+   a whirlwind) has no Swedish source yet.
+2. **After M27 (feel test):** scan the demo GIF on a phone: can a whirlwind and its strength be read in 128 × 128?
+   Does taking shelter feel obvious without text?
+3. **After M29 (Sixten test):** a nine-year-old plays 1-1 and 1-2 without help. Does he find the controls, read the
+   map, see the wind coming and find shelter? Notes go into `PROGRESS.md`; the tests cannot judge whether it is fun,
+   or whether he learns the right thing.
