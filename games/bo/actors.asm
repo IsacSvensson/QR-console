@@ -30,6 +30,7 @@ B_PIGEON = 7
 B_BOSS1  = 8
 B_PLAT   = 9                        ; a moving platform drifting back and forth (log)
 B_BUS    = 10                       ; a moving platform that drives off when Bo stands on it (the bus)
+B_RABBIT = 11                       ; Jättekaninen: hops after Bo (the chase of 2-5), spawned by boss_step
 ; stomp outcomes
 O_APPLE  = 0
 O_AWAY   = 1
@@ -61,6 +62,7 @@ EN_CONE = 14
 EN_SNOWBALL = 15
 EN_POPCORN = 16
 JOKE_T = 40
+PIGEON_NEAR = 48                    ; px: a pigeon flies up when Bo rolls this near
 
 .data
 ; per type: behaviour, box w, box h, speed (throwers: projectile type), outcome, flags, joke text, 0
@@ -85,11 +87,12 @@ en_table:
     .byte B_BOSS1, 14, 12, 16, O_STAND, F_BIG | F_RIGHT, 255, 0     ; 17 Stora Måsen (boss of world 1)
     .byte B_PLAT,  24, 6, 6, O_STAND, F_PLAT, 255, 10               ; 18 log: back and forth over 10 columns
     .byte B_BUS,   48, 16, 16, O_STAND, F_PLAT, 255, 160            ; 19 bus: drives 160 columns once Bo is on
+    .byte B_RABBIT, 14, 14, 8, O_STAND, F_BIG | F_RIGHT, 255, 36    ; 20 Jättekaninen: hop speed 8..36 (boss.asm)
 en_sprites:
     .word 0, spr_en_snail, spr_en_gull, spr_en_hedgehog, spr_en_wasp, spr_en_ball, spr_en_teddy, spr_en_squirrel
     .word spr_en_pigeon, spr_en_snowman, spr_en_sled, spr_en_jelly, spr_en_blob, spr_en_cannon, spr_en_cone
-    .word spr_en_snowball, spr_en_popcorn, spr_boss_gull, plat_log, plat_bus
-behaviours: .word b_walk, b_dive, b_fly, b_bounce, b_throw, b_proj, b_roll, b_pigeon, b_boss1, b_plat, b_bus
+    .word spr_en_snowball, spr_en_popcorn, spr_boss_gull, plat_log, plat_bus, spr_rabbit
+behaviours: .word b_walk, b_dive, b_fly, b_bounce, b_throw, b_proj, b_roll, b_pigeon, b_boss1, b_plat, b_bus, b_rabbit
 ; platform pictures (instead of a sprite): columns, rows, then world tile codes row by row
 plat_log:   .byte 3, 1, TW_LOG_L, TW_LOG_M, TW_LOG_R
 plat_bus:   .byte 6, 2, TW_BUS_R, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_W, TW_BUS_F
@@ -100,6 +103,15 @@ sine32:     .byte 0, 2, 5, 7, 8, 10, 11, 12, 12, 12, 11, 10, 8, 7, 5, 2, 0, 254,
 
 ; ---- the enemy list (from the level's objects) -------------------------------------------------------
 os_enemy:                           ; stamping: r6 = column, r7 = bottom row, r5 = type
+    CMP r5, EN_RABBIT               ; the chase: the rabbit's object is where it stops; boss_step brings it on
+    JNE @list
+    MOV r0, r6
+    SHL r0, 3
+    ST [chase_stop], r0
+    LDI r0, CHASE_FIRST
+    ST [chase_t], r0
+    RET
+@list:
     LD r1, [en_n]
     CMP r1, MAX_EN
     JGE @full
@@ -269,6 +281,9 @@ act_step:
     CMP r0, 0
     JEQ @done                       ; the behaviour removed it
 @far:
+    LD r0, [r7 + AC_TYPE]           ; the rabbit stays, however far behind
+    CMP r0, EN_RABBIT
+    JEQ act_touch
     LD r1, [r7 + AC_X]
     SHR r1, 4
     LD r0, [cam_x]
@@ -494,8 +509,11 @@ b_pigeon:                           ; walks; startled by Bo rolling near (not ju
     LD r0, [bo_state]
     CMP r0, ST_GROUND
     JNE b_walk
+    LD r0, [bo_vx]                  ; rolling (standing still does not scare it)
+    CMP r0, 0
+    JEQ b_walk
     CALL dir_to_bo
-    CMP r3, 24
+    CMP r3, PIGEON_NEAR             ; far enough that Bo riding at push speed finds it gone (DESIGN 9)
     JGT b_walk
     LDI r1, 1
     ST [r7 + AC_SUB], r1
@@ -918,6 +936,8 @@ contact:
     LD r0, [r7 + AC_TYPE]
     CMP r0, EN_BOSS1
     JEQ boss1_contact
+    CMP r0, EN_RABBIT
+    JEQ rabbit_contact
     LD r0, [r7 + AC_TYPE]
     CMP r0, 2                       ; a seagull takes the pommes, no damage (§5)
     JNE @godis
@@ -1219,6 +1239,14 @@ draw_actor:                         ; r7 = actor
     RET
 @draw:
     POP r0
+    LD r4, [r7 + AC_TYPE]           ; the rabbit in the air: the leaping picture
+    CMP r4, EN_RABBIT
+    JNE @live
+    LD r4, [r7 + AC_SUB]
+    CMP r4, RB_AIR
+    JNE @live
+    ADD r0, 128
+@live:
     LD r4, [r7 + AC_ST]
     CMP r4, AS_LIVE
     JNE @single

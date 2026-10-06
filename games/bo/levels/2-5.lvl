@@ -1,0 +1,59 @@
+# 2-5 KANINJAKTEN — BOSS: Jättekaninen (DESIGN §10.2). A chase level: the giant rabbit comes from behind and hops
+# after Bo; keep the speed up, hop over the pits and onto the stumps without stopping. Its landings shake the ground
+# (Bo loses speed), so there are no jump arcs here: an apple on a stump says "up here", apples on both sides of a
+# pit say "over it". The last kicker takes Bo over the brook; the rabbit stops at the edge, sniffs, finds the
+# carrots and eats. The `enemy rabbit` object marks where it stops (boss_step brings it on from behind).
+name  KANINJAKTEN
+world 2
+music 2
+rows  16
+start 6
+
+terrain
+h 4
+flat 40         # 0-39    start: the rabbit comes from behind
+gap 3           # 40-42   a little pit
+flat 30         # 43-72   stumps
+up22 2          # 73-76   (h6)
+flat 20         # 77-96   flag
+down22 2        # 97-100  (h4)
+flat 40         # 101-140 a stump, flag
+liq water
+liquid 3        # 141-143 a little brook
+flat 23         # 144-166 the carrots, the last kicker
+liquid 4        # 167-170 the brook: the rabbit stops at its edge (a slowed-down jump clears it too)
+flat 41         # 171-211 the goal
+
+objects
+4   apples g 4
+10  sign right
+14  prefab spruce g
+20  apples g 8
+36  apples g 4
+43  apples g 4
+52  prefab stump2 g
+52  apple g+2
+58  apples g 3
+68  prefab stump2 g
+68  apple g+2
+74  apple g+1
+76  apple g+1
+80  flag
+84  apples g 6
+92  prefab spruce g
+98  apple g+1
+100 apple g
+104 apples g 4
+112 prefab stump2 g
+112 apple g+2
+118 apples g 4
+126 flag
+130 prefab spruce g
+136 apples g 4
+144 apples g 6
+160 prefab carrots g
+166 ramp45 1
+166 enemy rabbit g
+180 apples g 6
+196 prefab spruce g
+202 goal

@@ -129,6 +129,11 @@ const stations = (b: Bot, list: string[], c0: number) => {
     const harmType = PROJECTILE[e] ?? type;
     const kinds = e === 'hedgehog' || e === 'sled' ? [EV.SPIKY] : e === 'jelly' || e === 'cannon' ? [EV.BOUNCE] : [EV.STOMP];
     if (PROJECTILE[e]) standBefore(b, c + 9); // throwers: close enough to jump on before the first throw
+    if (e === 'pigeon') {
+      // it flies up from a rolling Bo: stand still and let it walk up
+      b.brakeToStop();
+      b.until(0, (x) => (x.actorX(type) ?? 9999) - x.x <= 28, 900, 'the pigeon walks up');
+    }
     stompEnemy(b, type, kinds, `${e}: landing on it`);
     if (e === 'hedgehog' || e === 'sled') {
       // blinking after the spiky landing: past the other one to the second box
@@ -137,8 +142,25 @@ const stations = (b: Bot, list: string[], c0: number) => {
     }
     // the other one, from the side (waiting near a seagull or a thrower, running into the others)
     const stand = e === 'gull' || !!PROJECTILE[e];
-    const home = px(c + 19);
-    waitEvent(
+    const home = e === 'pigeon' ? px(c + 23) + 4 : px(c + 19);
+    if (e === 'pigeon') {
+      // a pigeon flies up when Bo rolls near it: reach it through the air, a full ollie from d px away
+      const n0 = b.u('ev_n');
+      b.search(
+        (k) => {
+          // stand 110 px away, run up, take off d px from it (outside the 48 px that scare it)
+          const d = 50 + 2 * k;
+          const dist = (x: Bot) => (x.actorX(type) ?? home) - x.x;
+          b.until((x) => (dist(x) < 110 ? B.L : x.vx < 0 ? B.R : 0), (x) => dist(x) >= 110 && x.vx === 0, 600);
+          b.until(B.R, (x) => dist(x) <= d, 300);
+          b.step(B.A | B.R);
+          b.until(B.A | B.R, (x) => x.u('ev_n') !== n0 || x.grounded, 120);
+        },
+        (x) => x.u('ev_n') === n0 + 1 && x.u('ev_kind') === EV.HELMET && x.u('ev_type') === type,
+        30,
+        'pigeon: side, through the air',
+      );
+    } else waitEvent(
       b,
       (x) => {
         const ax = x.actorX(type) ?? home;
@@ -297,6 +319,31 @@ const rideLog = (b: Bot, river: number) => {
   b.until(B.R, (x) => x.x >= px(river) + 6 && x.grounded, 60, 'onto the log');
   b.until((x) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => (log(x) ?? 0) >= home + 78, 400, 'carried across');
   b.until(B.R, (x) => x.x >= px(river + 13) + 4 && x.grounded, 120, 'off onto the far bank');
+};
+
+/** On a stump at `col` (2 high) without stopping: the hop that lands on its top. */
+const hopStump = (b: Bot, col: number) =>
+  b.search(
+    (k) => {
+      b.until(B.R, (x) => x.x >= px(col) - 40 + k, 300);
+      b.step(B.R | B.A);
+      b.until(B.R | B.A, (x) => x.grounded, 200);
+    },
+    (x) => x.foot === px(32 - 4 - 2) && x.x >= px(col) - 3 && x.x < px(col + 1) + 3,
+    40,
+    `onto the stump at ${col}`,
+  );
+/** 2-5: keep pushing; over the pit and the brook, onto the stumps, A at the last kicker (if `toEnd`). */
+const chaseRun = (b: Bot, stumps: number[], toEnd = true) => {
+  if (b.x < px(40)) {
+    b.until(B.R, (x) => x.x >= px(33), 600, 'to the pit');
+    b.jumpPast(px(43) + 4, { holdA: 20 }); // the pit
+  }
+  for (const col of stumps) hopStump(b, col);
+  if (!toEnd) return;
+  b.until(B.R, (x) => x.x >= px(134), 900, 'to the little brook');
+  b.jumpPast(px(144) + 4, { holdA: 20 });
+  kickA(b, 'the last kicker over the brook');
 };
 
 const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
@@ -522,6 +569,148 @@ const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
     b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
     b.land(B.R);
   },
+  // ---- World 3 (M23) ----
+  '3-1': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    b.until(B.R, (x) => x.x >= px(29) + 6, 300, 'the apples before the rail');
+    ollieOnto(b, (x) => x.state === 2, 'onto the low rail: grind');
+    b.until(B.R, (x) => x.grounded, 300, 'off the rail onto the curb');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.state === 2, 'onto the first bench');
+    b.until(B.R, (x) => x.grounded, 300, 'off the first bench');
+    b.brakeToStop(); // the grind combo made Bo fast (TRICK_BOOST)
+    ollieOnto(b, (x) => x.state === 2, 'onto the second bench');
+    b.until(B.R, (x) => x.grounded && x.x >= px(64), 300);
+    standBefore(b, 74);
+    hopOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 2), 'onto the first car');
+    b.brakeToStop();
+    b.until((x) => (x.x < px(75) + 4 ? B.R : 0), (x) => x.x >= px(75) + 4, 100, 'along the roof (its apple)');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 2) && x.x >= px(80), 'onto the second car');
+    b.brakeToStop();
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(32 - 4 - 2), 'straight up from the roof: star 1');
+    b.until(B.R, (x) => x.x >= px(104), 600, 'the apples, flag 2');
+    b.jumpPast(px(111) + 4, { holdA: 12 }); // up the curb
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.state === 2, 'onto the long rail');
+    b.until(B.R, (x) => x.grounded, 300, 'off the long rail');
+    followArc(b, 131, 24, true); // star 2
+    b.until(B.R, (x) => x.x >= px(166), 900, 'to the shop');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 2), 'onto the awning');
+    b.until((x) => (x.x < px(174) + 3 ? B.R : 0), (x) => x.x >= px(174) + 3 || !x.grounded, 200, 'along the awning');
+    b.land(B.R);
+    standBefore(b, 190);
+    hopOnto(b, (x) => x.cell(190, 27) === 0 && x.grounded, 'the box with apples');
+    b.jumpPast(px(199) + 4, { holdA: 30 }); // over the parked car
+    b.until(B.R, (x) => x.x >= px(201), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the hedge');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '3-2': (b) => {
+    const handrail = (note: string) => {
+      b.brakeToStop();
+      ollieOnto(b, (x) => x.state === 2, note);
+      b.until(B.R, (x) => x.grounded, 300, `${note}: off the end`);
+      b.brakeToStop(); // fast after the handrail (45 degrees, then TRICK_BOOST)
+    };
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    b.until(B.R, (x) => x.x >= px(11), 300);
+    handrail('the first handrail');
+    b.until(B.R, (x) => x.x >= px(27), 300, 'the apples of the landing');
+    handrail('the second handrail');
+    kickA(b, 'the kicker in the street: star 2', () => 0, 24);
+    b.brakeToStop();
+    for (const h of [5, 6, 7]) {
+      if (b.foot === px(32 - h)) continue; // the arc may already have landed on a step
+      ollieOnto(b, (x) => x.grounded && x.foot === px(32 - h), `up the step to h${h}`);
+      b.brakeToStop();
+    }
+    b.until(B.R, (x) => x.x >= px(83) + 4, 300, 'along the upper floor');
+    b.brakeToStop();
+    hopOnto(b, (x) => (x.u('lv_stars') & 1) === 1 && x.grounded && x.foot === px(32 - 7), 'straight up: star 1');
+    handrail('the third handrail');
+    standBefore(b, 118); // past the seagull
+    hopOnto(b, (x) => x.cell(118, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(127), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the hedge');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '3-3': (b) => {
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    standBefore(b, 21);
+    hopOnto(b, (x) => x.grounded && x.foot === px(32 - 4 - 2) && x.u('bo_plat') !== 0, 'onto the roof of the bus');
+    // the ride: near the front of the roof, crouch under the low signs, straight up under the stars
+    const bars = [60, 100, 120, 140].map((c) => px(c) + 4);
+    const stars = [84, 124].map((c) => px(c) + 4);
+    const end = px(24) + 4 + 160 * 8;
+    b.until(
+      (x) => {
+        if (!x.grounded) return B.A;
+        const nearBar = bars.some((bx) => bx - x.x > -8 && bx - x.x < 28);
+        if (nearBar) return B.D;
+        if (stars.some((sx) => sx - x.x >= 0 && sx - x.x <= 1) && x.vx === 0) return B.A;
+        const bus = x.actorX(19) ?? x.x;
+        if (x.x < bus + 8) return x.vx > 4 ? 0 : B.R;
+        return x.vx > 0 ? B.L : 0;
+      },
+      (x) => (x.actorX(19) ?? 0) >= end - 1 && x.grounded,
+      3000,
+      'the bus ride',
+    );
+    b.until(B.R, (x) => x.grounded && x.foot === px(28), 300, 'off the bus at the end');
+    standBefore(b, 200);
+    hopOnto(b, (x) => x.cell(200, 27) === 0 && x.grounded, 'the box with apples');
+    b.jumpPast(px(209) + 4, { holdA: 30 }); // over the parked car
+    b.until(B.R, (x) => x.x >= px(209) + 4, 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the hedge');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  '3-4': (b) => {
+    const grind = (note: string, stop = true) => {
+      if (stop) b.brakeToStop();
+      ollieOnto(b, (x) => x.state === 2, note);
+      b.until(B.R, (x) => x.grounded, 300, `${note}: off the end onto the slope (boost)`);
+      b.brakeToStop();
+    };
+    b.rideTo(px(2), -1);
+    b.brakeToStop();
+    b.until(B.R, (x) => x.x >= px(12), 300);
+    grind('the first rail');
+    b.until(B.R, (x) => x.x >= px(39), 300, 'the apples after the slope');
+    stompEnemy(b, 5, [EV.STOMP], 'the first ball');
+    kickA(b, 'the kicker: star 2', () => 0, 24);
+    b.until(B.R, (x) => x.x >= px(62), 300);
+    grind('the second rail');
+    b.until(B.R, (x) => x.x >= px(85), 300, 'past flag 2');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.state === 2, 'onto the bench');
+    b.until(B.R, (x) => x.x >= px(91), 200, 'along the bench');
+    b.step(B.R | B.A); // off the end of the bench with an ollie: star 1
+    b.land(B.R | B.A);
+    if (!(b.u('lv_stars') & 1)) throw new Error('no star 1');
+    stompEnemy(b, 5, [EV.STOMP], 'the second ball');
+    b.until(B.R, (x) => x.x >= px(115), 400, 'towards the high part');
+    grind('the third rail', false); // up the slope with speed (a standstill on it cannot push up)
+    standBefore(b, 156);
+    hopOnto(b, (x) => x.cell(156, 27) === 0 && x.grounded, 'the box with apples');
+    b.until(B.R, (x) => x.x >= px(159), 300);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the plank in the hedge');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'star 3 and the part');
+    b.land(B.R);
+  },
+  // the chase: keep pushing, every hop where the apples show it, A at the last kicker
+  '2-5': (b) => chaseRun(b, [52, 68, 112]),
 
 };
 
@@ -616,6 +805,26 @@ export const ROUTES: Record<string, Route> = {
   'm23-2-2': levelRoute('2-2'),
   'm23-2-3': levelRoute('2-3'),
   'm23-2-4': levelRoute('2-4'),
+  'm23-3-1': levelRoute('3-1'),
+  'm23-3-2': levelRoute('3-2'),
+  'm23-3-3': levelRoute('3-3'),
+  'm23-3-4': levelRoute('3-4'),
+  'm23-chase': levelRoute('2-5'),
+  // M23: the rabbit catches Bo standing still after flag 1; the chase starts again from the flag and is won
+  'm23-chase-caught': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('2-5');
+      chaseRun(b, [52, 68], false);
+      b.until(B.R, (x) => x.x >= px(86), 600, 'past flag 1');
+      b.brakeToStop();
+      b.until(0, (x) => x.state === 3, 900, 'the rabbit catches Bo');
+      b.until(0, (x) => x.state === 0 && x.playing, 300, 'back at the flag');
+      chaseRun(b, [112]);
+      b.until(B.R, (x) => x.u('goal_t') > 0, 3000, 'to the goal');
+      b.hold(0, 60);
+    },
+  },
   'm22-1-2': {
     seed: 1,
     run: (b) => {

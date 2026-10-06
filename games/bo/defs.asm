@@ -308,6 +308,8 @@ WALL_HINT  = 120
 .var boss_tx
 .var boss_ty
 .var boss_win_t
+.var chase_stop                 ; the chase level: x px where the rabbit stops (0: no chase)
+.var chase_t                    ; frames until the rabbit comes on
 
 ; enemies (actors.asm)
 .var en_n

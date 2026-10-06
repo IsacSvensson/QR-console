@@ -784,6 +784,8 @@ s_zero: .string "0"
 ; snail, seagull, hedgehog, wasp, ball, teddy, blob, Bo
 code_pics: .word spr_apple, spr_bigapple, spr_fries, spr_candy, spr_star, spr_part_small, spr_truck, spr_sticker
            .word spr_en_snail, spr_en_gull + 32, spr_en_hedgehog, spr_en_wasp, spr_en_ball, spr_en_teddy, spr_en_blob, spr_bo_head
-cut_lines:  .word cut_w1
+cut_lines:  .word cut_w1, cut_w2, cut_w3
 cut_w1:     .byte TX_MINA_POMMES, TX_MUMS, TX_GODISLANDET, TX_JAG_SKA_TILL_GODISLANDET, 255
+cut_w2:     .byte TX_DEN_VILLE_BARA_HA_MOROTTER, 255
+cut_w3:     .byte TX_DEN_AR_AVSTANGD, 255
 .code

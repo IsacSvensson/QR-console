@@ -1,0 +1,68 @@
+# 3-2 TRAPPORNA — the stairs (DESIGN §8.3): diagonal handrails along the stairs (a grind down a handrail is
+# fast, like a 45° hill), landings between the flights, steps up to hop, seagulls.
+name  TRAPPORNA
+world 3
+music 3
+rows  16
+start 4
+
+terrain
+h 12
+flat 16         # 0-15    the top floor: start, apples
+down45 3        # 16-18   stairs (h9), a handrail
+flat 12         # 19-30   a landing
+down45 3        # 31-33   stairs (h6), a handrail
+flat 12         # 34-45   a landing, flag
+down45 2        # 46-47   stairs (h4)
+flat 20         # 48-67   the street: the kicker and star 2
+step 1          #         steps up to hop (h5..h7)
+flat 3          # 68-70
+step 1
+flat 3          # 71-73
+step 1
+flat 14         # 74-87   the upper floor: star 1
+down45 3        # 88-90   stairs (h4), a handrail
+flat 64         # 91-154  a seagull, flag, the box, the hedge with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+10  prefab lamp g
+16  raild 12 3 down
+16  apple 13
+17  apple 12
+18  apple 11
+22  apples g 6
+31  raild 9 3 down
+31  apple 10
+32  apple 9
+33  apple 8
+36  apples g 4
+42  flag
+46  apple g+1
+50  apples g 4
+58  ramp45 1
+58  arc 24 r45a
+64  star 12 2
+68  apple g+1
+71  apple g+1
+74  apples g 4
+80  prefab lamp g
+82  apples g 2
+83  star g+3 1
+88  raild 7 3 down
+88  apple 8
+89  apple 7
+90  apple 6
+96  apples g 6
+100 enemy gull g+3
+110 flag
+118 box g apples
+122 prefab shop g
+130 apple g+4
+131 platform g+2 6
+131 fg hedge g+3
+133 star g+3 3
+135 part g+3
+142 apples g 6
+150 goal

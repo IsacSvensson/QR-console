@@ -242,8 +242,208 @@ boss1_contact:
     ST [boss_win_t], r0
     RET
 
+; ---- Jättekaninen (2-5 Kaninjakten, DESIGN §10.2) ------------------------------------------------------
+; A chase level: the rabbit appears behind Bo and hops after him in big arcs, on average a little slower than
+; Bo's top speed (each hop aims to land a little behind where Bo will be). Every landing shakes the ground: Bo on the ground wobbles and loses
+; a quarter of his speed (no hit). If it catches Bo it is a hit, and after a lost life the chase starts again from the
+; flag with the rabbit further back. At the brook it stops, sniffs and eats the carrots.
+RB_SIT  = 0
+RB_AIR  = 1
+RB_EAT  = 2
+RB_AIRTIME = 35                     ; frames of a hop (launch -52, gravity 3)
+RB_BEHIND = 24                      ; px
+CHASE_FIRST = 60                    ; frames before it appears at the start of the level
+CHASE_AGAIN = 150                   ; ... and after a lost life (further back)
+
+b_rabbit:
+    LD r0, [r7 + AC_SUB]
+    CMP r0, RB_AIR
+    JEQ @air
+    CMP r0, RB_EAT
+    JEQ @eat
+    LD r0, [r7 + AC_T]              ; sitting: a moment, then the next hop
+    SUB r0, 1
+    ST [r7 + AC_T], r0
+    JGT @done
+    CALL act_pos
+    LD r0, [chase_stop]             ; at the brook: it stops and eats
+    SUB r0, 12
+    CMP r1, r0
+    JLT @hop
+    LDI r0, RB_EAT
+    ST [r7 + AC_SUB], r0
+    RET
+@hop:
+    CALL dir_to_bo                  ; r0 = direction, r3 = distance to Bo
+    CMP r0, 0
+    JLT @back
+    LD r2, [bo_vx]                  ; aim at landing RB_BEHIND px behind where Bo will be (at his speed now):
+    SUB r3, RB_BEHIND               ; vx = (distance - RB_BEHIND) * 16 / RB_AIRTIME + Bo's vx, within the table's
+    SHL r3, 4                       ; two speeds; a Bo who stands still is reached on the next hop
+    DIV r3, RB_AIRTIME
+    ADD r3, r2
+    CALL en_row_of
+    LDB r0, [r1 + 3]
+    CMP r3, r0
+    JLT @set
+    LDB r0, [r1 + 7]
+    CMP r3, r0
+    JGT @set
+    MOV r0, r3
+    JMP @set
+@back:                              ; Bo is behind it: small hops back
+    LDI r0, -12
+@set:
+    ST [r7 + AC_VX], r0
+    LDI r0, -52
+    ST [r7 + AC_VY], r0
+    LDI r0, RB_AIR
+    ST [r7 + AC_SUB], r0
+@done:
+    RET
+@eat:
+    LDI r0, 0
+    ST [r7 + AC_VX], r0
+    RET
+@air:
+    LD r0, [r7 + AC_X]
+    LD r1, [r7 + AC_VX]
+    ADD r0, r1
+    LD r1, [chase_stop]             ; never past the brook's edge
+    SUB r1, 12
+    SHL r1, 4
+    CMP r0, r1
+    JLT @x
+    MOV r0, r1
+@x:
+    ST [r7 + AC_X], r0
+    CALL act_pos
+    MOV r6, r2                      ; feet before
+    LD r0, [r7 + AC_VY]
+    ADD r0, 3
+    CMP r0, 64
+    JLE @v
+    LDI r0, 64
+@v:
+    ST [r7 + AC_VY], r0
+    LD r1, [r7 + AC_Y]
+    ADD r1, r0
+    ST [r7 + AC_Y], r1
+    CMP r0, 0
+    JLT @done
+    CALL act_pos
+    MOV r3, r2
+    MOV r2, r6
+    LDI r6, 0
+    CALL surface
+    CMP r0, NONE
+    JEQ @nofloor
+    SHL r0, 4                       ; landed: the ground shakes
+    ST [r7 + AC_Y], r0
+    LDI r0, RB_SIT
+    ST [r7 + AC_SUB], r0
+    LDI r0, 0
+    ST [r7 + AC_VY], r0
+    ST [r7 + AC_VX], r0
+    LDI r0, 8
+    ST [r7 + AC_T], r0
+    LDI r0, SFX_BUMP
+    CALL play_sfx
+    LD r0, [bo_state]
+    CMP r0, ST_GROUND
+    JNE @done
+    LD r0, [bo_sattr]               ; not on a kicker (it would ruin the jump over the brook)
+    AND r0, 15
+    CMP r0, C_RAMP
+    JEQ @done
+    LD r0, [bo_vx]                  ; a quarter of his speed is lost
+    MOV r1, r0
+    SAR r1, 2
+    SUB r0, r1
+    ST [bo_vx], r0
+    LDI r0, BUMP_T
+    ST [bo_bump], r0
+    RET
+@nofloor:
+    CALL act_pos                    ; fell into a pit: it comes back from behind
+    CMP r2, LV_ROWS * 8 + 16
+    JLT @done
+    LDI r0, 0
+    ST [r7 + AC_TYPE], r0
+    LDI r0, CHASE_FIRST
+    ST [chase_t], r0
+    RET
+
+; rabbit_contact: r7 = the rabbit overlapping Bo: landing on it bounces Bo, otherwise it caught him (a hit)
+rabbit_contact:
+    LD r0, [r7 + AC_SUB]
+    CMP r0, RB_EAT
+    JEQ @none
+    LD r0, [bo_state]
+    CMP r0, ST_AIR
+    JNE @caught
+    LD r0, [bo_vy]
+    CMP r0, 0
+    JLE @caught
+    LD r0, [bo_pfoot]
+    LD r1, [t_atop]
+    ADD r1, 4
+    CMP r0, r1
+    JGT @caught
+    LDI r0, EV_BOUNCE
+    CALL event
+    LDI r0, STOMP_V
+    NEG r0
+    ST [bo_vy], r0
+    RET
+@caught:
+    LDI r0, EV_HIT
+    CALL event
+    JMP bo_hit
+@none:
+    RET
+
+; chase_step: brings the rabbit on behind Bo when its time comes (only in the chase level)
+chase_step:
+    LD r0, [chase_stop]
+    CMP r0, 0
+    JEQ @done
+    LD r0, [chase_t]
+    CMP r0, 0
+    JEQ @done
+    SUB r0, 1
+    ST [chase_t], r0
+    JNZ @done
+    CALL act_free_slot
+    CMP r7, 0
+    JEQ @done
+    LD r1, [cam_x]                  ; at the left edge of the screen, on the ground there
+    ADD r1, 4
+    CMP r1, 8
+    JGE @x
+    LDI r1, 8
+@x:
+    PUSH r1
+    LDI r2, 0
+    LDI r3, LV_ROWS * 8
+    LDI r6, 0
+    CALL surface
+    POP r1
+    CMP r0, NONE
+    JEQ @done
+    MOV r2, r0
+    LDI r0, EN_RABBIT
+    CALL act_init
+    LDI r0, 255
+    ST [r7 + AC_EN], r0
+    LDI r0, 20
+    ST [r7 + AC_T], r0
+@done:
+    RET
+
 ; boss_step: every frame: after the boss is won, the level ends like at a goal
 boss_step:
+    CALL chase_step
     LD r0, [boss_win_t]
     CMP r0, 0
     JEQ @done
@@ -256,6 +456,80 @@ boss_step:
     RET
 
 .data
+spr_rabbit:                         ; 16 x 16, facing right: sitting (4 sprites), then leaping (4 sprites)
+.sprite
+    ........
+    ........
+    ........
+    ........
+    ........
+    ........
+    ........
+    ........
+.sprite
+    ..ff....
+    .fcf.ff.
+    .fcffcf.
+    .fcfcf..
+    ..fff...
+    .ffffff.
+    fffff0f.
+    ffffffcf
+.sprite
+    ...fffff
+    ..ffffff
+    .fffffff
+    .fffffff
+    ffffffff
+    afffffff
+    .aa.ffa.
+    ...fffaa
+.sprite
+    fffffff.
+    ffffff..
+    ffffaa..
+    fffaa...
+    fffa....
+    ffaa....
+    ffa.....
+    fffa....
+.sprite
+    ........
+    ........
+    ........
+    ........
+    ........
+    ...ffff.
+    .fffffff
+    ffffffff
+.sprite
+    ........
+    ......f.
+    ....fcf.
+    ...fcf..
+    ..fff...
+    .fffff..
+    fffff0f.
+    fffffffc
+.sprite
+    afffffff
+    .aafffff
+    ...fffaa
+    ..ffa...
+    .ffa....
+    ffa.....
+    ........
+    ........
+.sprite
+    ffffff..
+    fffaa...
+    aa......
+    ........
+    ........
+    ........
+    ........
+    ........
+
 spr_boss_gull:                      ; 16 x 16: top-left, top-right, bottom-left, bottom-right (facing right)
 .sprite
     ........

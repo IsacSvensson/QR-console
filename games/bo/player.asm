@@ -933,6 +933,8 @@ bo_dead:
     ST [lives], r0
     JZ @over
     CALL actors_reset               ; the enemies come back
+    LDI r0, CHASE_AGAIN             ; the chase: the rabbit comes again, further back
+    ST [chase_t], r0
     LD r1, [cp_col]                 ; back to the last checkpoint
     CALL bo_spawn
     CALL camera_snap

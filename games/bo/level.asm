@@ -63,6 +63,8 @@ level_start:
     ST [lv_apples], r1
     ST [bub_t], r1
     ST [banner_t], r1
+    ST [chase_stop], r1
+    ST [chase_t], r1
     LDI r1, 4095
     ST [goal_col], r1
     LD r1, [lv_start]

@@ -1,0 +1,53 @@
+# 3-4 TORGET — the square (DESIGN §8.3): a trick course. Rail -> grind -> off the end -> land on the down-slope
+# right after it -> boost (DESIGN §3.5), three times; a kicker for a trick and star 2; benches; bouncing balls.
+name  TORGET
+world 3
+music 3
+rows  16
+start 4
+
+terrain
+h 6
+flat 30         # 0-29    start, the first rail
+down45 2        # 30-31   the landing slope (h4)
+flat 30         # 32-61   a ball, the kicker and star 2
+up22 2          # 62-65   (h6)
+flat 12         # 66-77   the second rail
+down45 2        # 78-79   the landing slope (h4)
+flat 40         # 80-119  flag, benches and star 1, a ball
+up22 3          # 120-125 (h7)
+flat 10         # 126-135 the third rail, on the high part of the square
+down45 3        # 136-138 the landing slope (h4)
+flat 60         # 139-198 flag, the box, the hedge with star 3 and the part, the goal
+
+objects
+2   apples g 4
+8   sign right
+12  prefab lamp g
+18  rail g 10
+18  apples g+1 10
+34  apples g 6
+44  enemy ball g
+54  ramp45 1
+54  arc 24 r45a
+60  star 12 2
+66  rail g 10
+66  apples g+1 10
+84  flag
+88  tile BENCH g 4 1
+88  apples g+1 4
+94  star g+4 1
+104 enemy ball g
+112 prefab lamp g
+126 rail g 8
+126 apples g+1 8
+142 apples g 6
+150 flag
+156 box g apples
+162 apple g+4
+163 platform g+2 6
+163 fg hedge g+3
+165 star g+3 3
+167 part g+3
+176 apples g 6
+190 goal
