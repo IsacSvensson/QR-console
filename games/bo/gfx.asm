@@ -159,6 +159,16 @@ spr_btn_a:                          ; the A button (title, hints)
     66f66f66
     .666666.
     ..6666..
+spr_hint_right:                     ; the arrow hint (as on the sign)
+.sprite
+    ...ff...
+    ...fff..
+    ffffff6.
+    f666666f
+    ffffff6.
+    ...fff..
+    ...ff...
+    ........
 spr_cloud:                          ; half a cloud (the other half flipped)
 .sprite
     ........

@@ -453,6 +453,28 @@ pop_arc: .byte 0, 2, 4, 5, 6, 7, 7, 8, 8, 8, 8, 7, 7, 6, 5, 4, 3, 2, 1, 1, 0, 0,
 board_colors: .byte C_BLACK, C_GREEN, C_BROWN, C_RED, C_CYAN, C_PEACH, C_YELLOW, C_DGREY
 .code
 
+; the hint above Bo's head, blinking
+draw_hint:
+    LD r0, [hint]
+    CMP r0, 0
+    JEQ @none
+    LD r1, [tick]
+    AND r1, 16
+    JZ @none
+    SHL r0, 1
+    LD r0, [r0 + hint_sprites - 2]
+    LD r1, [d_x]
+    LD r2, [d_y]
+    SUB r2, 12
+    LDI r3, 0
+    SYS SPR
+@none:
+    RET
+
+.data
+hint_sprites: .word spr_hint_right, spr_btn_a
+.code
+
 ; ---- foreground (sparse hedges hiding secrets, drawn over Bo; DESIGN.md §14.2) --------------------------
 draw_fg:
     LDI r7, 0

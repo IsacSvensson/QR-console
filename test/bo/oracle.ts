@@ -129,10 +129,18 @@ export interface RefGrid {
 /** Builds the level grid from the .lvl source by the rules of FORMAT.md. */
 export function refGrid(L: RefLevel): RefGrid {
   const W = L.width;
+  const patterns = new Map<number, [number, number][]>();
   const attr = new Uint8Array(W * ROWS);
   const used = new Uint8Array(W * ROWS);
   const put = (c: number, r: number, a: number) => {
     if (c < 0 || c >= W || r < 0 || r >= ROWS) throw new Error(`${L.id}: ${c},${r} outside`);
+    if ((attr[c * ROWS + r]! & 15) === CLASS.APPLE && (a & 15) !== CLASS.APPLE) {
+      // an apple covered by a later object is no longer part of its pattern
+      for (const list of patterns.values()) {
+        const k = list.findIndex(([pc, pr]) => pc === c && pr === r);
+        if (k >= 0) list.splice(k, 1);
+      }
+    }
     attr[c * ROWS + r] = a;
     used[c * ROWS + r] = 1;
   };
@@ -172,7 +180,6 @@ export function refGrid(L: RefLevel): RefGrid {
         } else throw new Error(`${L.id}: terrain ${t.op}`);
       }
   }
-  const patterns = new Map<number, [number, number][]>();
   const breakables: RefGrid['breakables'] = [];
   const isEmpty = (cc: number, r: number) => cc < 0 || cc >= W || r < 0 || r >= ROWS || !used[cc * ROWS + r];
   const classAt = (cc: number, r: number) => (cc < 0 || cc >= W || r < 0 || r >= ROWS ? 0 : attr[cc * ROWS + r]! & 15);
@@ -232,7 +239,7 @@ export function refGrid(L: RefLevel): RefGrid {
             next += 16;
           }
           const cl = classAt(x >> 3, foot >> 3);
-          if (dy > 0 && (foot > 255 || (cl !== CLASS.EMPTY && cl !== CLASS.APPLE))) break;
+          if (dy > 0 && (foot > 255 || dy >> 4 > 16 || (cl !== CLASS.EMPTY && cl !== CLASS.APPLE))) break;
         }
         apples(cells.slice(0, o.args[2] ? n(2) : cells.length));
         break;

@@ -57,8 +57,12 @@ const waitEvent = (b: Bot, buttons: number | ((x: Bot) => number), kinds: number
 };
 
 /** Gets the apple helmet from the box at `col` (rides there, stops, hops onto it). */
+/** Stand still just left of the thing in column `col`. */
+const standBefore = (b: Bot, col: number) =>
+  b.until((x) => (x.x < px(col) - 10 ? B.R : x.x > px(col) - 6 ? B.L : x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => Math.abs(x.x - (px(col) - 8)) <= 2 && x.vx === 0, 600, `to column ${col}`);
+
 const getHelmet = (b: Bot, col: number) => {
-  b.until((x) => (x.x < px(col) - 10 ? B.R : x.x > px(col) - 6 ? B.L : 0), (x) => Math.abs(x.x - (px(col) - 8)) <= 2 && x.vx === 0, 400, 'to the box');
+  standBefore(b, col);
   hopOnto(b, (x) => x.u('helmet') === 1 && x.cell(col, 27) === 0, `helmet from the box at ${col}`);
 };
 
@@ -124,6 +128,7 @@ const stations = (b: Bot, list: string[], c0: number) => {
     getHelmet(b, c + 2);
     const harmType = PROJECTILE[e] ?? type;
     const kinds = e === 'hedgehog' || e === 'sled' ? [EV.SPIKY] : e === 'jelly' || e === 'cannon' ? [EV.BOUNCE] : [EV.STOMP];
+    if (PROJECTILE[e]) standBefore(b, c + 9); // throwers: close enough to jump on before the first throw
     stompEnemy(b, type, kinds, `${e}: landing on it`);
     if (e === 'hedgehog' || e === 'sled') {
       // blinking after the spiky landing: past the other one to the second box
@@ -154,7 +159,360 @@ const stations = (b: Bot, list: string[], c0: number) => {
   return c;
 };
 
+// ---- World 1 (M22) ----
+/** Ride at push speed and take off with A held exactly where an apple arc starts (col * 8 + 4). */
+const followArc = (b: Bot, col: number, v = 24, brake = false) => {
+  const x0 = px(col) + 4;
+  b.until((x) => (brake && x.vx > v + 1 ? B.L : x.vx < v ? B.R : 0), (x) => x.x + Math.max(1, x.vx >> 4) > x0 - 1 && x.vx >= v - 1, 1500, `to the arc at ${col}`);
+  b.until(B.R, (x) => x.x >= x0, 4);
+  if (b.inputs[b.inputs.length - 1]! & B.A) b.step(B.R); // A must be pressed afresh
+  b.step(B.R | B.A);
+  b.land(B.R | B.A);
+};
+/** From the title: A (the intro the first time), skip it with A; returns when Bo can ride. */
+const fromTitle = (b: Bot) => {
+  b.until(0, (x) => x.mode === x.S('M_TITLE') && x.inputs.length > 30, 600, 'title');
+  b.step(B.A);
+  b.step(0);
+  if (b.mode === b.S('M_INTRO')) {
+    b.hold(0, 30);
+    b.step(B.A);
+  }
+  b.until(0, (x) => x.playing, 120, 'into the level');
+};
+/** At the goal: brake in, the tally, A to the map. */
+const finish = (b: Bot) => {
+  b.until(B.R, (x) => x.u('goal_t') > 0, 3000, 'to the goal');
+  b.until(0, (x) => x.mode === x.S('M_TALLY'), 600, 'the tally');
+  b.hold(0, 40);
+  b.step(B.A);
+  b.step(0);
+};
+
+/** The boss of 1-5: keep away from the dive, land on it while it is dizzy, three times. */
+const BS = { FLY: 0, WARN: 1, DIVE: 2, DIZZY: 3, RISE: 4 };
+const bossSub = (b: Bot) => {
+  const base = b.S('actors');
+  for (let i = 0; i < 12; i++) if (b.vm.read16(base + i * 22) === 17 && b.vm.read16(base + i * 22 + 10) === 0) return b.vm.read16(base + i * 22 + 20);
+  return -1;
+};
+const fightBoss1 = (b: Bot, hits = 3) => {
+  for (let h = 0; h < hits; h++) {
+    // wait for the warning, then roll away from where Bo stands (the dive goes there)
+    b.until((x) => (x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => bossSub(x) === BS.WARN, 900, 'the warning');
+    // along the dive, past where it aims; with no room for that (by a ramp), right under it to the other side
+    const left = (b.actorX(17) ?? 0) > b.x;
+    const room = left ? b.x - 40 : b.u('lv_wpx') - 40 - b.x;
+    const away = room >= 32 ? (left ? B.L : B.R) : left ? B.R : B.L;
+    b.until(away, (x) => bossSub(x) === BS.DIVE || (room >= 32 && Math.abs(x.vx) >= 24), 90);
+    // while it dives: to a spot 24 px beside where it will land, and wait there
+    b.until(
+      (x) => {
+        if (bossSub(x) !== BS.DIVE) return x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0;
+        const tx = x.u('boss_tx');
+        const spot = x.x < tx ? tx - 24 : tx + 24;
+        return x.x < spot - 3 ? (x.vx < 0 ? B.R : B.R) : x.x > spot + 3 ? B.L : x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0;
+      },
+      (x) => bossSub(x) === BS.DIZZY,
+      200,
+      'it lands',
+    );
+    // dizzy: get to a spot d px beside it and jump onto it, steering s frames towards it
+    const n0 = b.u('ev_n');
+    b.search(
+      (k) => {
+        const d = 10 + 4 * (k % 8);
+        const left = Math.floor(k / 8) % 2 === 0;
+        const steer = 4 * Math.floor(k / 16);
+        const bx = b.actorX(17)!;
+        const goal = left ? bx - d : bx + d;
+        b.until((x) => (x.x < goal - 2 ? B.R : x.x > goal + 2 ? B.L : x.vx > 0 ? B.L : x.vx < 0 ? B.R : 0), (x) => Math.abs(x.x - goal) <= 2 && x.vx === 0, 120);
+        const toward = left ? B.R : B.L;
+        b.step(B.A);
+        for (let i = 0; i < 60 && b.u('ev_n') === n0; i++) b.step(B.A | (i < steer ? toward : 0));
+        b.land();
+      },
+      (x) => x.u('ev_n') === n0 + 1 && x.u('ev_kind') === 1 && x.u('ev_type') === 17,
+      160,
+      `boss hit ${h + 1}`,
+    );
+  }
+};
+
+/** The levels of World 1, ridden from their start; each collects all three stars and the part. */
+/** A kicker with A: ride onto it, and press A in the first frame after its lip (the arcs are computed so). */
+const kickA = (b: Bot, note: string, air: (f: number) => number = () => 0, v?: number) => {
+  b.until((x) => (v === undefined || x.vx < v ? B.R : x.vx > v + 1 ? B.L : 0), (x) => x.onRamp, 1200, note);
+  b.until(B.R, (x) => !x.grounded, 60, `${note}: off the lip`);
+  if (process.env.BO_DEBUG) console.log(note, 'lip vx', b.vx, 'x', b.x);
+  b.step(B.A);
+  for (let f = 1; !b.grounded && b.state !== 2; f++) {
+    if (f > 400) throw new Error('long flight');
+    b.step(B.A | air(f));
+  }
+};
+/** On a platform from colL to colR: to its left end, then along to its right end (its apples). */
+const sweep = (b: Bot, colL: number, colR: number) => {
+  b.brakeToStop();
+  b.until((x) => (x.x > px(colL) + 4 ? B.L : 0), (x) => x.x <= px(colL) + 4, 200, `left end of ${colL}`);
+  b.brakeToStop();
+  b.until((x) => (x.x < px(colR) + 3 ? B.R : 0), (x) => x.x >= px(colR) + 3, 200, `right end of ${colR}`);
+  b.brakeToStop();
+};
+
+const LEVEL_RUNS: Record<string, (b: Bot) => void> = {
+  '1-1': (b) => {
+    followArc(b, 42); // over the first bin
+    followArc(b, 50); // the second
+    followArc(b, 57); // two bins and star 1
+    followArc(b, 66); // onto the box: the apple helmet
+    b.land();
+    b.until(B.R, (x) => x.x >= px(78), 300);
+    b.brakeToStop();
+    hopOnto(b, (x) => x.cell(80, 27) === 0 && x.grounded, 'the box with apples');
+    followArc(b, 91); // over the first snail
+    stompEnemy(b, 1, [EV.STOMP], 'the second snail');
+    kickA(b, 'up the hill, down, A at the kicker: star 2');
+    b.until(B.R, (x) => x.x >= px(143), 600); // the secret: bin, garage roof, into the hedge
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(28 - 2), 'onto the bin');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(28 - 3), 'onto the garage roof');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'the wheel');
+    b.land(B.R);
+    b.until(B.R, (x) => x.x >= px(184), 600, 'the apples of the run-in');
+    b.until(B.R, (x) => !x.grounded, 300, 'the last kicker');
+    b.land(B.R);
+  },
+  '1-2': (b) => {
+    b.rideTo(px(2), -1); // the apples behind the start
+    b.brakeToStop();
+    b.rideTo(px(21));
+    b.brakeToStop();
+    // the trampoline: bounce up the apple column to star 1, then off to the right
+    let up = false;
+    b.search(
+      (k) => {
+        b.hold(B.R, k);
+        b.step(B.R | B.A);
+        for (let i = 0; i < 400 && !(b.grounded && b.x > px(27)); i++) {
+          b.step((i < 20 ? B.A : 0) | (b.u('lv_stars') & 1 ? B.R : b.x < px(24) + 6 ? B.R : b.x > px(25) + 2 ? B.L : 0));
+          if (b.u('lv_stars') & 1) up = true;
+        }
+      },
+      (x) => up && x.grounded,
+      40,
+      'the trampoline and star 1',
+    );
+    kickA(b, 'the kicker after the B sign', (f) => (f === 3 ? B.B : 0)); // the first trick: a kickflip
+    b.until(B.R, (x) => x.x >= px(76), 600, 'under the apple tree');
+    followArc(b, 82); // over the hedgehog's dip
+    // the first kicker: kickflip + shove-it + grab: SÅG DU?!
+    kickA(b, 'the first kicker', (f) => (f === 2 ? B.B : f === 21 ? B.U | B.B : f >= 36 && f < 52 ? B.D | B.B : 0));
+    kickA(b, 'the second kicker: star 2', () => 0, 24);
+    b.until(B.R, (x) => x.x >= px(158), 600);
+    b.brakeToStop();
+    hopOnto(b, (x) => x.cell(160, 27) === 0 && x.grounded, 'the box with apples');
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the platform behind the bush');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'the trucks');
+    b.land(B.R);
+    b.brakeToStop();
+    b.rideTo(px(180), -1); // back for the whole row of apples
+    b.brakeToStop();
+    b.until(B.R, (x) => x.x >= px(194), 600, 'the row');
+    b.brakeToStop();
+    stompEnemy(b, 1, [EV.STOMP], 'the snail');
+    followArc(b, 208);
+  },
+  '1-3': (b) => {
+    const onto = (foot: number, note: string) => {
+      b.brakeToStop();
+      ollieOnto(b, (x) => x.grounded && x.foot === foot, note);
+    };
+    b.rideTo(px(14));
+    onto(px(25), 'climbing frame 1');
+    sweep(b, 18, 21);
+    onto(px(23), 'climbing frame 2');
+    sweep(b, 22, 25);
+    onto(px(21), 'climbing frame 3: star 1');
+    b.until(B.R, (x) => (x.u('lv_stars') & 1) === 1 || !x.grounded, 60, 'along the top to star 1');
+    if (!(b.u('lv_stars') & 1)) throw new Error('no star 1');
+    b.until(B.R, (x) => x.x >= px(31) && x.grounded && x.foot === px(28), 300, 'down again');
+    b.brakeToStop();
+    b.rideTo(px(30), -1);
+    onto(px(25), 'the tower: platform 1');
+    onto(px(23), 'the tower: platform 2');
+    b.until(B.R, (x) => x.x >= px(48) && x.grounded, 300, 'down the slide');
+    b.until(B.R, (x) => x.x >= px(64), 300, 'into the sandbox');
+    b.brakeToStop();
+    hopOnto(b, (x) => x.cell(66, 27) === 0 && x.grounded, 'the box in the sandbox');
+    b.until(B.R, (x) => x.x >= px(75) + 4, 300, 'the apples in the sand');
+    b.brakeToStop();
+    stompEnemy(b, 5, [EV.STOMP], 'ball 1');
+    stompEnemy(b, 6, [EV.STOMP], 'teddy 1');
+    b.until(B.R, (x) => x.x >= px(103), 600);
+    b.brakeToStop();
+    b.until(B.R, (x) => x.x >= px(109) + 4, 300, 'the row after the flag');
+    b.brakeToStop();
+    stompEnemy(b, 5, [EV.STOMP], 'ball 2');
+    kickA(b, 'the kicker: star 2');
+    stompEnemy(b, 6, [EV.STOMP], 'teddy 2');
+    b.until(B.R, (x) => x.x >= px(152), 600);
+    onto(px(25), 'the high frame 1');
+    sweep(b, 156, 159);
+    onto(px(23), 'the high frame 2');
+    sweep(b, 160, 163);
+    onto(px(21), 'the high frame 3');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'the part behind the leaves');
+    b.land(B.R);
+    b.until(B.R, (x) => x.x >= px(202), 600, 'the row of the run-in');
+    followArc(b, 212);
+  },
+  '1-4': (b) => {
+    b.until(B.R, (x) => x.u('pw_kind') === 1, 300, 'pommes from the kiosk');
+    kickA(b, 'the first pommes kicker', () => 0, 40);
+    kickA(b, 'the second: star 1', () => 0, 40);
+    b.until((x) => (x.vx > 41 ? B.L : x.vx < 40 ? B.R : 0), (x) => x.onRamp && x.x >= px(86), 900, 'the third, without A');
+    b.until((x) => (x.vx > 41 ? B.L : x.vx < 40 ? B.R : 0), (x) => !x.grounded, 60, 'off its lip');
+    b.land(B.R);
+    kickA(b, 'the 22.5 degree kicker', () => 0, 40);
+    followArc(b, 126, 40, true); // over the first pit, still with pommes
+    for (const c of [141, 148]) if (b.x < px(c)) b.jumpPast(px(c) + 4); // the cardboard boxes, unless the arc flew over them
+    followArc(b, 160, 24, true); // over the second pit
+    standBefore(b, 180);
+    hopOnto(b, (x) => x.cell(180, 27) === 0 && x.grounded, 'the box with pommes');
+    standBefore(b, 196);
+    hopOnto(b, (x) => (x.u('lv_stars') & 2) === 2 && x.grounded, 'the tall cardboard box: star 2');
+    b.until(B.R, (x) => x.x >= px(204), 600);
+    b.brakeToStop();
+    ollieOnto(b, (x) => x.grounded && x.foot === px(25), 'onto the garage roof');
+    b.until(B.R, (x) => x.u('lv_part') === 1, 300, 'the part in the hedge');
+    b.land(B.R);
+    b.until(B.R, (x) => x.x >= px(242), 600, 'the run-in');
+    b.brakeToStop();
+    followArc(b, 246);
+  },
+
+};
+
+const levelRoute = (id: string): Route => ({
+  seed: 1,
+  run: (b) => {
+    b.startLevel(id);
+    LEVEL_RUNS[id]!(b);
+    b.until(B.R, (x) => x.u('goal_t') > 0, 3000, 'to the goal');
+    b.hold(0, 60);
+  },
+});
+
+/** On the world map: wait a moment, A starts the selected level. */
+const fromMap = (b: Bot) => {
+  b.until(0, (x) => x.mode === x.S('M_MAP'), 600, 'the map');
+  b.hold(0, 30);
+  b.step(B.A);
+  b.until(0, (x) => x.playing, 120, 'into the level');
+};
+
 export const ROUTES: Record<string, Route> = {
+  // M22, FIRST10 §8 rules 5-8: the first time from the title; 10 s without a button (idle trick, arrow, balance),
+  // one press of → (Bo moves in that frame) and rolling out, then into the first bin without jumping (A blinks)
+  'm22-first10': {
+    seed: 1,
+    run: (b) => {
+      fromTitle(b);
+      b.hold(0, 600);
+      b.step(B.R); // the very first press of right: Bo moves in this frame
+      b.hold(0, 30);
+      b.hold(B.R, 20); // one push (a third of a second), then rolling out down the driveway
+      b.until(0, (x) => x.vx === 0, 600, 'rolling out after one push');
+      b.hold(0, 10);
+      b.until(B.R, (x) => x.vx === 0 && x.x > px(40), 600, 'into the first bin');
+      b.hold(0, 160);
+      b.hold(B.R, 20);
+      b.hold(0, 20);
+    },
+  },
+  // M22: from the title through all of World 1 (every star and part) to the World 2 map
+  'm22-world1': {
+    seed: 1,
+    run: (b) => {
+      fromTitle(b);
+      LEVEL_RUNS['1-1']!(b);
+      finish(b);
+      for (const id of ['1-2', '1-3', '1-4']) {
+        fromMap(b);
+        LEVEL_RUNS[id]!(b);
+        finish(b);
+      }
+      fromMap(b);
+      b.hold(0, 20);
+      fightBoss1(b);
+      finish(b);
+      b.until(0, (x) => x.mode === x.S('M_MAP'), 900, 'the scene, then the World 2 map');
+      b.hold(0, 60);
+    },
+  },
+  // M22: the boss's dive costs a life; the fight starts again and is won
+  'm22-boss-retry': {
+    seed: 3,
+    run: (b) => {
+      b.startLevel('1-5');
+      b.until(0, (x) => x.state === 3, 900, 'standing still: the dive hits');
+      b.until(0, (x) => x.state === 0, 200, 'back');
+      fightBoss1(b);
+      b.until(0, (x) => x.mode !== x.S('M_PLAY'), 600, 'the end of the level');
+      b.hold(0, 10);
+    },
+  },
+  // M22: the patterns that are alternatives to the main path (apples never lie: each one can be followed)
+  'm22-alts': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('1-1');
+      for (const c of [42, 50, 57]) followArc(b, c);
+      b.jumpPast(px(73) + 4);
+      b.jumpPast(px(81) + 4);
+      followArc(b, 91);
+      stompEnemy(b, 1, [EV.STOMP], 'the second snail');
+      b.until(B.R, (x) => x.onRamp, 600, '1-1: the kicker without A');
+      b.until(B.R, (x) => !x.grounded, 60);
+      b.land(B.R);
+      b.hold(0, 30);
+    },
+  },
+  'm22-1-3': levelRoute('1-3'),
+  'm22-1-4': levelRoute('1-4'),
+  'm22-1-2': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('1-2');
+      LEVEL_RUNS['1-2']!(b);
+      b.until(B.R, (x) => x.u('goal_t') > 0, 3000, 'to the goal');
+      b.hold(0, 60);
+    },
+  },
+  // M22: Stora Måsen won with exactly three hits in its pattern
+  'm22-boss': {
+    seed: 1,
+    run: (b) => {
+      b.startLevel('1-5');
+      b.hold(0, 20);
+      fightBoss1(b);
+      b.until(0, (x) => x.mode !== x.S('M_PLAY'), 600, 'the end of the level');
+      b.hold(0, 10);
+    },
+  },
+  // M22: the reference route through 1-1 from the title: all three stars and the wheel (FIRST10 §8 rule 9)
+  'm22-1-1': {
+    seed: 1,
+    run: (b) => {
+      fromTitle(b);
+      LEVEL_RUNS['1-1']!(b);
+      finish(b);
+    },
+  },
+
   // M21, T4: 100 apples (a life), then snail, seagull, hedgehog, wasp, ball, teddy: each landed on and touched
   // from the side (the helmet takes the hit)
   'm21-zoo1': {

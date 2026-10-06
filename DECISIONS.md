@@ -519,3 +519,55 @@ Decision:
 Measurement: m21-zoo1 2727 frames, m21-zoo2 4697 frames, max 15.1k cycles per frame (loading), play frames under
 3k; melody note lengths 12/24/36 frames, with pommes 8/16/24. ROM 21.7 KB (code 16.1 KB, data 5.4 KB):
 code is well above the DESIGN 16 estimate (11-13 KB for the whole game); the M22 budget gate must deal with it.
+
+## D-032 - Bo World 1 and the screens around it (M22)
+Date: 2026-10-06 - Milestone: M22
+Decision:
+- **Flow**: title (Bo rolls in, pulsing A) -> intro the first time (15 s, A skips) -> 1-1; later A on the title opens
+  the world map. Level card banner at every level start, a tally screen (apples, stars, parts, score; the seagull
+  flies past) at every goal, after a boss a short scene with its lines, then the map with the next world unlocked.
+  Progress (stars/parts per level) is kept in RAM for the session (persistence comes with picture codes, M25).
+- **Test levels** are no longer the start screen: title -> B -> the picture-code screen; the code of four Bos opens
+  the test menu (T1-T5). The bot uses this to reach any level; `demo/bo.gif` still shows the test menu path.
+- **A box gives its power-up directly** (apple helmet, pommes, godis) instead of dropping a pickup that could
+  fall into a pit or behind a block; apple boxes still put a column of apples.
+- **1-1 vs FIRST10**: the bins of the first minute moved 2-3 columns right (45, 53, 61-62) so the computed arcs over
+  them do not overlap each other; the fence at 16 was removed (it covered apples). The order of events is FIRST10's.
+- **Hints**: an arrow after 2 s standing still at the start, an A button in front of the first wall Bo rides into
+  (WALL_HINT frames), both only until used once.
+- **Stora Masen (1-5)**: fly -> warn (60 frames, SKRIII) -> dive (speed 3 + hits) -> dizzy (120 - 10 x hits frames,
+  the only time a landing counts) -> rise. Three landings win; MINA POMMES, pommes rain, then the goal.
+- **Arcs** stop when the jump falls 2 tiles below its takeoff (they never lead into a pit), and an apple covered by
+  a later object is no part of its pattern (the oracle drops it; levels avoid it). 1-4 was rebuilt wider (270
+  columns) so the four pommes-speed kicker arcs and the two pit arcs have room; the third kicker is without A.
+- **Bot**: `kickA`/`followArc` can brake to the arc's speed (pommes 40, normal 24); without that the run-up after a
+  downhill is faster than the arc and the apples above are missed.
+Measurement: m22-world1 (title -> World 2 map, all of World 1) 8557 frames; per-level routes 1241-2164 frames;
+boss win 1234 frames, boss retry 1465; max 3.4k cycles in play, 14.9k in loading frames. 71 apple patterns in
+World 1, all followed by life-safe replays.
+
+## D-033 - Bo budget gate after World 1 (M22): projected over 32 KB, flagged
+Date: 2026-10-06 - Milestone: M22
+Measurement (from bo.lst/bo.sym after M22): **ROM 27 133 B** = code 20 070 B + data 7 063 B. Data: levels 1 837
+(World 1: 1-1..1-4 = 221-252 B each, 1-5 arena 17 B, test levels T1-T5 599 B, tables/prefabs 265 B), tiles 1 541
+(patterns 1 088 = 68 tiles, World 1 tileset/strip/attributes 254 B), text + font 1 115, sprites 1 504 (Bo, items,
+all 13 enemies, boss 1), music + effects 164, tables ~900. Cartridge 15.1 KB compressed.
+Projection for five worlds (World 1 measured, the rest estimated from it):
+| Part | Now | Five worlds |
+|---|---:|---:|
+| Code (moving platforms, chase, bulldozer, 3 bosses, theft, ending, SUPERBOSSE, golden board, codes) | 20.1 | 24.5-25.5 |
+| Levels (4 more worlds x ~1.0 KB + Backhoppet) | 1.8 | 6.0 |
+| Tiles (own look per world, DESIGN 14.4 human request: ~30 patterns + tileset per world, ~0.75 KB) | 1.5 | 4.5 |
+| Sprites (bosses 2-4, rabbit, bulldozer, boards) | 1.5 | 2.7 |
+| Music and effects (~10 loops, ~25 effects) | 0.2 | 1.5 |
+| Text, font, tables | 2.0 | 2.6 |
+| **Sum** | **27.1** | **41-43 KB** |
+The DESIGN 16.1 cut list in order: (1) 4 levels per world, -1.0 KB per world for worlds 2-5 = -4 KB; (2) parallax
+in two worlds and fewer decor tiles, -0.5-1 KB (conflicts with the human's request for distinct worlds); (3) the
+final reuses Stora Masen, -0.3; (4) shorter loops, -0.3. After all four: **~35-37 KB, still over 32 KB.** Step 5
+(ROM banking or a larger ROM) is an ISA change: forbidden by the runtime freeze, a human decision.
+Decision: flagged in PROGRESS *Blocked / needs human*. Meanwhile, within the locks: cut (1) is applied from World 2
+on (3 levels + boss; World 1 keeps its four FIRST10 levels), cuts (3) and (4) are applied when those parts are
+written, and before M23 a code-size pass targets the code overrun (20 KB against DESIGN's 11-13 KB estimate:
+the largest routines are bo_ground 1.2 KB, draw_actor 0.7, b_boss1 0.6, on_map 0.6, pose_update 0.5) and the test
+levels leave the final ROM (-0.6 KB). Cut (2) waits for the human because it contradicts their request.

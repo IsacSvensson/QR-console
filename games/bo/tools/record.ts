@@ -3,6 +3,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Bot, loadGame } from './bot';
+import { pickFrames } from './pick-frames';
 import { ROUTES } from './routes';
 import { GAME_DIR } from './util';
 
@@ -24,3 +25,4 @@ for (const name of names) {
   writeFileSync(join(dir, `${name}.json`), JSON.stringify(bot.replayFile(r.seed)) + '\n');
   console.log(`${name}: ${bot.inputs.length} frames, ends in ${bot.level} at x ${bot.x}`);
 }
+for (const name of names.filter((n) => ['m21-zoo1', 'm21-zoo2'].includes(n))) await pickFrames(name);

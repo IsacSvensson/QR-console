@@ -49,7 +49,7 @@ Each line: `<column> <kind> <arguments>`. Objects are drawn over the terrain in 
 | `apples` | `y n` | a row of n apples from the column to the right |
 | `column` | `y n` | a column of n apples upwards |
 | `apple` | `y` | one apple (e.g. the one sticking out of a hedge) |
-| `arc` | `v kind [n]` | apples along a jump that starts in this column at speed v (1/16 px per frame). kind `hold` (ollie, A held), `tap`, `r45`/`r22` (launched from the lip of a ramp that ends in this column), `r45a`/`r22a` (the same with A at the lip). One apple every 16 px, computed with the engine's physics (`tools/physics.ts`) |
+| `arc` | `v kind [n]` | apples along a jump that starts in this column at speed v (1/16 px per frame). kind `hold` (ollie, A held), `tap`, `r45`/`r22` (launched from the lip of a ramp that ends in this column), `r45a`/`r22a` (the same with A at the lip). One apple every 16 px, computed with the engine's physics (`tools/physics.ts`), until the jump lands or falls 2 tiles below its takeoff |
 | `block` | `y [w h]` | solid block(s) |
 | `weak` | `y [w h]` | a weak obstacle: breaks when Bo lands on it (DESIGN §3.7) |
 | `bounce` | `y [w h]` | trampoline / jelly |

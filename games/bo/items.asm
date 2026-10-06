@@ -319,18 +319,10 @@ bc_apples:                          ; five apples upwards (into empty cells)
     JNZ @a
 @done:
     RET
-bc_big:
-    LDI r0, T_BIGAPPLE
-    JMP set_cell
-bc_pommes:
-    LDI r0, T_POMMES
-    JMP set_cell
-bc_godis:
-    LDI r0, T_GODIS
-    JMP set_cell
+; a power-up in a box goes straight to Bo (he bounces on: it must not be left behind)
 
 .data
-box_content: .word bc_apples, bc_big, bc_pommes, bc_godis
+box_content: .word bc_apples, got_apple_helmet, got_pommes, got_godis
 ; extra bytes after the 4-byte record, per object type (APPLES: param - 1)
 obj_extra: .byte 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 .code

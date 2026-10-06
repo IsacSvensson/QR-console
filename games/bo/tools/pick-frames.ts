@@ -5,10 +5,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expandInputs } from '@qrc/vm';
 import { loadGame } from './bot';
-import { GAME_DIR } from './util';
+import { GAME_DIR, isMain } from './util';
 
-const names = process.argv.slice(2).length ? process.argv.slice(2) : ['m21-zoo1', 'm21-zoo2'];
-for (const name of names) {
+export async function pickFrames(name: string) {
   const rf = JSON.parse(readFileSync(join(GAME_DIR, 'replays', `${name}.json`), 'utf8'));
   const { vm, sym } = await loadGame(rf.seed);
   const inputs = expandInputs(rf.inputs, rf.frames);
@@ -26,3 +25,5 @@ for (const name of names) {
   writeFileSync(join(GAME_DIR, 'replays', `${name}.frames.json`), JSON.stringify(frames) + '\n');
   console.log(`${name}: reference frames ${frames.join(', ')}`);
 }
+
+if (isMain(import.meta.url)) for (const name of process.argv.slice(2).length ? process.argv.slice(2) : ['m21-zoo1', 'm21-zoo2']) await pickFrames(name);

@@ -23,6 +23,7 @@ export const SIGN_KIND: Record<string, number> = { right: 0, a: 1, b: 2, down: 3
 export const RAMP_KIND: Record<string, number> = { ramp45: 0, ramp45l: 1, ramp22: 2, ramp22l: 3 };
 export const ENEMY_TYPE: Record<string, number> = {
   snail: 1, gull: 2, hedgehog: 3, wasp: 4, ball: 5, teddy: 6, squirrel: 7, pigeon: 8, snowman: 9, sled: 10, jelly: 11, blob: 12, cannon: 13,
+  boss1: 17,
 };
 export const PREFAB_IDS = Object.keys(PREFABS);
 
@@ -177,7 +178,7 @@ export function buildLevel(lvl: Lvl): Built {
             next += 16;
           }
           const c = attrOf(lvl.world - 1, get(x >> 3, foot >> 3)) & 15;
-          return dy > 0 && (foot > 255 || (c !== CLASS.EMPTY && c !== CLASS.APPLE));
+          return dy > 0 && (foot > 255 || dy >> 4 > 16 || (c !== CLASS.EMPTY && c !== CLASS.APPLE));
         });
         const limit = o.args[2] ? N(2) : cells.length;
         apples(cells.slice(0, limit).filter(([c, r]) => c >= 0 && c < W && r >= 0 && r < ROWS));

@@ -33,4 +33,9 @@ export const PREFABS: Record<string, string[][]> = {
     ['HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE'],
     ['HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE'],
   ],
+  bush: [
+    ['HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE'],
+    ['HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE'],
+    ['HEDGE', 'HEDGE', 'HEDGE', 'HEDGE', 'HEDGE'],
+  ],
 };

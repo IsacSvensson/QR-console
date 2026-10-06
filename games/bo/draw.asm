@@ -110,6 +110,7 @@ draw_play:
     CALL draw_level
     CALL draw_actors
     CALL draw_bo
+    CALL draw_hint
     CALL draw_fg
     CALL draw_combo
     CALL draw_bubble

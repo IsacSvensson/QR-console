@@ -34,7 +34,6 @@ objects
 10  apple g
 11  sign right
 13  apples g 12
-16  prefab fence g
 28  apple g
 29  apple g
 30  apples g 4
@@ -43,11 +42,11 @@ objects
 40  sign a
 42  arc 24 hold
 45  prefab bin g
-48  arc 24 hold
-51  prefab bin g
-54  arc 24 hold
-57  star g+5 1
-58  prefab bins2 g
+50  arc 24 hold
+53  prefab bin g
+57  arc 24 hold
+60  star g+5 1
+61  prefab bins2 g
 66  arc 24 hold
 72  box g apple
 80  box g apples
@@ -57,8 +56,8 @@ objects
 106 enemy snail g
 121 sign a
 125 ramp45 1
-125 arc 38 r45a
-125 arc 38 r45
+125 arc 37 r45a
+125 arc 37 r45
 133 star g+9 2
 142 flag
 146 prefab bin g

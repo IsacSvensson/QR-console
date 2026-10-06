@@ -2,9 +2,9 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M22 (World 1 and the game around it, budget gate)
+**Current milestone:** M23 (Worlds 2 and 3)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
-Part 3 (Bo's Skateäventyr) in progress: M19, M20 and M21 done.
+Part 3 (Bo's Skateäventyr) in progress: M19-M22 done; the M22 budget gate projects over 32 KB (flagged).
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -37,7 +37,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M19 Engine: levels, scrolling, rolling
 - [x] M20 Skate mechanics and the feel prototype
 - [x] M21 Enemies, power-ups, items, HUD, Bo's voice
-- [ ] M22 World 1 and the game around it (budget gate)
+- [x] M22 World 1 and the game around it (budget gate)
 - [ ] M23 Worlds 2 and 3
 - [ ] M24 Worlds 4 and 5, the theft and the ending
 - [ ] M25 Picture codes, music, delivery
@@ -55,8 +55,11 @@ human's first Bo test, PLAN *Manual acceptance* 1). All seven T3 kicker launches
 M21 done — the 13 enemies of DESIGN §9 (nine behaviours, every landing joke and side hit shown in the zoo test
 levels T4/T5), apple helmet, pommes (music 1.5× faster), godis (one extra jump), 100 apples = a life, a music
 sequencer with a World 1 loop, the bubble font with ÅÄÖ checked byte for byte against DESIGN §11–12 (D-031).
-**Bo ROM 21.7 KB after M21 (code 16.1 KB)** — code is far above DESIGN §16's 11–13 KB; the M22 budget gate must
-shrink it (shared helpers, tables) or apply the cut list. Human request (2026-10-06): the worlds must look clearly
+M22 done — title, intro, picture-code screen (test levels via the code of four Bos), world map, level cards,
+tally, after-boss scene; levels 1-1..1-4 and Stora Måsen (1-5); replays from the title to the World 2 map, every
+star and part of World 1, the boss pattern and a retry, FIRST10 §8 rules, all 71 apple patterns followed (D-032).
+**Budget gate: ROM 27.1 KB after World 1 (code 20.1 KB); five worlds projected 41-43 KB, 35-37 KB after the whole
+cut list** — flagged below (D-033). Human request (2026-10-06): the worlds must look clearly
 different (own sky, parallax, ground/structure colours, decor) — added to DESIGN §14.4, done in M23–M24.
 DESIGN §17 defaults apply (only question 1 answered). **Part 3 runtime baseline = the M19 commit** — from it on
 `git diff <M19> -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
@@ -90,6 +93,11 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 ## Blocked / needs human
 
+- **Bo does not fit 32 KB (M22 budget gate, D-033).** Measured after World 1: ROM 27.1 KB (code 20.1, data 7.1).
+  Projection for five worlds 41-43 KB; after DESIGN §16.1 cuts 1-4 still ~35-37 KB. Step 5 (ROM banking or a
+  larger ROM) is an ISA change and the runtime is frozen. Meanwhile: 3 levels + boss from World 2 on, a code-size
+  pass, test levels out of the final ROM; cut 2 (less parallax/decor) not applied because it contradicts the
+  request for clearly different worlds. Human: choose between a larger ROM / banking, fewer worlds, or cut 2.
 - **`npm run test:e2e:offline` (M10) is flaky: 3 of 8 runs pass.** Every failure is one browser-initiated
   `GET /sw.js` (the service-worker update check on reload) reaching the server ~2 s after going offline; the
   app itself makes no requests. Fixing it needs a change in `apps/web` (frozen in Part 2) or a decision on what

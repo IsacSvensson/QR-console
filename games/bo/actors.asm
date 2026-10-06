@@ -27,6 +27,7 @@ B_THROW  = 4
 B_PROJ   = 5
 B_ROLL   = 6
 B_PIGEON = 7
+B_BOSS1  = 8
 ; stomp outcomes
 O_APPLE  = 0
 O_AWAY   = 1
@@ -44,6 +45,7 @@ F_HARM  = 1                         ; the body hurts
 F_TALL  = 2                         ; 8 x 16 (two sprites)
 F_WIDE  = 4                         ; 16 x 8
 F_RIGHT = 8                         ; the sprite faces right
+F_BIG   = 16                        ; 16 x 16 (four sprites)
 ; events (for the tests): what happened at a contact
 EV_STOMP  = 1
 EV_HIT    = 2
@@ -77,11 +79,12 @@ en_table:
     .byte B_PROJ,   4, 4, 0, O_HIT,   F_HARM, 255, 0               ; 14 cone
     .byte B_PROJ,   4, 4, 0, O_HIT,   F_HARM, 255, 0               ; 15 snowball
     .byte B_PROJ,   4, 4, 0, O_HIT,   F_HARM, 255, 0               ; 16 popcorn
+    .byte B_BOSS1, 14, 12, 16, O_STAND, F_BIG | F_RIGHT, 255, 0     ; 17 Stora Måsen (boss of world 1)
 en_sprites:
     .word 0, spr_en_snail, spr_en_gull, spr_en_hedgehog, spr_en_wasp, spr_en_ball, spr_en_teddy, spr_en_squirrel
     .word spr_en_pigeon, spr_en_snowman, spr_en_sled, spr_en_jelly, spr_en_blob, spr_en_cannon, spr_en_cone
-    .word spr_en_snowball, spr_en_popcorn
-behaviours: .word b_walk, b_dive, b_fly, b_bounce, b_throw, b_proj, b_roll, b_pigeon
+    .word spr_en_snowball, spr_en_popcorn, spr_boss_gull
+behaviours: .word b_walk, b_dive, b_fly, b_bounce, b_throw, b_proj, b_roll, b_pigeon, b_boss1
 sine32:     .byte 0, 2, 5, 7, 8, 10, 11, 12, 12, 12, 11, 10, 8, 7, 5, 2, 0, 254, 251, 249, 248, 246, 245, 244
             .byte 244, 244, 245, 246, 248, 249, 251, 254
 .code
@@ -106,6 +109,8 @@ os_enemy:                           ; stamping: r6 = column, r7 = bottom row, r5
 ; actors_reset: no actors; every enemy can come back (after a fall, DESIGN.md §6)
 actors_reset:
     LDI r0, 0
+    ST [boss_hits], r0              ; a boss fight starts again
+    ST [boss_win_t], r0
     LDI r1, 0
 @a:
     ST [r1 + actors], r0
@@ -790,6 +795,9 @@ contact:
     CALL en_row_of
     MOV r6, r1                      ; r6 = the type's row
     LD r0, [r7 + AC_TYPE]
+    CMP r0, EN_BOSS1
+    JEQ boss1_contact
+    LD r0, [r7 + AC_TYPE]
     CMP r0, 2                       ; a seagull takes the pommes, no damage (§5)
     JNE @godis
     LD r0, [pw_kind]
@@ -1071,10 +1079,13 @@ draw_actor:                         ; r7 = actor
     XOR r4, 1
 @facer:
     MOV r3, r4
-    LD r4, [r7 + AC_SUB]            ; the seagull blinks while it warns
+    LD r4, [r7 + AC_SUB]            ; the seagulls blink while they warn
     LD r5, [r7 + AC_TYPE]
     CMP r5, 2
+    JEQ @gull
+    CMP r5, EN_BOSS1
     JNE @draw
+@gull:
     CMP r4, 1
     JNE @draw
     LD r4, [tick]
@@ -1089,6 +1100,9 @@ draw_actor:                         ; r7 = actor
     JNE @single
     LDB r4, [r6 + 5]
     MOV r5, r4
+    AND r5, F_BIG
+    JNZ @big
+    MOV r5, r4
     AND r5, F_TALL
     JNZ @tall
     AND r4, F_WIDE
@@ -1101,6 +1115,39 @@ draw_actor:                         ; r7 = actor
     SYS SPR
     ADD r0, 32
     ADD r2, 8
+    SYS SPR
+    JMP @zzz
+@big:                               ; 2 x 2 sprites (the order mirrored when flipped)
+    SUB r1, 4
+    SUB r2, 8
+    MOV r4, r0
+    CMP r3, 0
+    JEQ @b1
+    ADD r0, 32
+@b1:
+    SYS SPR
+    ADD r1, 8
+    MOV r0, r4
+    CMP r3, 0
+    JNE @b2
+    ADD r0, 32
+@b2:
+    SYS SPR
+    ADD r2, 8
+    MOV r0, r4
+    ADD r0, 64
+    CMP r3, 0
+    JNE @b3
+    ADD r0, 32
+@b3:
+    SYS SPR
+    SUB r1, 8
+    MOV r0, r4
+    ADD r0, 64
+    CMP r3, 0
+    JEQ @b4
+    ADD r0, 32
+@b4:
     SYS SPR
     JMP @zzz
 @wide:
@@ -1119,6 +1166,25 @@ draw_actor:                         ; r7 = actor
 @w2:
     SYS SPR
 @zzz:
+    LD r4, [r7 + AC_TYPE]           ; the dizzy boss: stars round its head
+    CMP r4, EN_BOSS1
+    JNE @sleep
+    LD r4, [r7 + AC_SUB]
+    CMP r4, 3
+    JNE @end
+    LD r0, [tick]
+    SHR r0, 2
+    AND r0, 7
+    LDB r0, [r0 + dizzy_dx]
+    ADD r0, r1
+    SUB r2, 3
+    MOV r1, r2
+    LDI r2, C_YELLOW
+    SYS PSET
+    ADD r0, 6
+    SYS PSET
+    RET
+@sleep:
     LD r4, [r7 + AC_ST]
     CMP r4, AS_SLEEP
     JNE @end
@@ -1140,5 +1206,6 @@ draw_actor:                         ; r7 = actor
     RET
 
 .data
+dizzy_dx: .byte 0, 1, 2, 3, 4, 3, 2, 1
 s_zzz: .string "Z Z"
 .code

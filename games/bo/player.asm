@@ -466,6 +466,12 @@ bo_ground:
 @wall:
     LD r0, [t_old]
     ST [bo_x], r0
+    LD r0, [wall_t]                 ; against a wall: count towards the A hint
+    CMP r0, 0
+    JNE @counting
+    LDI r0, 1
+    ST [wall_t], r0
+@counting:
     CALL speed_split                ; bumped into a wall: stops softly, a wobble at speed
     LDI r0, 0
     ST [bo_vx], r0
@@ -732,6 +738,8 @@ land:
 
 ; a trampoline (or jelly): straight back up with BOUNCE_V
 land_bounce:
+    SHL r7, 4                       ; on the surface, then straight back up
+    ST [bo_y], r7
     LD r0, [PH_BOUNCE_V]
     NEG r0
     ST [bo_vy], r0
@@ -970,6 +978,36 @@ pose_update:
     LDI r0, 0
     ST [bo_idle_t], r0
 @idled:
+    ; hints: standing still against a wall (A), or standing still at all (the arrow)
+    LD r0, [wall_t]
+    CMP r0, 0
+    JEQ @nowall
+    LD r1, [bo_vx]
+    CMP r1, 0
+    JNE @wallgone
+    LD r1, [bo_state]
+    CMP r1, ST_GROUND
+    JNE @wallgone
+    CMP r0, WALL_HINT
+    JGE @nowall
+    ADD r0, 1
+    ST [wall_t], r0
+    JMP @nowall
+@wallgone:
+    LDI r0, 0
+    ST [wall_t], r0
+@nowall:
+    LDI r1, HINT_A
+    LD r0, [wall_t]
+    CMP r0, WALL_HINT
+    JGE @hint
+    LDI r1, HINT_ARROW
+    LD r0, [bo_idle_t]
+    CMP r0, IDLE_POP
+    JGE @hint
+    LDI r1, 0
+@hint:
+    ST [hint], r1
     LD r0, [bo_look_t]
     CMP r0, 0
     JEQ @nolook

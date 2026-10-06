@@ -288,6 +288,19 @@ MAX_FG = 8
 .var voice_s, 4
 .var sfx_busy, 6
 
+; hints (FIRST10.md §5): a blinking arrow after 3 s standing still, a blinking A after 2 s against a wall
+HINT_ARROW = 1
+HINT_A     = 2
+WALL_HINT  = 120
+.var hint
+.var wall_t                     ; frames standing still against a wall since bumping into it
+
+; bosses (boss.asm)
+.var boss_hits
+.var boss_tx
+.var boss_ty
+.var boss_win_t
+
 ; enemies (actors.asm)
 .var en_n
 .var en_col, 80

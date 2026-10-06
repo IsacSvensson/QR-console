@@ -11,6 +11,7 @@
 .include "tricks.asm"
 .include "items.asm"
 .include "actors.asm"
+.include "boss.asm"
 .include "bubble.asm"
 .include "sound.asm"
 .include "draw.asm"
@@ -66,6 +67,7 @@ on_play:
     CALL timers
     CALL bo_update
     CALL actors_update
+    CALL boss_step
     CALL camera_update
     CALL draw_play
     RET

@@ -44,6 +44,7 @@ level_start:
     LDI r1, 0
     ST [cp_n], r1
     ST [fg_n], r1
+    ST [wall_t], r1
     ST [en_n], r1
     ST [cp_next], r1
     ST [goal_t], r1
