@@ -21,6 +21,7 @@ M_PLAY   = 0
 M_SLIDE  = 1
 M_MAP    = 2
 M_CARD   = 3                 ; the level card before a level (until the title and world map exist, M29)
+M_SIDE   = 4                 ; a side view: its engine is a code overlay at OVL_RAM
 
 ; ---- layout ----------------------------------------------------------------------------------
 PLAY_Y   = 32               ; HUD: two rows of 16 px; the playfield is 4 x 3 cells = 128 x 96
@@ -92,6 +93,33 @@ LR_NAME  = 12
 LR_CTRLS = 14
 LR_WHIRLS = 16
 LR_NWHIRL = 18
+LR_LINKS = 20
+LR_NLINK = 22
+; side link (8 B) and side view record (16 B), levels.gen.asm
+SL_CELL  = 0
+SL_SIDE  = 2
+SL_EXITL = 4
+SL_EXITR = 6
+SR_HI    = 0
+SR_LO    = 2
+SR_COLS  = 4
+SR_SKY   = 5
+SR_RIGHT = 6
+SR_WIND  = 8
+SR_SX    = 10
+SR_SY    = 12
+
+; ---- the side view (DESIGN §3.2) -------------------------------------------------------------
+OVL_RAM  = 0xE000           ; code overlays run here (D-040); RAM variables stay far below
+SIDE_Y   = 16               ; the side view is drawn under a 16 px HUD row
+SD_WALK  = 16               ; 1/16 px per frame
+SD_CLIMB = 12
+SD_GRAV  = 3                ; 1/16 px per frame per frame
+SD_JUMP  = -46              ; jump speed; releasing A early cuts it to SD_CUT
+SD_CUT   = -16
+SD_FALL  = 64
+SD_H     = 14               ; body height (standing); 9 crouching
+SD_HC    = 9
 
 ; ---- sound -----------------------------------------------------------------------------------
 .sfx SFX_BIP, 0, 1760, 6, 10
@@ -201,6 +229,27 @@ LR_NWHIRL = 18
 .var part_y, N_PART * 2
 .var strbuf, 6
 ; test hooks (as BLACKBOX and Bo): written by tests and tools, read once per frame
+.var sbuf, 96 * SIDE_ROWS            ; the side view's tiles, column-major: sbuf[col * SIDE_ROWS + row]
+.var sd_link                        ; the side link Sixten came through
+.var sd_rec                         ; its side view record
+.var sd_cols
+.var sd_wind                        ; 1/16 px per frame, + = to the right
+.var sd_right                       ; compass direction of the right edge (16ths)
+.var sd_x                           ; feet (bottom centre), 1/16 px; the body is x-3..x+2, y-14..y-1
+.var sd_y
+.var sd_vy
+.var sd_face                        ; 0 right, 1 left
+.var sd_ground
+.var sd_climb
+.var sd_crouch
+.var sd_lee                         ; 1 = something solid upwind covers him (DESIGN §6.5): the wind does not push
+.var sd_btn
+.var sd_btnp
+.var sd_cam
+.var sd_dx                          ; this frame's walking step (tests)
+.var sd_dir                         ; the compass arrow: the way he faces (16ths)
+.var ovl_loaded                     ; which overlay is in OVL_RAM (1 = the side view)
+.var map_ret                        ; the mode the map returns to
 .var dbg_level                      ; n + 1: start level n
 .var dbg_goto                       ; cell + 1: put Sixten on that cell
 .var dbg_cell                       ; cell + 1: write dbg_cell_v into it

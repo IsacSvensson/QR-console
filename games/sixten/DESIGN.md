@@ -149,7 +149,30 @@ en lekplats.
 - 2–6 skärmar bred, scrollar vågrätt, en kolumnvis buffert (16 rader) och `MAP` per kolumn, samma teknik som Bo.
 - Fysik: gå, hopp (A, variabel höjd), klättra (↑/↓ på klättringsbara tiles), huka. **Vinden är bara en vågrät kraft**
   (beslut 3): `vx += vind` varje bildruta, utom när Sixten står i lä bakom något sett från vinden, eller har choklad.
-- Sidovyn är en egen liten bana i xdata, med ingång och utgång kopplade till två celler i kartan.
+- Sidovyn är en egen liten bana i xdata (`levels/*.side`, 14 rader, 32–96 kolumner) med konstant vind, väderstrecket
+  åt höger, himlens färg och startplatsen. Ingång och utgångar kopplas till celler i kartan (`side:` i `.map`).
+- **Lä:** med vind är Sixten i lä när något fast finns inom 14 px mot vinden vid fötterna, och vid huvudet om han
+  inte hukar. Bakom en sten på en tile måste han huka. Bakom rotvältan räcker det att stå.
+- Toppen på rötter och grepp går att stå på (↓ klättrar ned igen).
+
+| Tecken | Tile i sidovyn | Fast/klättra |
+|:--:|---|---|
+| ` ` | himmel | – |
+| `g` | mark med gräs | fast |
+| `d` | jord | fast |
+| `x` | dikets/ravinens bakvägg | – |
+| `f` | dikets botten | fast |
+| `L` | stam på marken | fast |
+| `l` | stam över diket/ravinen | fast |
+| `c` | trädets krona (på marken) | fast |
+| `A` | grantopp (bakgrund) | – |
+| `Y` | gran (bakgrund) | – |
+| `#` | berg | fast |
+| `h` | grepp i berget | klättra |
+| `r` | rötter | klättra |
+| `k` | grottans mörker | – |
+| `o` | sten | fast |
+| `1`–`6` | rotvältan (2 × 3 tiles) | fast |
 
 ### 3.3 När vyn byts
 
@@ -516,6 +539,8 @@ bubbla och HUD ≤ 4 853 (med expansion av hela skärmen högst 10 627. I spelet
   får RAM-adresser medan byten hamnar i xdata. Det skulle göra relokeringen automatisk och ge rätt adresser i `.lst`.
   Den behövs inte för att bygga spelet. Den står i DECISIONS D-040 och i PROGRESS under *Blocked / needs human*.
 - Planen: sidovyns motor och skärmarna runt spelet (titel, världskarta, naturbok, slut) blir overlays.
+- **Gjort i M28:** sidomotorn är en overlay på 1 972 B kod i xdata (inte i ROM). Den kopieras till `0xE000` första
+  gången en sidovy startar och körs därifrån (D-043).
   Uppifrånmotorn, tromben, HUD, kartan och ljudet ligger i ROM.
 
 ### 12.5 Risker

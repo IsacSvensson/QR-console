@@ -22,6 +22,47 @@ function weather(bot: Bot, k: number, c: number, r: number) {
   waitOut(bot);
 }
 
+// ---- the side view (DESIGN §3.2) ----
+const sx = (bot: Bot) => bot.u('sd_x') >> 4;
+const sy = (bot: Bot) => bot.u('sd_y') >> 4;
+/** in a side view: walk until the feet's x is (about) tx */
+function sideWalk(bot: Bot, tx: number) {
+  for (let guard = 0; Math.abs(sx(bot) - tx) > 1; guard++) {
+    if (guard > 1500 || bot.mode !== bot.S('M_SIDE')) throw new Error(`side: stuck at ${sx(bot)},${sy(bot)} going to x ${tx}`);
+    bot.step(sx(bot) < tx ? B.R : B.L);
+  }
+}
+/** in a side view: hold buttons until a condition holds */
+function holdUntil(bot: Bot, b: number, done: () => boolean, what: string) {
+  for (let guard = 0; !done(); guard++) {
+    if (guard > 1500) throw new Error(`side: ${what} never happened (at ${sx(bot)},${sy(bot)})`);
+    bot.step(b);
+  }
+}
+/** top-down: face a direction (towards a blocked cell) and press A */
+function enterSide(bot: Bot, b: number) {
+  bot.settle();
+  bot.tap(b);
+  bot.tap(B.A);
+  if (bot.mode !== bot.S('M_SIDE')) throw new Error('no side view');
+  bot.wait(2);
+}
+/** walk out of a side view at an edge */
+function leaveSide(bot: Bot, b: number) {
+  holdUntil(bot, b, () => bot.mode === bot.S('M_PLAY'), 'leaving the side view');
+  bot.wait(2);
+}
+/** T4's cave: to the roots, up them onto the ledge, back down and out to the left */
+function cave(bot: Bot) {
+  enterSide(bot, B.U);
+  sideWalk(bot, 155);
+  holdUntil(bot, B.U, () => sy(bot) <= 41, 'climbing the roots');
+  bot.hold(B.U | B.R, 12);
+  bot.hold(B.R, 20);
+  bot.wait(10);
+  leaveSide(bot, B.L);
+}
+
 /** hold a direction until the feet are on column c (moving horizontally), then centre in the cell */
 function runTo(bot: Bot, c: number) {
   bot.walkToPoint(c * 32 + 16, bot.y);
@@ -135,6 +176,37 @@ export const ROUTES: Record<string, Route> = {
   // T3: the same whirlwind, Sixten in the forest or on open land inside its radius: AJ! and back to control 3
   'm27-forest': { seed: 1, run: (bot) => (bot.startLevel('T3'), weather(bot, 3, 6, 7), bot.wait(20)) },
   'm27-open': { seed: 1, run: (bot) => (bot.startLevel('T3'), weather(bot, 3, 20, 7), bot.wait(20)) },
+  // T4: the cave twice (the same inputs both times), the ravine in the wind (crouching behind the stone, pushed when
+  // standing, the root plate's lee, a jump over it, out on the south side), back north through it, and the cliff
+  'm28-t4': {
+    seed: 1,
+    run(bot) {
+      bot.startLevel('T4');
+      bot.walkTo(4, 2);
+      cave(bot);
+      cave(bot);
+      bot.walkTo(1, 3);
+      enterSide(bot, B.D);
+      sideWalk(bot, 76);
+      bot.hold(B.D, 60); // crouched behind the stone: the lee
+      bot.wait(40); // standing: the wind pushes him west
+      sideWalk(bot, 70);
+      bot.hold(B.R | B.A, 30); // over the stone
+      sideWalk(bot, 268);
+      bot.wait(60); // standing by the root plate: the lee
+      bot.hold(B.R | B.A, 40); // over it
+      leaveSide(bot, B.R);
+      enterSide(bot, B.U); // from the south side the same side view starts at its north edge
+      leaveSide(bot, B.L);
+      bot.walkTo(6, 3);
+      enterSide(bot, B.U);
+      sideWalk(bot, 116);
+      holdUntil(bot, B.U, () => sy(bot) <= 25, 'climbing the holds');
+      bot.hold(B.U | B.R, 12);
+      leaveSide(bot, B.R);
+      bot.wait(10);
+    },
+  },
   // 1-1: control 3 starts the whirlwind; Sixten waits by the lake until it has passed and the spruce lies over the
   // brook, then walks over it to the revealed control 5
   'm27-11': {

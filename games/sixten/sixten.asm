@@ -3,9 +3,9 @@
 ; with collision by cell type, the HUD with the compass, the map screen drawn from the same cells.
 .title "SIXTENS EXPEDITION"
 
-.include "art.gen.asm"                ; first: defs.asm sizes RAM from its constants
-.include "defs.asm"
+.include "art.gen.asm"                ; first: defs.asm sizes RAM from their constants
 .include "levels.gen.asm"
+.include "defs.asm"
 .code                               ; levels.gen.asm ends in .xdata
 
 init:
@@ -77,6 +77,9 @@ debug_hooks:
 .include "draw.asm"
 .include "card.asm"
 .include "whirl.asm"
+.include "side.asm"
+.include "sideovl.asm"
+.code
 
 .data
-mode_table: .word play_frame, slide_frame, map_frame, card_frame
+mode_table: .word play_frame, slide_frame, map_frame, card_frame, OVL_RAM

@@ -864,3 +864,33 @@ the funnel, 24 particles and a screen expansion), 0 overruns. All M27 checks pas
 seeds 1 and 777 and along six different routes (by its own clock); warning >= 300 frames for every whirlwind of
 every level; the wind turned 120 frames before the one turn; every step <= its speed; cells changed only at
 waypoints within the radius; shelter (ditch, hollow, cabin) keeps all hearts, forest and open land cost one.
+
+## D-043 - Sixten's side view as a code overlay (M28)
+Date: 2026-10-07 - Milestone: M28
+Decision:
+- **The overlay**: `sideovl.asm` is assembled into `.xdata` between `ovl_side` and `ovl_side_end`; every jump and
+  call inside it is written `OV op, target` (= `op OVL_RAM + (target - ovl_side)`, the mockup's convention, D-040),
+  calls into ROM are ordinary. `side_enter` (ROM) copies it to OVL_RAM (0xE000) with `SYS COPY` the first time (it
+  stays: nothing else uses the area yet) and `mode_table` calls OVL_RAM for M_SIDE. No assembler change; the
+  optional `.overlay` directive remains the human's decision.
+- **Side views are data**: `levels/*.side` (14 rows, 32-96 columns of tiles, wind, the compass letter of the right
+  edge, sky colour, start cell) packed column-major in xdata and unpacked into `sbuf`; `side:` lines in `.map` link a
+  cell (entered with A while facing it) to a side view and its two exits (left edge -> a cell, right edge -> a cell).
+  The side tiles and their flags (solid, climbable, background) are in DESIGN 3.2, where the tests read them.
+- **Physics** (1/16 px): walk 16, climb 12 (sideways at half speed), gravity 3, jump -46 cut to -16 when A is let go
+  (about 22 px high), fall cap 64; the body is 6 x 14 px (9 crouching, with ↓ on the ground). Climbing works while
+  the feet's top row is on roots or holds; the top tile of a climb is something to stand on (↓ goes through), so a
+  climb ends on the ledge instead of bouncing at it. The crown tile of the fallen tree is solid ground.
+- **Wind** is a constant per side view, added to the step each frame unless Sixten is in the lee, has chocolate or
+  climbs. The lee: something solid within 6-14 px upwind at the feet, and at the head unless he crouches (so a
+  one-tile stone needs a crouch, the root plate does not).
+- **The map** can be opened in a side view; it returns to the mode it was opened from (`map_ret`).
+- **The HUD** row 1 is shared (`draw_hud_top`); in a side view the compass arrow points the way Sixten faces (the
+  right edge's direction, or the opposite) with its letter.
+Measurement: the overlay is 1 972 B of code in xdata (not in ROM); ROM 14 397 B (code 9 804, data 4 552, sound 41),
+xdata 2 765 B, cartridge 9 224 B. RAM variables end far below 0xE000. m28-t4 (2 658 frames: the cave twice, the
+ravine both ways in a -6 wind with a crouch behind the stone and a stand by the root plate, the cliff) passes: the
+overlay is in RAM before its first instruction, runs in every side-view frame and in no top-down frame, every jump
+in it lands in it, the two cave visits have identical frames, the body never overlaps a solid tile, the wind pushes
+exactly 6/16 px a frame except in the lee (which the test computes from the source), chocolate stops the push, the
+exits land on the linked cells, the compass shows the facing direction.

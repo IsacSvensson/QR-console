@@ -2,34 +2,49 @@
 ; stamped controls, wood, the active power-up and the hearts; row 2 the buttons and what they do.
 .code
 
+; the top-down HUD: both rows
 draw_hud:
+    LDI r0, 0
+    LDI r1, 16
+    LDI r2, 128
+    LDI r3, 16
+    LDI r4, C_NAVY
+    SYS RECTFILL
+    LD r0, [course_set]             ; row 1 with the course arrow and the step counter (if a course is set)
+    CMP r0, 0
+    JEQ @nocourse
+    LD r0, [course_dir]
+    CALL draw_hud_top
+    LD r0, [steps]
+    LDI r1, 17
+    LDI r2, 6
+    LDI r3, C_YELLOW
+    SYS NUM
+    JMP @hints
+@nocourse:
+    LDI r0, 0xFFFF
+    CALL draw_hud_top
+@hints:
+    CALL draw_hud_hints
+    RET
+
+; row 1 (y 0-15): r0 = the compass arrow's direction (or 0xFFFF), the stamped controls, wood, the power-up, hearts
+draw_hud_top:
+    PUSH r0
     LDI r0, 0
     LDI r1, 0
     LDI r2, 128
-    LDI r3, 32
+    LDI r3, 16
     LDI r4, C_NAVY
     SYS RECTFILL
     LDI r1, 15
     LDI r3, 1
     LDI r4, C_DGREY
     SYS RECTFILL
-    LDI r0, 8                       ; compass
+    POP r2                          ; compass
+    LDI r0, 8
     LDI r1, 8
-    LD r2, [course_set]
-    CMP r2, 0
-    JEQ @nocourse
-    LD r2, [course_dir]
     CALL draw_compass
-    LD r0, [steps]                  ; the step counter (cells)
-    LDI r1, 17
-    LDI r2, 6
-    LDI r3, C_YELLOW
-    SYS NUM
-    JMP @controls
-@nocourse:
-    LDI r2, 0xFFFF
-    CALL draw_compass
-@controls:
     LDI r0, spr_flag
     LDI r1, 28
     LDI r2, 4
@@ -82,12 +97,16 @@ draw_hud:
     LDI r3, 0
 @heart:
     CMP r6, 0
-    JEQ @hints
+    JEQ @done
     SYS SPR
     ADD r1, 8
     SUB r6, 1
     JMP @heart
-@hints:
+@done:
+    RET
+
+; row 2 (y 16-31): the buttons and what they do
+draw_hud_hints:
     LDI r0, spr_dpad
     LDI r1, 1
     LDI r2, 19

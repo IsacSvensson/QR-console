@@ -5,9 +5,18 @@
 ; one frame in play: B opens the map; otherwise walk, and slide to the next screen when the feet cross its edge
 play_frame:
     SYS BTNP
+    MOV r1, r0
     AND r0, BTN_B
-    JZ @walk
+    JZ @side
     CALL map_open
+    RET
+@side:
+    AND r1, BTN_A                   ; A facing a side view's cell: into the side view
+    JZ @walk
+    CALL try_side
+    LD r0, [mode]
+    CMP r0, M_SIDE
+    JNE @walk
     RET
 @walk:
     CALL player_move

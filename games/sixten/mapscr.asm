@@ -4,6 +4,8 @@
 .code
 
 map_open:
+    LD r0, [mode]
+    ST [map_ret], r0
     LDI r0, M_MAP
     ST [mode], r0
     LDI r0, 0
@@ -43,6 +45,16 @@ map_open:
     CALL map_frame
     RET
 
+; back to where the map was opened from (the top-down view is drawn at once; a side view draws its next frame)
+map_close:
+    LD r0, [map_ret]
+    ST [mode], r0
+    CMP r0, M_PLAY
+    JNE @done
+    CALL draw_world
+@done:
+    RET
+
 ; r0 = control index -> r0 = 1 if that control is on the map (its cell is not under leaves)
 ctrl_visible:
     MUL r0, 3
@@ -79,9 +91,7 @@ map_frame:
     MOV r7, r0
     AND r0, BTN_B
     JZ @keep
-    LDI r0, M_PLAY                  ; close: back to the world in the same frame
-    ST [mode], r0
-    CALL draw_world
+    CALL map_close
     RET
 @keep:
     LD r0, [you_here]
@@ -91,9 +101,7 @@ map_frame:
     AND r0, BTN_A
     JZ @choose
     CALL set_course
-    LDI r0, M_PLAY
-    ST [mode], r0
-    CALL draw_world
+    CALL map_close
     RET
 @choose:
     MOV r0, r7

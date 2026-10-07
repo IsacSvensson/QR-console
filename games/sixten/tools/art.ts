@@ -80,6 +80,10 @@ export const TEXTS: Record<string, string> = {
   t_lg_hill: 'HÖJD',
   t_lg_path: 'STIG',
   t_lg_marsh: 'MYR',
+  t_dir_e: 'Ö',
+  t_dir_n: 'N',
+  t_dir_w: 'V',
+  t_dir_s: 'S',
 };
 
 // ---- pixel art ---------------------------------------------------------------------------------------------
@@ -248,6 +252,48 @@ export const patternBytes = (p: string) => {
   return rows.flat();
 };
 
+// ---- side view (DESIGN §3.2) ------------------------------------------------------------------------------
+// One character per tile in a .side file; flags: 'S' solid, 'C' climbable (not solid), '-' background.
+const GRASS_TOP: Art = ['.5...5..', 'B5..B5.5', '5B.5B.B5', 'BBBBBBBB', '55B5555B', '44444444', '47444474', '44744444'];
+const DIRT: Art = ['44444444', '44744444', '44444474', '47444444', '44444744', '44444444', '74444447', '44474444'];
+const BACKWALL: Art = ['33433343', '34333333', '33333433', '33343333', '43333334', '33333333', '33433343', '33333333'];
+const DITCH_FLOOR: Art = ['B353B335', '5B5B55B5', 'BBBBBBBB', '44444444', '47444474', '44444444', '44474444', '74444447'];
+const TRUNK: Art = ['33333333', '47774777', '44444444', '74447444', '33333333'];
+const LOG_GROUND: Art = [...TRUNK, '44444444', '47444474', '44744444'];
+const LOG_DITCH: Art = [...TRUNK, '33433343', '34333333', '33333433'];
+const TWIGS_SIDE: Art = ['..5..B..', '.5B.5B5.', '5B5B5B33', 'B5B55447', 'B5B5B333', '44444444', '47444474', '44744444'];
+const TIP: Art = ['...55...', '...55...', '..5555..', '..5555..', '.555555.', '.555555.', '55555555', '55555555'];
+const TREE: Art = ['...55...', '..5555..', '.555555.', '55555555', '..5555..', '.555555.', '55555555', '55555555'];
+const HOLDS: Art = ['AAA3AAAA', 'A700AAAA', 'AA77A3A7', '3AAAA00A', 'AA3AA77A', 'A00AA3AA', 'A77A7AAA', '3AA3AAAA'];
+const ROOTS: Art = ['00400040', '04004004', '04040040', '40040400', '04004040', '00404004', '04004004', '40040040'];
+const CAVE_DARK: Art = ['00000000', '00000300', '00000000', '03000000', '00000000', '00000030', '00000000', '00300000'];
+const STONE: Art = ['..3333..', '.3AAAA3.', '3AFFAAA3', '3AFAAAA3', '3AAAAA33', '3AAAA333', '.333333.', '44444444'];
+const ROOT_PLATE = draw(16, 24, (x, y) => {
+  const d = Math.hypot((x - 7.5) / 7.6, (y - 11.5) / 11.6);
+  if (d > 1) return y < 19 ? '.' : y === 19 ? 'B' : '4';
+  if (d > 0.86) return '3';
+  return (x * 7 + y * 3) % 9 === 0 ? '7' : (x * 5 + y * 11) % 13 === 0 ? '3' : '4';
+});
+/** side tiles: [character, flags, art]; index = position + 1 (' ' = 0 = sky, the level's CLS colour) */
+export const SIDE_TILES: [string, 'S' | 'C' | '-', Art][] = [
+  ['g', 'S', GRASS_TOP],
+  ['d', 'S', DIRT],
+  ['x', '-', BACKWALL],
+  ['f', 'S', DITCH_FLOOR],
+  ['L', 'S', LOG_GROUND],
+  ['l', 'S', LOG_DITCH],
+  ['c', 'S', TWIGS_SIDE],
+  ['A', '-', TIP],
+  ['Y', '-', TREE],
+  ['#', 'S', ROCK],
+  ['h', 'C', HOLDS],
+  ['r', 'C', ROOTS],
+  ['k', '-', CAVE_DARK],
+  ['o', 'S', STONE],
+  ...split(ROOT_PLATE).map((a, i): [string, 'S' | 'C' | '-', Art] => [String(i + 1), 'S', a]), // the root plate, 2 x 3 tiles: 1 2 / 3 4 / 5 6
+];
+export const SIDE_INDEX = new Map(SIDE_TILES.map(([ch], i) => [ch, i + 1]));
+
 // ---- sprites ---------------------------------------------------------------------------------------------
 // Sixten top-down: 8 x 16 = head + body; facing down, up and right (left = right flipped); two walking bodies.
 export const SPRITES: Record<string, Art> = {
@@ -263,6 +309,9 @@ export const SPRITES: Record<string, Art> = {
   // crouching (in shelter): 8 x 12, drawn 4 px lower
   spr_crouch_head: ['..4444..', '.444444.', '.4CCCC4.', '.C0CC0C.', '.CCCCCC.', '.299992.', 'C299992C', '22999922'],
   spr_crouch_body: ['.222222.', '.22..22.', '.FF..FF.', '........', '........', '........', '........', '........'],
+  // side view: crouching in the lee, facing right
+  spr_sc_head: ['..4444..', '.444444.', '.44CCCC.', '.4CC0CC.', '..CCCCC.', '.229999.', '2229999C', '2229999C'],
+  spr_sc_body: ['22299999', '.2299999', '..22222.', '.222222.', '.22.22..', 'FF..FF..', '........', '........'],
   spr_shadow: ['........', '........', '........', '..3333..', '.333333.', '..3333..', '........', '........'],
   spr_flag: ['3.......', '3FFFFFF.', '3FFFFF9.', '3FFFF99.', '3FFF999.', '3FF9999.', '3F99999.', '3.......'],
   spr_heart: ['.66.66..', '6666666.', '6666666.', '.66666..', '..666...', '...6....', '........', '........'],
@@ -289,6 +338,8 @@ export function generateArt(): string {
     `CELL_TYPES = ${CELLS.length}`,
     ...CELLS.map((c, i) => `CT_${c.name} = ${i}`),
     ...TOP_TILES.map(([n], i) => `T_${n.toUpperCase()} = ${i + 1}`),
+    'ST_SOLID = 1',
+    'ST_CLIMB = 2',
     '',
     '.data',
     '; bubble font, 1 bit per pixel (bit 7 = leftmost), 8 bytes per glyph',
@@ -312,8 +363,13 @@ export function generateArt(): string {
     `map_fill:   .byte ${CELLS.map((c) => c.fill).join(', ')}`,
     `map_sym:    .byte ${CELLS.map((c) => c.sym).join(', ')}`,
     '',
-    '; sprites',
+    '; side-view tiles and their flags (0 background, 1 solid, 2 climbable); tile 0 = sky',
+    `side_attr: .byte 0, ${SIDE_TILES.map(([, f]) => (f === 'S' ? 1 : f === 'C' ? 2 : 0)).join(', ')}`,
+    'tiles_side:',
+    '    .fill 32',
   );
+  for (const [ch, , a] of SIDE_TILES) out.push(`; '${ch}'`, ...sprite(a));
+  out.push('', '; sprites');
   for (const [n, a] of Object.entries(SPRITES)) out.push(`${n}:`, ...sprite(a));
   return out.join('\n') + '\n';
 }

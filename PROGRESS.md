@@ -2,11 +2,12 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M28 (Sixten: side view as a code overlay) — M26 and M27 done
+**Current milestone:** M29 (Sixten: World 1, budget gate) — M26-M28 done; M29 needs the human's fact review first
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
 Part 4 (Sixtens expedition) on branch `claude/sixtens-expedition`: planned (DESIGN, mockup, PLAN Part 4, D-040); M26 done
-(the top-down engine, D-041), M27 done (the whirlwind and the wind, D-042). The human still reviews the safety facts (DESIGN §1.3, §8.3) before M29.
+(the top-down engine, D-041), M27 done (the whirlwind and the wind, D-042), M28 done (the side view as a code
+overlay, D-043). The human still reviews the safety facts (DESIGN §1.3, §8.3) before M29.
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -49,7 +50,7 @@ Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`; planned, not st
 
 - [x] M26 Engine: cells, screens, walking, map and compass
 - [x] M27 The whirlwind and the wind
-- [ ] M28 Side view as a code overlay
+- [x] M28 Side view as a code overlay
 - [ ] M29 World 1 and the game around it (budget gate)
 - [ ] M30 Worlds 2 and 3
 - [ ] M31 Worlds 4 and 5 and the final
@@ -64,6 +65,9 @@ bot-recorded replays; `npm run test:sixten` checks map = world cell for cell (RA
 M27 done — whirlwinds as `.map` data (exact integer legs, cell changes at waypoints), warning, strength steps, wind
 particles and bending grass, shelter (ditch, hollow, cabin) and AJ!; test level T3 and 1-1's whirlwind; tests: never
 random (seeds, routes), warning >= 300 frames, the wind turns 120 frames first, no step > speed, shelter is real (D-042).
+M28 done — side views (`levels/*.side`, `side:` links) run by a code overlay copied from xdata to 0xE000: walk, jump,
+climb, crouch, a horizontal wind with the lee, exits back to cells; T4 (cave, ravine, cliff); tests: the overlay is in
+RAM before it runs and runs only in side frames, its jumps stay inside it, the wind and the lee match the source (D-043).
 **Runtime baseline for Part 4 = 02d7058.**
 
 Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
@@ -118,6 +122,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
 | Sixten mockup (planning) | cartridge 4 479 B (ISA 2); max cycles/frame: top-down 10 627 (with screen expansion; else ≤ 4 853), map 8 067, side view 2 793, overlays 9 900; QR round trip identical | D-040, `games/sixten/mockup/measure.ts` |
+| Sixten ROM after M28 | 14.1 KB (code 9.6 KB, data 4.4 KB) + the side-view overlay 1 972 B in xdata; xdata 2.7 KB, cartridge 9.0 KB | test:sixten, D-043 |
 | Sixten ROM after M27 | 12.7 KB (code 9.1 KB, data 3.6 KB), xdata 0.6 KB, cartridge 7.1 KB; max 19 716 cycles/frame (funnel + particles + screen expansion) | test:sixten, D-042 |
 | Sixten ROM after M26 | 9.1 KB (code 6.0 KB, data 3.1 KB), xdata 0.5 KB, cartridge 5.2 KB; max 13 613 cycles/frame (a slide's first frame) | test:sixten, D-041 |
 | Sixten projection | code 17.8–22.0 KB; ROM 22–28 KB (17–22 KB with overlays); cartridge 22–27 KB (target < 25 KB) | DESIGN §12 (sixten) |
@@ -135,7 +140,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
   app itself makes no requests. Fixing it needs a change in `apps/web` (frozen in Part 2) or a decision on what
   the criterion means. Measurement and options: DECISIONS.md D-021.
 
-- **Part 4 (Sixten) needs the human before M26/M29:** (1) tick or correct the safety rules and facts in
+- **Part 4 (Sixten) needs the human before M29:** (1) tick or correct the safety rules and facts in
   `games/sixten/DESIGN.md` §1.3 and §8.3. Rule S3 (a ditch or low spot as shelter from a whirlwind) has only a US
   source (NWS), no Swedish one. (2) Answer or accept the defaults for the draft's open questions (§11). (3) Optional,
   generic tool change: an `.overlay ADDR` directive in the assembler (labels at the run address, bytes in xdata).
