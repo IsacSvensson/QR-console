@@ -1,0 +1,23 @@
+# 3-4 Forsen (DESIGN.md §7): the rapids cross the level; walking in them is dangerous (S8). The bridge is the way.
+name: 3-4 FORSEN
+world: 3
+cells:
+TTTTTTTTTTTTTTTT
+TS......TTT....T
+T....u......o..T
+QQQQQQQbQQQQQQQQ
+QQQQQQQbQQQQQQQQ
+T..............T
+T..TTT....TTT..T
+T..TTT....TTT..T
+T..............T
+T.............MT
+T..............T
+TTTTTTTTTTTTTTTT
+controls:
+1 O 5 2
+2 O 12 2
+3 O 2 8
+item: CHIPS 9 9
+entry: KÄLLA 9 7
+entry: LERA 13 5

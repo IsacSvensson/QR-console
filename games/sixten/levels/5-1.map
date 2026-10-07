@@ -1,0 +1,28 @@
+# 5-1 Kartan och vinden (DESIGN.md §7): a strength-4 whirlwind and a storm together. Into the ditch at once.
+name: 5-1 KARTAN OCH VINDEN
+world: 5
+cells:
+TTTTTTTTTTTTTTTT
+TS....TTTT.....T
+T.....TTTT.....T
+T..............T
+T..vvvvvvvv....T
+T..............T
+T....TTTT......T
+T....TTTT..u...T
+T..............T
+T..o...........T
+T.............MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 2 3
+2 O 11 7
+3 O 3 9
+entry: ÄLG 13 2
+entry: MYRA 8 9
+whirl: 1               # strength 4 from the east along row 3
+wp 15 3 4 10 0
+wp 0 3 4 10 30
+event: 1 FALL 600 240  # the storm fells two spruces in the north
+cell 6 2 X
+cell 7 2 X

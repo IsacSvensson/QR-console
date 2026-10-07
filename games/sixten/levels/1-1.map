@@ -1,0 +1,34 @@
+# 1-1 Skogsstarten (DESIGN.md §13).
+name: 1-1 SKOGSSTARTEN
+world: 1
+cells:
+^^^^^^TTTT##TTTTTWWWWTTT
+^^G===+TT###TTTTWWWWWWTT
+^^^TTT|TTT##TTTT~~WWWWTT
+TTTTTT|TTTTTTTT~~~~.WTTT
+TT##TT|TTTTTTT~~~~~.WTTT
+TT##TT|TTTTTT.....~.WTTT
+TTTTTT|.....T.o.....W.MT
+TTTTTT|...u.........WTTT
+TTTTTT|vvvvvvvvvvvv.W.TT
+TTTTTT|TTTTTTTTTTTTTW.TT
+TT##TT|TTTTTTTTTTTTTW|TT
+TT##TT|TTTTTTTTTTTTTW|TT
+TTTTTT|TTTTTTTTTTTTTW|TT
+H.S===+=============b+TT
+...TTTTTTTTTTTTTTTTTWTTT
+controls:
+1 O 6 13
+2 O 14 6
+3 O 19 3
+4 O 10 7
+5 H 21 8
+leaves: 21 8
+item: GURKA 15 5
+entry: RÄV 6 9
+entry: GRAN 12 6
+whirl: 3              # after control 3: across the field west to east; the spruce falls over the brook (a bridge)
+wp 7 7 3 8 0
+wp 20 7 3 8 60
+change 1 20 7 L
+reveal 1 21 8

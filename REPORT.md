@@ -128,6 +128,30 @@ known. Design changes found by the bot (each recorded in DECISIONS D-029 – D-0
 total is 60, the ski-lift chair waits at its station, popcorn drops less often, the longest jump is 1.3 s rather
 than the design's "over 2 s".
 
+## Part 4 — Sixtens expedition
+
+An orienteering adventure for a nine-year-old, designed in `games/sixten/DESIGN.md`: 20 levels in five worlds, a top-down
+view built from one byte per cell and side views run by a code overlay, a deterministic whirlwind and timed weather
+events (falling trees, a landslide, floods, thunder, fog, night), a 40-entry nature book with sources, and a
+10-character save code. The runtime stayed frozen on ISA 2: `git diff 02d7058 -- packages/vm packages/cartridge
+packages/transport packages/qr apps` is empty [tested]. Parents' guide in Swedish: `games/sixten/GUIDE.md`.
+
+| # | Capability | Status |
+|---|---|---|
+| S1 | Levels: the 24 `.map` sources (20 levels, 4 test levels) equal the ROM level table, every level's cells in RAM, every screen's tiles and the map screen read back from the framebuffer, cell for cell | [tested] `npm run test:sixten` |
+| S2 | The whirlwind and the events: never random (other seeds, other routes, the same weather), warned ≥ 300 frames (whirlwind) / ≥ 120 (events), the wind turns 120 frames first, no step beyond its speed, cell changes only at waypoints or event times | [tested] |
+| S3 | Safety: on the safe routes Sixten is never in the forest within a whirlwind's radius, never in flowing water, never by a lone tree, on the fell or on water while lightning is on; shelter (ditch, hollow, cabin) is real and the forest is not | [tested] |
+| S4 | The whole game: one replay plays from the title through all 20 levels to the ending without losing a heart (36 082 frames), another collects every control and all 40 nature-book entries (49 083 frames) | [tested] |
+| S5 | Save code: every code round-trips (the test's encoder from DESIGN §10.2 → the VM's code screen → the world map shows the same code) for worlds 1–6 × seeded books + empty + full; wrong checksums and impossible worlds are rejected; a replay enters a code and plays 3-1 | [tested] |
+| S6 | Music: five tunes, each heard in order in its world's levels; the whirlwind's noise follows its strength (1–5) and is dull in shelter | [tested] |
+| S7 | Budgets: no fault, no cycle overrun, heaviest frame of every replay ≤ 25 000 cycles | [tested] |
+| S8 | Size: ROM 27.0 KB of 32 KB (code 17.3 KB, data 9.6 KB), the side-view overlay 2.0 KB in xdata, cartridge 19.0 KB (target < 25 KB) | [measured] |
+| S9 | Delivery: `demo/sixten.gif` (113 frames, 16.9 s loop, 1.6 MB) decodes back byte-identical; the web app scans it with a fake camera to 100 % and renders the VM reference frame | [tested] `npm run demo`, `npm run test:e2e` |
+| S10 | The facts and safety advice: Claude checked every row of DESIGN §1.3 and `NATURBOK.md` against its source (MSB, SMHI and others); the human's tick is still open, and S3 (a ditch as shelter from a whirlwind) has only a US source (NWS) | [not verified] by the human |
+| S11 | Whether it is fun for a nine-year-old, whether he reads the map and the wind, whether he learns the right thing, the screens on a phone | [not verified] — PLAN *Manual acceptance* for Part 4 |
+
+"Completable" and "safe" mean so on the bot's routes, which read RAM; how hard orientation is for a child is not known.
+
 ## Known limitations
 
 - **Real-device scanning is not verified.** The distortion simulator (scale, rotation, perspective, blur,

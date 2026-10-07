@@ -1,0 +1,24 @@
+# 3-3 Myren (DESIGN.md §7): a big marsh with control 2 on a boulder in its middle: a compass course (the cucumber
+# helps). Slow going, but safe.
+name: 3-3 MYREN
+world: 3
+cells:
+TTTTTTTTTTTTTTTT
+TS...~~~~~~~...T
+T....~~~~~~~...T
+T...~~~~~~~~~..T
+T...~~~~~~~~~..T
+T..~~~~~~~~~~~.T
+T..~~~~o~~~~~~.T
+T..~~~~~~~~~~~.T
+T...~~~~~~~~~..T
+T....~~~~~~~...T
+T.............MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 2 3
+2 O 7 6
+3 O 13 2
+item: GURKA 2 7
+entry: VITMOSSA 10 8
+entry: MYR 5 9

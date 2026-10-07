@@ -1,0 +1,21 @@
+# T4: the cave behind the hill (DESIGN §3.3): roots to climb up to a ledge. Test side view, M28.
+name: GROTTAN
+wind: 0
+right: N
+sky: 0
+start: 1 10
+cells:
+################################
+################################
+##kkkkkkkk######kkkkkkkkkkkkk###
+#kkkkkkkkkkk##kkkkkkkkkkkkkkkkk#
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkr#####kkkkkkk
+kkkkkkkkkkkkkkkkkkkrkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkrkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkrkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkrkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkrkkkkkkkkkkkk
+################################
+################################
+################################

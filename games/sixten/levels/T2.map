@@ -1,0 +1,24 @@
+# T2 — a 6 x 5-screen maze of paths and forest. Test level, M26.
+name: T2 LABYRINTEN
+world: 1
+cells:
+S===+=====+TTTT##T====+T
+TTTT|TTTTT|TTTT##TTTTT|T
+^^TT|TT^^T|TTTTTTT~~~T|T
+TTTT+=====+TTTWWW~~~TT|T
+TTTT|TTTTT|TTTWWWTTTTT|T
+####|#####+=====+TTTTT|T
+TTTT|TTTTTTTTTTT|TTTTT|T
+TTTT+======+TTTT|TT^^^|T
+TTTTTTTTTTT|TTTT|TTTTT|T
+TT~~~~TTTTT+====+=====+T
+TT~WW~TTTTT|TTTTTTTTTTTT
+TT~~~~TTTTT|TTTT###TTTTT
+TTTTTTTTTTT+=======+TTTT
+TT##TTTTTTTTTTTTTTT|TTTT
+TTTTTTTTTTTTTTTTTTT+===M
+controls:
+1 O 4 3
+2 O 22 5
+3 O 16 9
+4 O 19 12

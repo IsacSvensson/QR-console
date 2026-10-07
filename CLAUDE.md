@@ -81,6 +81,7 @@ This is a **prototype that proves a concept**, not a console platform.
 |---|---|
 | `npm ci` | install everything (then `npx playwright install --with-deps chromium` once for e2e) |
 | `npm run check` | typecheck (pure packages without DOM/Node types, then everything) + ESLint + unit tests |
+| `npm run check:console` | the console alone: typecheck + ESLint + runtime/tool/slice tests, no game suites (CI deploys the app after this; each game's tests then run in their own job and only passing games get their demo GIF published, `.github/workflows/pages.yml`) |
 | `npm test -w packages/<name>` | one package's tests (cartridge, transport, vm, asm, qr, tools) |
 | `npm run qrc -- <cmd>` | CLI: `build <game dir>` (+ `.sym`, `.lst`), `run <file.qrc> --frames N --dump-frame out.png [--inputs f --ram a,b --trace N --trace-frame F]`, `replay <file.qrc> <inputs.json> --frames N` |
 | `npm run refs:games` | rebuild every `games/<g>/<g>.qrc`, `frame1.png`, `reference.json`, `hashes.txt` (from the VM, never a browser) |
@@ -91,9 +92,9 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run test:games` | every game with a `replay.json`: assemble, size, per-frame hash replay, `games/<g>/checks.ts` rules |
 | `npm run dev -w apps/web` | Vite dev server (no service worker in dev) |
 | `npm run build -w apps/web` | production build → `apps/web/dist` (incl. generated `sw.js`) |
-| `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scans of Breakout, BLACKBOX and Bo, Library persistence |
+| `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scans of Breakout, BLACKBOX, Bo and Sixten, Library persistence |
 | `npm run test:e2e:offline` | production build, SW precache, offline reload, fake-camera scan of Pong, zero network requests |
-| `npm run demo` | build Breakout, Pong, BLACKBOX and Bo → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
+| `npm run demo` | build Breakout, Pong, BLACKBOX, Bo and Sixten → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
 | `npm run preview` / `npm run preview:https` | serve the production build on :4173 (https: self-signed cert in `.tmp/cert`) |
 | `npm run bench:scan` | 50 KB cartridge through the browser scanner with a fake camera → `bench/scan.md` |
 | `npm run test:blackbox` | BLACKBOX (PLAN Part 2): generated data up to date, ROM vs LAYOUT, every room in RAM vs LAYOUT, replays with per-frame hashes and oracle checks |
@@ -101,4 +102,7 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run blackbox:record [name…]` | re-record bot replays (`games/blackbox/tools/routes.ts`) and pick reference frames, then `npm run refs:games` |
 | `npm run test:bo` | Bo's Skateäventyr (PLAN Part 3): generated data up to date, ROM level table vs `.lvl` sources, every level in RAM vs an independent reader, replays with per-frame hashes and reference checks, DESIGN §3.3 measured |
 | `npm run bo:gen` | regenerate `games/bo/tiles.gen.asm`, `levels.gen.asm` and `levels/*.png` from `tools/tiles.ts` and `levels/*.lvl` |
+| `npm run test:sixten` | Sixtens expedition (PLAN Part 4): generated data up to date, ROM cell tables vs DESIGN §4.1, every level in RAM and every screen vs the `.map` sources, the map screen read back from the framebuffer, replays with per-frame hashes, the save code round trip, the music and the whirlwind's sound |
+| `npm run sixten:gen` | regenerate `games/sixten/art.gen.asm`, `levels.gen.asm` and `levels/*.png` from `tools/art.ts` and `levels/*.map` |
+| `npm run sixten:record [name…]` | re-record Sixten's bot replays (`games/sixten/tools/routes.ts`), then `npm run refs:games` |
 | `npm run bo:record [name…]` | re-record Bo's bot replays (`games/bo/tools/routes.ts`), then `npm run refs:games` |

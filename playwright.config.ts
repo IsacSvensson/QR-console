@@ -23,6 +23,7 @@ export default defineConfig({
     { name: 'offline', testMatch: /offline\.spec\.ts/, use: fakeCamera('pong') },
     { name: 'blackbox', testMatch: /blackbox\.spec\.ts/, use: fakeCamera('blackbox') },
     { name: 'bo', testMatch: /bo\.spec\.ts/, use: fakeCamera('bo') },
+    { name: 'sixten', testMatch: /sixten\.spec\.ts/, use: fakeCamera('sixten') },
     { name: 'measure', testMatch: /measure\.spec\.ts/, use: fakeCamera('big') },
   ],
   webServer: {

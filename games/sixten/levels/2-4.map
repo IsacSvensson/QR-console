@@ -1,0 +1,25 @@
+# 2-4 Skogen efter stormen (DESIGN.md §7): windfalls block the ways; the fallen spruces give wood; with it, the
+# building site's bridge is the shortcut over the stream. The long way crosses the footbridge in the south.
+name: 2-4 SKOGEN EFTER STORMEN
+world: 2
+cells:
+TTTTTTTTTTTTTTTT
+TS.L..TTXTTTWT.T
+T....TTTXTTTW.MT
+T..L.TTTXTTTW..T
+T....TTTXTTTW..T
+T..........BW..T
+T....TTTTTTTW..T
+T....TTTTTTTW..T
+T....TTTTTTTW..T
+T....XXXX...W..T
+T...........b..T
+TTTTTTTTTTTTTTTT
+controls:
+1 O 3 5
+2 O 9 10
+3 O 14 4
+4 F 2 9
+entry: TALL 6 5
+entry: LINGON 4 7
+build: 11 5 12 5 b

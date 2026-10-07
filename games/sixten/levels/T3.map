@@ -1,0 +1,47 @@
+# T3 — whirlwinds of strength 1-5 across open land, forest, a ditch, a hollow and a cabin. Test level, M27.
+# Row 7 is the whirlwinds' track; the controls on row 12 start them (control k starts whirlwind k), far from row 7.
+name: T3 TROMBERNA
+world: 1
+cells:
+........................
+........................
+........................
+........................
+........................
+........................
+........................
+....TTTT.vvv.u.H........
+........................
+........................
+........................
+........................
+........................
+.S....................M.
+........................
+controls:
+1 O 2 12
+2 O 5 12
+3 O 8 12
+4 O 11 12
+5 O 14 12
+6 H 6 8
+leaves: 6 8
+whirl: 1              # strength 1 along row 7, west to east
+wp 0 7 1 8 0
+wp 23 7 1 8 30
+whirl: 2              # strength 2: east along row 7, then it turns north (the wind turns first)
+wp 0 7 2 8 0
+wp 8 7 2 8 60
+wp 8 2 2 8 30
+whirl: 3              # strength 3 over the forest, the ditch, the hollow and the cabin; a tree falls, leaves blow off
+wp 0 7 3 8 0
+wp 6 7 3 8 0
+wp 23 7 3 8 30
+change 1 5 7 L
+reveal 1 6 8
+whirl: 4              # strength 4 from the east
+wp 23 7 4 10 0
+wp 0 7 4 10 30
+whirl: 5              # strength 5 on a diagonal
+wp 0 3 5 10 0
+wp 21 10 5 10 30

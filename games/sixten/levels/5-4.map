@@ -1,0 +1,31 @@
+# 5-4 Den stora tromben (DESIGN.md §7): the final: a strength-5 whirlwind gathers in the west, crosses the field
+# and turns south. No button stops it: read the wind, shelter in the cabin, cross where it has passed.
+name: 5-4 DEN STORA TROMBEN
+world: 5
+cells:
+TTTTTTTTTTTTTTTTTTTTTTTT
+TS...........TTTTTTTTTTT
+T.......u....TTTTTTTTTTT
+T..............TTTTTTTTT
+T......................T
+T...vvvvvvvvvvvv.......T
+T......................T
+T..........H...........T
+T......................T
+T......................T
+T....o..........vvvvvv.T
+T......................T
+T......................T
+T.....................MT
+TTTTTTTTTTTTTTTTTTTTTTTT
+controls:
+1 O 8 2
+2 O 5 10
+3 O 20 7
+4 F 19 12
+entry: DIKE 8 5
+entry: SÄNKA 9 2
+whirl: 2               # strength 5: it gathers for 5 s in the west, crosses row 8, then turns south
+wp 0 8 5 10 300
+wp 12 8 5 10 60
+wp 12 13 5 10 30

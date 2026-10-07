@@ -1,0 +1,37 @@
+# 1-4 Trombens spår (DESIGN.md §7): the first whirlwind level. Control 2 starts it; the ditch and the cabin are close.
+# It fells two spruces (wood) and blows the leaves off control 4; with the wood, the building site makes a shortcut
+# over the brook. The long way round crosses the footbridge in the south.
+name: 1-4 TROMBENS SPÅR
+world: 1
+cells:
+TTTTTTTTTTTTTTTTTTTTTTTT
+TS.....TTTTT.........TTT
+T......TTTTT..........TT
+T..T......TT.....W....TT
+T..T...........TTW....TT
+TTTT.........TTTTW....MT
+T.......TT.......W.....T
+T.......TT.......W.....T
+T......TTTT...B..W.....T
+T...........H....W.....T
+T..vvvvvvvvvvv...W.....T
+T................W.....T
+T................W.....T
+T...+=======+====b=====T
+TTTTTTTTTTTTTTTTTTTTTTTT
+controls:
+1 O 4 2
+2 O 5 8
+3 O 20 9
+4 F 10 7
+leaves: 10 7
+entry: TROMB 12 4
+entry: ROTVÄLTA 20 3
+build: 14 8 17 8 b
+whirl: 2               # strength 3 from the west along row 7, through the forest patch, on to the brook
+wp 0 7 3 8 0
+wp 9 7 3 8 30
+wp 16 7 3 8 30
+change 1 8 6 L
+change 1 9 6 L
+reveal 1 10 7

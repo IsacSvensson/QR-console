@@ -1,5 +1,12 @@
 # Builds the PWA and publishes it to GitHub Pages on every push to main.
 # One-time setup: repo Settings → Pages → Source: "GitHub Actions".
+#
+# Two stages, so one game cannot hold back the console or the other games:
+#   1. console        — the console's own checks (check:console: typecheck, lint, runtime/tool tests), the web build,
+#                       and a deploy of the app alone (deploy-console).
+#   2. game (matrix)  — each game's tests on their own job; a failing game fails only its own job.
+#      publish        — the app again, plus demo/<game>.gif for every game whose tests passed; deployed last.
+# A red game job marks the run red but does not stop the publish; the job summary lists what was published.
 name: Deploy to GitHub Pages
 
 on:
@@ -17,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  console:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,16 +33,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
+      - run: npm run check:console
       - run: npm run build -w apps/web
-      # The demo GIFs are published next to the app (not precached), so the laptop can open them from the same site.
-      - run: mkdir -p apps/web/dist/demo && cp demo/*.gif apps/web/dist/demo/
+      # the plain build for the publish job, and the same build as the console-only Pages artifact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
       - uses: actions/upload-pages-artifact@v3
         with:
+          name: pages-console
           path: apps/web/dist
 
-  deploy:
-    needs: build
+  deploy-console:
+    needs: console
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -43,3 +54,74 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-console
+
+  game:
+    needs: console
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - game: breakout
+            test: npx vitest run --project games -t "games/breakout"
+          - game: pong
+            test: npx vitest run --project games -t "games/pong"
+          - game: blackbox
+            test: npm run test:blackbox
+          - game: bo
+            test: npm run test:bo
+          - game: sixten
+            test: npm run test:sixten
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: ${{ matrix.test }}
+      # only reached when the game's tests passed
+      - if: ${{ matrix.demo != false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-${{ matrix.game }}
+          path: demo/${{ matrix.game }}.gif
+          if-no-files-found: error
+
+  publish:
+    needs: [deploy-console, game]
+    if: ${{ always() && needs.deploy-console.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+      # The demo GIFs are published next to the app (not precached), so the laptop can open them from the same site.
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: demo-*
+          path: dist/demo
+          merge-multiple: true
+      - name: Summary
+        run: |
+          mkdir -p dist/demo
+          {
+            echo "### Published demo GIFs"
+            for g in breakout pong blackbox bo sixten; do
+              if [ -f "dist/demo/$g.gif" ]; then echo "- $g: published"; else echo "- $g: **not published** (its tests failed)"; fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-full
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-full

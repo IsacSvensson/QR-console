@@ -724,3 +724,304 @@ Decision:
   `test:e2e` script change, the runtime does not.
 Measurement: ROM 31 608 B of 32 768 (code 25 404, data 6 043, sound 161), cartridge 22 945 B; `demo/bo.gif` 132
 frames (K=88), 19.8 s loop, 1.8 MB.
+
+## D-039 - Deploy: the console first, then each game on its own (human request, 2026-10-06)
+Date: 2026-10-06 - Milestone: none (CI; human request: "deploy the console before the game tests; one game's
+failing test must not sink everything; publish what is OK")
+Decision:
+- **`npm run check:console`**: typecheck + lint + the console's own Vitest projects (unit, cartridge, transport,
+  vm, asm, qr, tools, slice). `npm run check` is unchanged (it still runs every suite) and stays the rule for every
+  commit. The two top-level BLACKBOX tests (`test/blackbox-layout`, `test/blackbox-text`) move from the `unit`
+  project to the `blackbox` project (the files stay where they are), so the console check holds no game tests.
+  `test/isa2.test.ts` stays in `unit`: it guards the runtime (every game still builds byte-identical).
+- **`pages.yml`**: job `console` (check:console, web build) -> `deploy-console` (the app alone) ; a `game` matrix
+  (breakout, pong, blackbox, bo; `fail-fast: false`) runs each game's tests after the console job, and a passing
+  game uploads its committed `demo/<game>.gif`; `publish` runs whenever the console deploy succeeded and deploys the
+  app plus the GIFs that passed, listing published and held-back games in the job summary. A red game job makes the
+  run red but publishes the rest.
+- Trade-off: two Pages deploys per push; between them (the length of the game jobs, minutes) the site has the new
+  app without demo GIFs. Accepted: the app is what matters, and the GIFs are not precached.
+Measurement: `check:console` 172 tests in 15 files, ~16 s locally; `check` 340 tests, green. The workflow itself
+runs only on GitHub (main) and is **not verified** here.
+
+## D-040 - Sixtens expedition planned: design, VM-rendered mockup, code overlays without a tool change (Part 4)
+Date: 2026-10-06 - Milestone: planning for Part 4 (human request: plan the next game from the human's 38-section
+draft and ten locked decisions; no implementation)
+Decision:
+- **The locked decisions win over the draft** where they disagree, and every conflict is written out in
+  `games/sixten/DESIGN.md` §1.2: top-down screen by screen plus short side views (not a side-scroller); **forest is
+  never shelter** (the draft listed it, decision 4 says it is dangerous in storms; shelter = ditch, hollow, solid
+  building; "under fixed structures" dropped, since wind is stronger under an overpass); 4 levels per world (1-4 and
+  1-5 merged); wood only; a letter code (not a picture code); choklad only resists wind and never protects from the
+  whirlwind.
+- **Safety facts are sourced and left for the human to tick** (DESIGN §1.3, §8.3): SMHI ("do not approach a
+  whirlwind", *Skydd mot blixten*: kneel in a hollow, not under a lone tree, not in water), Krisinformation/MCF and the
+  County Administrative Boards (avoid forest in storms and storm-felled forest). **Ditch/low spot as shelter from a
+  whirlwind** was found only at the US National Weather Service, not at SMHI or MCF: flagged (S3). MSB has been called
+  MCF (Myndigheten för civilt försvar) since 2026.
+- **Cell format**: one byte per cell, bits 0-4 type (20 used of 32), bit 5 mirrored variant, bit 6 covered by leaves,
+  bit 7 control. A screen is 4 x 3 cells (128 x 96) under a 32 px HUD; one 16-byte pattern per type; the map screen
+  reads the same byte through a fill-colour and a symbol table, so the map cannot disagree with the world. The course
+  is drawn in red: DawnBringer 16 has no magenta.
+- **The whirlwind** is data (waypoints, triggered by an event in the level), never follows Sixten, never uses RND;
+  warning >= 300 frames before strength 3 on Sixten's screen; movement per frame <= speed. These are PLAN M27 tests.
+- **Code overlays need no assembler change.** Instructions may be written in `.xdata`, and xdata labels are
+  `0x10000 + offset`, so `OVL_RAM + (target - overlay_start)` is an ordinary 16-bit value; a macro (`OJ op, target`)
+  writes every jump inside an overlay that way, calls into ROM are normal, `SYS COPY` copies the overlay to RAM
+  (0xE000) and `CALL 0xE000` runs it (the VM fetches from `mem[pc]` anywhere). Spiked first in a 130-byte test
+  cartridge (a relocated loop and an internal call, traced at 0xE000-0xE010), then in the mockup: two overlays swapped
+  at the same address. Costs: overlays cannot be `.pack`ed (labels), and `.lst`/`.sym` show xdata addresses, not run
+  addresses (`qrc run --trace` shows the real ones). **Open for the human (optional generic tool change, not needed):**
+  an `.overlay ADDR` / `.endoverlay` directive that gives the labels their run address while the bytes go to xdata
+  (automatic relocation, correct listings). Not done; flagged in PROGRESS.
+- **Budget** (DESIGN §12), calibrated from the listings of Bo (code 25.4 KB: actors 4.6, screens 4.3, player 3.8,
+  level 3.1 KB …) and BLACKBOX (room 1.0, player 1.2 KB): Sixten's code 17.8-22.0 KB; ROM 22-28 KB without overlays,
+  17-22 KB with the side-view engine and the screens as overlays; xdata 11-14 KB packed; cartridge 22-27 KB, so the
+  25 KB target, not ROM, is the main budget risk. RAM ~15 KB (4 KB overlay area).
+- **Mockup** (`games/sixten/mockup/`, Bo's technique: font with ÅÄÖ and every asset from `gen.ts`, column-major MAP,
+  drawing spread over frames; `measure.ts` builds, measures, writes the pictures to `games/sixten/docs/` and does the
+  QR round trip). Shown: 1-1's cell map packed in xdata and unpacked; one screen expanded and drawn, a strength-3
+  whirlwind with inflowing particles and grass bending towards it, HUD with the compass; the map screen from the same
+  360 bytes; the side view with the fallen tree over the ditch and Sixten in the lee; overlays A and B.
+- **CI** (D-039) gets a `sixten` matrix entry from M26 on (PLAN Part 4).
+Measurement (VM, `measure.ts`): cartridge 4 482 B (ISA 2; code 4 624, rodata 3 558, xdata 488 B: the packed cell
+map and two overlays of 164 and 116 B); 0 faults, 0 overruns. Max cycles per frame: top-down 10 895 (frame with the
+screen expansion, ~5 700 of it; other frames <= 4 853), map screen 8 067 (the symbols part), side view 2 793,
+overlays 9 900. Routine sizes: screen expansion 300 B, whirlwind + particles 1 048 B, map screen 1 376 B.
+`qrc encode` -> `mockup.gif` (27 frames, 4.0 s loop) -> `qrc decode`: identical SHA-256. Not verified on a phone.
+
+## D-041 - Sixten engine (M26): cells, screens, walking, map and compass
+Date: 2026-10-07 - Milestone: M26 (the human said "kör vidare" after the planning commit; the DESIGN §11 defaults
+apply, the fact review is needed before M29, not M26)
+Decision:
+- **Level card instead of a title for now** (`card.asm`, mode M_CARD): the level's name; ←/→ choose a level, A
+  starts it. Replays choose their level with buttons, so every replay is pure input (the first recordings wrote
+  `dbg_level` into RAM and could not be replayed). The title and world map come in M29. Test hooks as in BLACKBOX
+  and Bo: `dbg_level`, `dbg_goto` (put Sixten on a cell), `dbg_cell` + `dbg_cell_v` (change a cell), `dbg_pw`.
+- **The variant bit swaps the pattern's upper and lower halves** (DESIGN §4.1). Mirroring left-right (the mockup's
+  first version) reversed the tile order but not the pixels, so 2 x 2-tile spruces split into "bow ties"; fixed in
+  the mockup too (its top-down picture and numbers changed: max 10 627 cycles, cartridge 4 479 B).
+- **Levels are at most 24 x 15 cells** (6 x 5 screens, 360 B; DESIGN §3.1 said 32 x 21): the map screen draws 5 px
+  per cell, and 24 x 15 = 120 x 75 px is what fits with the title and the legend.
+- **DESIGN §4.1's cell table** got separate columns for map colour, map symbol and speed (the test oracle parses
+  them). The fallen tree (`L`) is walkable — one walks on the trunk, which is how it becomes a bridge — and a new type
+  20, the windfall (`X`), is the fallen timber that blocks a path (§6.4 used `L` for both).
+- **Movement**: four directions (left/right wins when both axes are held), speed by the cell under the feet (1/16 px
+  per frame from the table), a 6 x 4 px box at the feet, collision against blocking cell types and the level edge;
+  when only the corners on one side hit, Sixten slides 1 px per frame round the corner.
+- **Screens and the slide**: the tile buffer holds two screens (32 x 24 tiles, column-major, 768 B); the slide moves
+  the camera 8 px a frame (16 frames sideways, 12 up/down), always whole tiles; Sixten waits at the edge he crossed.
+  A slide's first frame expands both screens: max 13 613 cycles in the replays.
+- **Controls** are stamped when the feet enter the cell, in any order (the order and the goal come in M29); a control
+  under leaves cannot be stamped and is not on the map. The HUD counts stamped / all controls of the level.
+- **The map** (B, pauses): five parts over five frames, as the mockup; the course is start, every control not under
+  leaves, goal. When Sixten knows where he is (DESIGN §5), a ring shows him, ←/→ choose a control (the map is drawn
+  again) and A sets the course: the nearest of 16 directions from where he stands to the control's centre (dot
+  products with the cos/sin table), and the step counter (cell changes) starts at 0. B closes the map.
+- **Fonts**: the 1 bpp font is unpacked with a table of the four pixel pairs (~14 000 cycles per ink); the first
+  version (two inks and the level start in `init`) overran the 50 000-cycle entry budget.
+- **CI**: `sixten` joins the game matrix (D-039) without a demo GIF until M32.
+Measurement: ROM 9 078 B (code 5 988, data 3 065, sound 25), xdata 519 B, cartridge 5 168 B. Replays m26-t1 (10 513
+frames), m26-t2 (7 417, all 30 screens, all four slide directions) and m26-11 (1 384): max 13 613 cycles per frame,
+0 overruns. Speeds measured from the replays equal DESIGN §4.1 exactly (e.g. path 40 px and dense forest 16 px in 32
+frames).
+
+## D-042 - Sixten's whirlwind and wind (M27)
+Date: 2026-10-07 - Milestone: M27
+Decision:
+- **Data, not behaviour**: a level's whirlwinds are `whirl:` blocks in its `.map` (the control that starts it,
+  waypoints with strength, speed and wait, cell changes and revealed leaves per waypoint). The generator turns every
+  leg into exact integer steps (q per frame plus a Bresenham remainder, 1/16 px): the whirlwind arrives exactly on
+  the waypoint and no frame moves more than the leg's speed (the generator simulates each leg and lengthens it
+  until that holds). It refuses a change outside the waypoint's radius and a turn that leaves the wind less than
+  TURN_FRAMES (120) to turn first.
+- **The engine never reads Sixten's position or RND for the whirlwind.** Phases: WARN 150 frames (strength 0: wind
+  particles and leaves, its sound), ACTIVE (one strength step per 60 frames towards the waypoint it waits at or goes
+  to; legs; cell changes on arrival), DYING (one step down per 60 frames). Strength 3 comes 330 frames after the
+  trigger at the earliest (PLAN asks >= 300). Its own clock runs in play and slide frames; the map pauses it.
+- **One whirlwind at a time**: a second one triggered while one runs waits its turn (the records allow more; no
+  level needs two at once yet).
+- **Hazard rules (DESIGN 6.5)**: radius 24 + 8 x strength; inside it at strength >= 3 and not standing still in a
+  ditch, hollow or the cabin: AJ! after 20 frames (debris); in forest within radius + 64 px a branch's shadow grows
+  for 60 frames, then AJ!; AJ! = one heart, back to the last stamped control (or the start), 120 frames of safety;
+  no hearts = the level starts again. Chocolate does not protect (tested with hooks; power-up pickups are M29).
+- **The cabin is entered** (speed 1; Sixten is not drawn inside): "a solid building" has to be somewhere one can be.
+  DESIGN 4.1 changed.
+- **What it looks like**: the mockup's funnel (layers, turning band, dust ring, debris by strength); wind particles
+  (4 + 4 x strength) drift with the wind direction at 2 + strength px per frame, so the wind shows where it goes;
+  tufts within 2 x radius bend towards it from strength 2 (the screen is expanded again every 8 frames while it is
+  near, and once when it leaves); noise on channel 2 every 16 frames, louder with strength, halved in shelter.
+- **Not done yet** (recorded in DESIGN): the wind pushing Sixten on open land top-down (the side view's horizontal
+  force comes in M28), trees swaying at strength 4, the changed cell blinking on the next map (M29).
+- **The bot** never paths through a control that is not its target (stamping it would start an unasked-for
+  whirlwind). The M26 tests now read the cell under Sixten live from RAM (whirlwinds change cells; whirl.test.ts
+  checks that they change only as the `.map` lists).
+- **Levels**: T3 (five whirlwinds of strength 1-5 on row 7: open land, forest, ditch, hollow, cabin; whirlwind 2
+  turns north, 5 goes diagonally); 1-1's whirlwind from DESIGN 13 (after control 3, across the field; the spruce
+  falls over the brook and the leaves blow off control 5).
+Measurement: ROM 13 019 B (code 9 336, data 3 642, sound 41), xdata 582 B, cartridge 7 293 B; 10 replays, max 19 716 cycles per frame (a frame with
+the funnel, 24 particles and a screen expansion), 0 overruns. All M27 checks pass: the same whirlwind state for
+seeds 1 and 777 and along six different routes (by its own clock); warning >= 300 frames for every whirlwind of
+every level; the wind turned 120 frames before the one turn; every step <= its speed; cells changed only at
+waypoints within the radius; shelter (ditch, hollow, cabin) keeps all hearts, forest and open land cost one.
+
+## D-043 - Sixten's side view as a code overlay (M28)
+Date: 2026-10-07 - Milestone: M28
+Decision:
+- **The overlay**: `sideovl.asm` is assembled into `.xdata` between `ovl_side` and `ovl_side_end`; every jump and
+  call inside it is written `OV op, target` (= `op OVL_RAM + (target - ovl_side)`, the mockup's convention, D-040),
+  calls into ROM are ordinary. `side_enter` (ROM) copies it to OVL_RAM (0xE000) with `SYS COPY` the first time (it
+  stays: nothing else uses the area yet) and `mode_table` calls OVL_RAM for M_SIDE. No assembler change; the
+  optional `.overlay` directive remains the human's decision.
+- **Side views are data**: `levels/*.side` (14 rows, 32-96 columns of tiles, wind, the compass letter of the right
+  edge, sky colour, start cell) packed column-major in xdata and unpacked into `sbuf`; `side:` lines in `.map` link a
+  cell (entered with A while facing it) to a side view and its two exits (left edge -> a cell, right edge -> a cell).
+  The side tiles and their flags (solid, climbable, background) are in DESIGN 3.2, where the tests read them.
+- **Physics** (1/16 px): walk 16, climb 12 (sideways at half speed), gravity 3, jump -46 cut to -16 when A is let go
+  (about 22 px high), fall cap 64; the body is 6 x 14 px (9 crouching, with ↓ on the ground). Climbing works while
+  the feet's top row is on roots or holds; the top tile of a climb is something to stand on (↓ goes through), so a
+  climb ends on the ledge instead of bouncing at it. The crown tile of the fallen tree is solid ground.
+- **Wind** is a constant per side view, added to the step each frame unless Sixten is in the lee, has chocolate or
+  climbs. The lee: something solid within 6-14 px upwind at the feet, and at the head unless he crouches (so a
+  one-tile stone needs a crouch, the root plate does not).
+- **The map** can be opened in a side view; it returns to the mode it was opened from (`map_ret`).
+- **The HUD** row 1 is shared (`draw_hud_top`); in a side view the compass arrow points the way Sixten faces (the
+  right edge's direction, or the opposite) with its letter.
+Measurement: the overlay is 1 972 B of code in xdata (not in ROM); ROM 14 397 B (code 9 804, data 4 552, sound 41),
+xdata 2 765 B, cartridge 9 224 B. RAM variables end far below 0xE000. m28-t4 (2 658 frames: the cave twice, the
+ravine both ways in a -6 wind with a crouch behind the stone and a stand by the root plate, the cliff) passes: the
+overlay is in RAM before its first instruction, runs in every side-view frame and in no top-down frame, every jump
+in it lands in it, the two cave visits have identical frames, the body never overlaps a solid tile, the wind pushes
+exactly 6/16 px a frame except in the lee (which the test computes from the source), chocolate stops the push, the
+exits land on the linked cells, the compass shows the facing direction.
+
+## D-044 - The human delegates Sixten's open decisions to Claude (2026-10-07)
+Date: 2026-10-07 - Milestone: before M29 (the human: "Ta besluten själv efter bästa förmåga" — take the decisions
+yourself as well as you can)
+Decision:
+- **DESIGN §11** (the draft's 15 open questions): the proposals stand as decisions (the map pauses, the whole map is
+  shown from the start, a simplified compass with a course and steps, 5 x 4 levels, wood only, no space world …).
+- **The fact review** (DESIGN §1.3, §8.3, `NATURBOK.md`): Claude checked every row against its source and records
+  that check (✓ Claude) in a column of its own; the human's own tick (☐) stays a manual acceptance step and no longer
+  blocks M29. PLAN Part 4's rule and M29's criterion were changed accordingly (an explicit human decision, not a
+  weakened test: every row still needs a source and a recorded check, and the tests still require both).
+- **S3, shelter from a whirlwind**: a solid building is the best shelter (UD's crisis advice for storms: indoors,
+  a basement or a windowless room in a larger building; SMHI: do not go near a whirlwind). A ditch or hollow, crouching,
+  as the shelter when there is no time to get in, comes only from the US National Weather Service; no Swedish source
+  was found (searched 2026-10-07). It stays, because it is the established advice and the alternative (open land or
+  forest) is worse, and levels put the cabin on the safe route where they can. Flagged for the human in PROGRESS.
+- **The `.overlay` directive** (D-040): not done. The OV/OJ macro convention works (M28) and keeps the assembler
+  unchanged.
+
+## D-045 - Sixten's World 1 and the game around it; the budget gate (M29)
+Date: 2026-10-07 - Milestone: M29
+Decision:
+- **Screens**: a title (A: the world map; B: the level card with every level, which the test replays use), the world
+  map (the world's levels as stops on a path, each with three marks: done, every control, every entry; a level opens
+  when the one before it is done; B: the nature book; the save code at the bottom), the tally after the goal (controls,
+  the level's entries, hearts), a nature-book page over the play screen (the picture at 2 x, the name, NY! the first
+  time, two lines a page, A: more / close), the nature book (the world's 8 entries, found or "?", n of 40). When every
+  level of a world is done the next world opens; Worlds 2-5 show "BANORNA KOMMER SNART" until their levels exist.
+- **The goal**: the M cell with every obligatory control stamped (controls in any order; the order is shown by the
+  course on the map).
+- **Objects** (`item:`, `entry:`, `build:` in `.map`, 6-byte records): power-ups are taken by walking onto them and
+  last 900 frames (a test hook's power-up, with no time, lasts); entries open with A on or facing their cell; a fallen
+  tree gives 2 wood once (A on or facing it; up to 8 trees a level); a building site with 2 wood makes its target cell
+  the new type (1-4: a bridge over the brook). The HUD's A word follows what A would do (UNDERSÖK, GÅ IN, BYGG, TA TRÄ).
+  Chips: 1.5 x speed top-down and in side views, the music 10 -> 7 frames a note.
+- **NATURBOK.md** holds all 40 entries (8 a world, the save code's bit order); `tools/naturbok.ts` wraps the texts
+  (20 characters a line, 2 lines a page, at most 3 pages) into packed xdata blocks; pictures exist for World 1's 8
+  (the rest show "?" until their worlds).
+- **The save code** (DESIGN 10.2, now exact): world 3 bits + book 40 bits + checksum 7 bits (the sum of i + 1 over the
+  set bits, mod 128); character j = bits 5j..5j+4 XOR (7j + 3) mod 32 in BLACKBOX's alphabet. Shown on the world map;
+  entering a code is M32.
+- **World 1**: 1-1 as DESIGN 13 (its safe route waits out the whirlwind in the ditch at (18, 8)), 1-2 Sjön (the lake,
+  the islet's footbridge), 1-3 Berget (the mountain splits the level; the cave side view `1-3-grottan` is the way
+  through: two climbs, out on the north side), 1-4 Trombens spår (control 2 starts a strength-3 whirlwind; the cabin is
+  on the safe route; two spruces fall, wood, the building site's bridge is the shortcut). Music: one 32-note loop.
+- **DESIGN 13.2's shelter rule** is checked while the whirlwind is at strength >= 3 (it was "while it is active",
+  which includes the harmless warning, when Sixten is still at control 3 by the lake).
+- **Budget gate**: measured ROM 20 618 B (code 14 268, data 6 269, sound 81), the side overlay 2 004 B in xdata, xdata
+  6 396 B, cartridge 14 923 B. Projection for five worlds (six phenomena ~0.35 KB each, code entry 0.6 KB, the ending
+  0.5 KB, 32 more pictures and 16 more levels): ROM 27-28 KB, xdata 10-12 KB, cartridge 21-23 KB at today's ratio
+  (55 %). Under 32 KB and under the 25 KB target: no cuts. Should code grow more, the screens (2.5 KB) go into an
+  overlay next.
+Measurement: replays m29-safe (9 910 frames: title -> 1-1 .. 1-4 on safe routes -> the World 2 map, no heart lost, no
+wood, no power-up, no course) and m29-all (12 864 frames: every control, every World 1 entry, both power-ups, wood and
+the bridge); all 15 M29 checks pass, and the 86 earlier Sixten checks.
+
+## D-046 - Sixten's Worlds 2 and 3: events, flowing water, rain (M30)
+Date: 2026-10-07 - Milestone: M30
+Decision:
+- **Events** (`event:` in `.map`, DESIGN 6.6): a generic timed change: trigger (a control, or the level's start),
+  kind (FALL, SLIDE, FLOOD), time, warning frames, cells. The generator refuses a fall or a slide that warns less than
+  120 frames. The engine runs up to 8 a level with clocks of their own (paused by the map and pages, like the
+  whirlwind); during the warning the cells show it (shadows, trickling gravel, ripples) with a creak every 30 frames;
+  then the cells change; Sixten on a cell a tree or a slide falls on: AJ!. Never Sixten's position, never RND.
+- **Two new cell types**: `Q` flowing water (walkable at 0.375 px/frame, 20 frames in it = AJ!, S8; floods and the
+  rapids) and `R` landslide (blocking). The map draws them (white flow strokes on blue; brown dots).
+- **A side link can need a cell type** (an 8th field): 2-3's cave opens only once the whirlwind has turned the hill
+  cell into a cave.
+- **Each world looks and sounds its own**: the ground's colour (World 2 khaki after the storm, World 3 wet dark green)
+  and a 32-note tune per world; rain over every World 3 level.
+- **Levels**: 2-1 Stormen (control 1 starts the storm; the forest path is buried under windfalls; the safe way is
+  the open west edge), 2-2 Rasbranten (the slide buries the path under the slope; round through the south), 2-3
+  Stenarna (control 1 in a hollow starts a whirlwind that moves the boulder and opens the cave), 2-4 Skogen efter
+  stormen (windfalls, wood, the site's bridge), 3-1 Regnet (the meadow floods), 3-2 Bäcken svämmar över (two floods;
+  the high bridge stays dry), 3-3 Myren (control 2 on a boulder in the marsh), 3-4 Forsen (rapids; one bridge).
+  16 x 12 cells each. 16 more nature-book pictures.
+- **A bug found and fixed**: `tick` read as a signed value went negative after ~9 minutes of play, and `MOD` then gave
+  negative y for rain, wind particles and the side view's streaks (they vanished). `tick` is masked positive first.
+- **Replays from the title**: there is no code entry before M32, so m30-safe and m30-all play World 1 first.
+Measurement: ROM 23 489 B (code 15 456, data 7 944, sound 89), xdata 7 263 B, cartridge 17 137 B. m30-safe 19 983
+frames (title -> World 4 map; no heart lost in Worlds 2-3, never in flowing water), m30-all 28 441 frames (every
+control, all 24 entries of Worlds 1-3). 146 Sixten checks pass.
+
+## D-047 - Sixten's Worlds 4 and 5, the final and the ending (M31)
+Date: 2026-10-07 - Milestone: M31
+Decision:
+- **Thunder** is a fourth event kind (THUNDER, with a duration: `event: 1 THUNDER 360 240 900`): a warning (>= 120
+  frames, the creak/rumble), then lightning for the duration, then over; no cells change. While it lasts, a lone tree
+  or a cell next to one, the bare fell (new cell type 23 `K`, walkable), a bridge or flowing water are dangerous:
+  30 frames there unsheltered = AJ!. Kneeling still in a hollow, a ditch or the cabin is safe. Open land and forest are
+  not marked dangerous: SMHI's advice names lone trees, heights, open flat ground and water; the game teaches the first
+  three that it can show clearly and does not claim more (open flat ground stays neutral rather than a second rule).
+  On screen: a white flash at the border and a bolt every 64 frames (its x from the clock, not RND).
+- **Fog and night** are level flags (`fog: 1`, `night: 1`, the level record's flags byte): everything but a 56-px
+  square round Sixten is grey (fog) or black (night); the map, the course and the step counter work as always.
+- **The ending**: after the last level's tally the world becomes 6 and the ending shows (JAG FÖRSTÅR., the nature
+  book's count, TACK FÖR SPELET!); A goes back to the title.
+- **Levels**: 4-1 Åskan, 4-2 Dimman, 4-3 Fjället, 4-4 Molnens väg (a whirlwind and the cabin), 5-1 Kartan och vinden
+  (strength 4 + a storm), 5-2 Natten, 5-3 Vattnet stiger (a flood), 5-4 Den stora tromben (24 x 15: strength 5 gathers
+  for 300 frames in the west, crosses the field, turns south). Tunes for Worlds 4 and 5; all 40 nature-book pictures.
+- **A bug found and fixed**: `lv_done` had 16 bits for 24 level indices; World 5's levels read and wrote the next
+  variable, so the world map took 5-1 to 5-3 as done. Now 32 bits.
+Measurement: ROM 25 920 B (code 16 328, data 9 503, sound 89), xdata 8 034 B, cartridge 18 953 B (under 25 KB). m31-safe
+(36 082 frames) and m31-all (49 083 frames: every control, all 40 entries) both go from the title to the ending
+without losing a heart. All M31 checks pass (the lightning on exactly from its time for its duration, its warning
+whole; the safe route never by a lone tree, on the fell or on water while it lasts; a course in the fog reaches its
+control; the flags in ROM).
+
+## D-048 - Sixten's save code entry, music checks and delivery (M32)
+Date: 2026-10-07 - Milestone: M32
+Decision:
+- **Entering a code**: the title's B opens a code screen (ten A's, the cursor on the first; UP/DOWN change the
+  character, LEFT/RIGHT move, A tries it, B goes back). The level card for the test levels, which was the title's B
+  until now, moved to B with DOWN held, so the bot's `startLevel` presses both; the card replays were recorded again
+  (same frames, the same frame counts). A code is taken when its checksum matches and its world is 1-6; it sets the
+  world, the book and every level of the worlds before it as done (none of its own world: the code does not hold
+  them), then opens the world map, where `code_make` shows the same code again (or the ending for world 6). A wrong
+  code: `FEL KOD. FÖRSÖK IGEN` for 120 frames and the AJ sound; nothing changes.
+- **The tests' encoder** reads DESIGN §10.2 (its field table and its alphabet) and is the test's own; the bot has its
+  own copy for the m32-code route. Round trip: worlds 1-6 x 12 books from a seeded generator (seed 32, printed in the
+  test name) plus the empty and the full book, typed in with the buttons; 20 corrupted codes (the ones the reference
+  decoder would also take, 1 in 128, are skipped) and worlds 0 and 7 with a right checksum are rejected.
+- **Music checks** follow the notes of square channel 1 (8 frames, volume 3) in m31-all: in each world's levels every
+  note is the next sounding step of that world's tune (all steps heard); none outside the levels. The whirlwind's
+  noise is 180 + 60 s Hz at volume 2 s + 3 (half in shelter), strengths 1-5 all heard.
+- **Delivery**: `sixten` in the demo list, the e2e fixtures and a Playwright project; the CI matrix publishes its GIF
+  (the `demo: false` flag is gone). `games/sixten/GUIDE.md` in Swedish.
+Measurement: ROM 27 012 B (code 17 344, data 9 579, sound 89), xdata 8 034 B, cartridge 19 459 B; code.asm 1 352 B
+(the design guessed 0.5-0.6 KB for the code: the entry screen is most of it). `demo/sixten.gif`: 113 frames (K = 75 +
+38 repair), 16.9 s loop, 1.58 MB; decoded back byte-identical. The fake-camera e2e scan: 75/75 blocks, the first frame
+equals the VM reference. Not verified: scanning on a real phone, reading the code screen in 128 x 128 on a phone.

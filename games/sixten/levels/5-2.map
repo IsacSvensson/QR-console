@@ -1,0 +1,24 @@
+# 5-2 Natten (DESIGN.md §7): dark: only the nearest cells can be seen; the crossings and the compass find the way.
+name: 5-2 NATTEN
+world: 5
+night: 1
+cells:
+TTTTTTTTTTTTTTTT
+TS+=======+....T
+T.|.......|....T
+T.|..TTT..|..o.T
+T.+===+===+....T
+T.....|........T
+T..TT.|...TT...T
+T..TT.+===+....T
+T.........|....T
+T.....u...|....T
+T.........+===MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 2 1
+2 O 13 3
+3 O 6 9
+4 F 10 7
+entry: HUGGORM 8 2
+entry: FLUGSVAMP 3 8

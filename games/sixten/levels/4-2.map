@@ -1,0 +1,25 @@
+# 4-2 Dimman (DESIGN.md §7): fog: only the nearest cells can be seen. The paths' crossings show where you are;
+# from there the compass's course and the step counter find the controls.
+name: 4-2 DIMMAN
+world: 4
+fog: 1
+cells:
+TTTTTTTTTTTTTTTT
+TS+=====+......T
+T.|.....|......T
+T.|..TT.|..o...T
+T.+=====+......T
+T..............T
+T....TTTT......T
+T....TTTT...u..T
+T..............T
+T......o.......T
+T.............MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 2 1
+2 O 11 3
+3 O 12 7
+4 F 7 9
+entry: DIMMA 5 5
+entry: BJÖRK 7 8

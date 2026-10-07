@@ -1,0 +1,25 @@
+# 4-4 Molnens väg (DESIGN.md §7): a thundercloud lets down a whirlwind. The cabin is the shelter.
+name: 4-4 MOLNENS VÄG
+world: 4
+cells:
+TTTTTTTTTTTTTTTT
+TS.............T
+T..TTT....TTT..T
+T..TTT....TTT..T
+T..............T
+T......H.......T
+T..............T
+T..vvvvvvvvv...T
+T..............T
+T..TTT....TTT..T
+T.............MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 1 4
+2 O 7 4
+3 O 12 8
+entry: BYMOLN 12 1
+entry: KANTARELL 4 8
+whirl: 2               # strength 3 from the west along row 6
+wp 0 6 3 8 0
+wp 15 6 3 8 30

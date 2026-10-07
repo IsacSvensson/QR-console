@@ -1,0 +1,24 @@
+# 4-1 Åskan (DESIGN.md §7): control 1 brings a thunderstorm. While the lightning lasts, lone trees (and the cells
+# next to them) are dangerous (S4); the shelter is a hollow: kneel there until it has passed (S5).
+name: 4-1 ÅSKAN
+world: 4
+cells:
+TTTTTTTTTTTTTTTT
+TS......i......T
+T..............T
+T...i.....u....T
+T..............T
+T..u.....i.....T
+T..............T
+T.....i....u...T
+T..............T
+T..i.......i...T
+T.............MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 2 2
+2 O 12 4
+3 O 6 9
+entry: ÅSKA 6 3
+entry: BLIXT 12 8
+event: 1 THUNDER 360 240 900   # the storm comes over: lightning for 15 s

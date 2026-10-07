@@ -1,0 +1,29 @@
+# 2-1 Stormen (DESIGN.md §7): in a storm the forest is dangerous (S2). Control 1 starts it: after a warning (creaks,
+# branch shadows) spruces fall across the forest path. The safe way is the open land along the west edge.
+name: 2-1 STORMEN
+world: 2
+cells:
+TTTTTTTTTTTTTTTT
+TS.+=====+TTTTTT
+T...TTTTT|TTTTTT
+T...TTTTT|TTTTTT
+T...TTTTT+====+T
+T...TTTTTTTTTT|T
+T...TTTTTTTTTT|T
+T...TTTTTTTTTT|T
+T...TTTTTTTTTT|T
+T...TTTTTTTTTT|T
+T.............MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 3 1
+2 O 2 7
+3 F 9 4
+item: CHOKLAD 1 9
+entry: STORM 2 4
+entry: KORP 7 9
+event: 1 FALL 420 240     # the storm fells the spruces over the forest path
+cell 6 1 X
+cell 9 2 X
+cell 12 4 X
+cell 14 7 X
