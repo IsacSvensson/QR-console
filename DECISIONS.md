@@ -789,3 +789,39 @@ map and two overlays of 164 and 116 B); 0 faults, 0 overruns. Max cycles per fra
 screen expansion, ~5 700 of it; other frames <= 4 853), map screen 8 067 (the symbols part), side view 2 793,
 overlays 9 900. Routine sizes: screen expansion 300 B, whirlwind + particles 1 048 B, map screen 1 376 B.
 `qrc encode` -> `mockup.gif` (27 frames, 4.0 s loop) -> `qrc decode`: identical SHA-256. Not verified on a phone.
+
+## D-041 - Sixten engine (M26): cells, screens, walking, map and compass
+Date: 2026-10-07 - Milestone: M26 (the human said "kör vidare" after the planning commit; the DESIGN §11 defaults
+apply, the fact review is needed before M29, not M26)
+Decision:
+- **Level card instead of a title for now** (`card.asm`, mode M_CARD): the level's name; ←/→ choose a level, A
+  starts it. Replays choose their level with buttons, so every replay is pure input (the first recordings wrote
+  `dbg_level` into RAM and could not be replayed). The title and world map come in M29. Test hooks as in BLACKBOX
+  and Bo: `dbg_level`, `dbg_goto` (put Sixten on a cell), `dbg_cell` + `dbg_cell_v` (change a cell), `dbg_pw`.
+- **The variant bit swaps the pattern's upper and lower halves** (DESIGN §4.1). Mirroring left-right (the mockup's
+  first version) reversed the tile order but not the pixels, so 2 x 2-tile spruces split into "bow ties"; fixed in
+  the mockup too (its top-down picture and numbers changed: max 10 627 cycles, cartridge 4 479 B).
+- **Levels are at most 24 x 15 cells** (6 x 5 screens, 360 B; DESIGN §3.1 said 32 x 21): the map screen draws 5 px
+  per cell, and 24 x 15 = 120 x 75 px is what fits with the title and the legend.
+- **DESIGN §4.1's cell table** got separate columns for map colour, map symbol and speed (the test oracle parses
+  them). The fallen tree (`L`) is walkable — one walks on the trunk, which is how it becomes a bridge — and a new type
+  20, the windfall (`X`), is the fallen timber that blocks a path (§6.4 used `L` for both).
+- **Movement**: four directions (left/right wins when both axes are held), speed by the cell under the feet (1/16 px
+  per frame from the table), a 6 x 4 px box at the feet, collision against blocking cell types and the level edge;
+  when only the corners on one side hit, Sixten slides 1 px per frame round the corner.
+- **Screens and the slide**: the tile buffer holds two screens (32 x 24 tiles, column-major, 768 B); the slide moves
+  the camera 8 px a frame (16 frames sideways, 12 up/down), always whole tiles; Sixten waits at the edge he crossed.
+  A slide's first frame expands both screens: max 13 613 cycles in the replays.
+- **Controls** are stamped when the feet enter the cell, in any order (the order and the goal come in M29); a control
+  under leaves cannot be stamped and is not on the map. The HUD counts stamped / all controls of the level.
+- **The map** (B, pauses): five parts over five frames, as the mockup; the course is start, every control not under
+  leaves, goal. When Sixten knows where he is (DESIGN §5), a ring shows him, ←/→ choose a control (the map is drawn
+  again) and A sets the course: the nearest of 16 directions from where he stands to the control's centre (dot
+  products with the cos/sin table), and the step counter (cell changes) starts at 0. B closes the map.
+- **Fonts**: the 1 bpp font is unpacked with a table of the four pixel pairs (~14 000 cycles per ink); the first
+  version (two inks and the level start in `init`) overran the 50 000-cycle entry budget.
+- **CI**: `sixten` joins the game matrix (D-039) without a demo GIF until M32.
+Measurement: ROM 9 078 B (code 5 988, data 3 065, sound 25), xdata 519 B, cartridge 5 168 B. Replays m26-t1 (10 513
+frames), m26-t2 (7 417, all 30 screens, all four slide directions) and m26-11 (1 384): max 13 613 cycles per frame,
+0 overruns. Speeds measured from the replays equal DESIGN §4.1 exactly (e.g. path 40 px and dense forest 16 px in 32
+frames).

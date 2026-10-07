@@ -193,7 +193,7 @@ expand_screen:
     ADD r0, SCR_X * 4
     LDB r0, [r0 + cells]
     MOV r1, r0
-    AND r1, 0x20                    ; variant: the pattern is mirrored
+    AND r1, 0x20                    ; variant: the pattern's halves swap
     ST [tmp0], r1
     AND r0, 31
     SHL r0, 4
@@ -203,16 +203,14 @@ expand_screen:
 @ty:
     LDI r3, 0                       ; tile column in the cell
 @tx:
-    MOV r2, r3
-    LD r1, [tmp0]
-    CMP r1, 0
-    JEQ @plain
-    LDI r2, 3
-    SUB r2, r3
-@plain:
     MOV r1, r4
+    LD r2, [tmp0]
+    CMP r2, 0
+    JEQ @plain
+    XOR r1, 2
+@plain:
     SHL r1, 2
-    ADD r1, r2
+    ADD r1, r3
     LD r2, [tmp1]
     ADD r1, r2
     LDB r1, [r1]                    ; the tile

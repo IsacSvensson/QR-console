@@ -522,7 +522,7 @@ milestone adds to it and never removes earlier checks. From M26 on, the CI game 
 **Accept:** `npm run test:sixten`
 - **the map and the world agree cell for cell:** for every level, an independent TypeScript reader of the `.map`
   source reproduces the RAM cell map after unpacking; for every screen of T1 and T2 the tile buffer equals the
-  reference expansion of those cells (patterns, mirrored variants), and the map screen's fill colour and symbol for
+  reference expansion of those cells (patterns, the variant's swapped halves), and the map screen's fill colour and symbol for
   every cell equal the reference tables, read back from the framebuffer
 - after a cell change written into RAM by a test hook, the next screen expansion **and** the next map screen show the
   new cell (the map is never stale)

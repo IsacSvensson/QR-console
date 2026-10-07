@@ -2,11 +2,11 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** none — Parts 1–3 complete; Part 4 (Sixtens expedition) planned, waiting for the human's review
+**Current milestone:** M27 (Sixten: the whirlwind and the wind) — M26 done
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
-Part 4 (Sixtens expedition) planned on branch `claude/sixtens-expedition`: `games/sixten/DESIGN.md`, a VM-rendered mockup,
-PLAN.md Part 4 (M26–M32), D-040. Next: the human reviews the safety facts (DESIGN §1.3, §8.3) and the open questions (§11).
+Part 4 (Sixtens expedition) on branch `claude/sixtens-expedition`: planned (DESIGN, mockup, PLAN Part 4, D-040); M26 done
+(the top-down engine, D-041). The human still reviews the safety facts (DESIGN §1.3, §8.3) before M29.
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -47,7 +47,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 
 Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`; planned, not started)
 
-- [ ] M26 Engine: cells, screens, walking, map and compass
+- [x] M26 Engine: cells, screens, walking, map and compass
 - [ ] M27 The whirlwind and the wind
 - [ ] M28 Side view as a code overlay
 - [ ] M29 World 1 and the game around it (budget gate)
@@ -56,6 +56,12 @@ Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`; planned, not st
 - [ ] M32 Save code, music, delivery
 
 ## Current work
+
+Part 4 (PLAN.md Part 4): M26 done — `.map` levels + generator + previews, the cell map packed in xdata, screens expanded
+from cells (one MAP per column), the screen slide, Sixten walking with collision by cell type, the HUD with the compass,
+the map screen from the same cells ("you are here", course, step counter), a level card; test levels T1/T2 and 1-1;
+bot-recorded replays; `npm run test:sixten` checks map = world cell for cell (RAM, tile buffer, framebuffer) (D-041).
+**Runtime baseline for Part 4 = 02d7058.**
 
 Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
 buffer, camera, parallax, HUD frame, Bo's rolling physics on flat ground, hills, blocks and one-way platforms; test
@@ -108,7 +114,8 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Bo ROM after M25 (final) | 31.6 KB (code 25.4 KB, data 6.0 KB), ISA 2; cartridge 22.9 KB; 132-frame GIF loop (19.8 s) | test:bo, npm run demo |
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
-| Sixten mockup (planning) | cartridge 4 482 B (ISA 2); max cycles/frame: top-down 10 895 (with screen expansion; else ≤ 4 853), map 8 067, side view 2 793, overlays 9 900; QR round trip identical | D-040, `games/sixten/mockup/measure.ts` |
+| Sixten mockup (planning) | cartridge 4 479 B (ISA 2); max cycles/frame: top-down 10 627 (with screen expansion; else ≤ 4 853), map 8 067, side view 2 793, overlays 9 900; QR round trip identical | D-040, `games/sixten/mockup/measure.ts` |
+| Sixten ROM after M26 | 9.1 KB (code 6.0 KB, data 3.1 KB), xdata 0.5 KB, cartridge 5.2 KB; max 13 613 cycles/frame (a slide's first frame) | test:sixten, D-041 |
 | Sixten projection | code 17.8–22.0 KB; ROM 22–28 KB (17–22 KB with overlays); cartridge 22–27 KB (target < 25 KB) | DESIGN §12 (sixten) |
 | Bo ROM after M19 | 8.2 KB (code 5.8 KB, data 2.4 KB); cartridge 4.7 KB; play frames ~1.4k cycles, loading ≤ 15.1k | test:bo |
 

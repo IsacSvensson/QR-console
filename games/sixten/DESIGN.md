@@ -141,7 +141,8 @@ en lekplats.
 - Motorn bygger på BLACKBOX:s rum, spelare och kodinmatning (`games/blackbox/room.asm`, `player.asm`, `code.asm`):
   kollision mot tile-klasser, ingångar och utgångar och ett skärmbyte i taget. Skillnaden är att ett "rum" inte
   lagras. Det expanderas ur cellkartan.
-- Bana: upp till **32 × 21 celler** (8 × 7 skärmar). Standard är 24 × 15 (6 × 5 skärmar, 360 byte), som 1-1.
+- Bana: upp till **24 × 15 celler** (6 × 5 skärmar, 360 byte), som 1-1. Större får inte plats på kartskärmen med
+  5 px per cell och teckenförklaringen (M26, D-041).
 
 ### 3.2 Sidovy (korta actionsträckor)
 
@@ -167,37 +168,43 @@ samtidigt.
 ```
 bit 7      kontroll står här (kontrollens nummer står i banans kontrollista)
 bit 6      täckt av löv (kontrollen eller föremålet syns inte förrän vinden blåst bort löven)
-bit 5      variant (mönstret speglas vänster-höger: skogen ser inte ut som ett rutmönster)
+bit 5      variant (mönstrets övre och nedre halva byter plats: skogen ser inte ut som ett rutmönster)
 bit 4..0   typ (32)
 ```
 
-| Typ | Tecken i `.map` | Namn | Uppifrån (4 × 4 tiles) | Kartfärg och symbol | Regler |
-|---:|:--:|---|---|---|---|
-| 0 | `.` | öppen mark | gräs, tuvor | gul | går. Vid tromb: vinden knuffar |
-| 1 | `T` | skog (lättlöpt) | två granar + skogsbotten | vit | går. **Farlig vid vind ≥ 3** (S2) |
-| 2 | `#` | tät skog | tätt med kronor | grön | går långsamt. Farlig vid vind ≥ 3 |
-| 3 | `=` | stig öst–väst | stig | svart streckad | snabbare. Korsningar visar "du är här" |
-| 4 | `\|` | stig nord–syd | stig | svart streckad | – |
-| 5 | `+` | korsning | korsande stigar | svart streckad | **"du är här" på kartan** (beslut 5) |
-| 6 | `~` | myr | gräs och pölar | vit med blå streck | inga landmärken: kompasskurs |
-| 7 | `W` | vatten | vatten | blå | går inte (sidovy: simma kort) |
-| 8 | `^` | höjd/berg | häll | bruna höjdkurvor | går inte. Farlig vid åska |
-| 9 | `v` | dike | dike | blått streck | **skydd** (tromb) |
-| 10 | `u` | sänka | skål | brunt u | **skydd** (tromb, åska) |
-| 11 | `H` | byggnad (fast) | röd stuga | svart ruta | **skydd** (bäst). Går inte igenom |
-| 12 | `o` | stort block | sten | svart prick | lä mot vind 1–2. **Inte skydd** mot tromb |
-| 13 | `L` | fallet träd | stam, krona, rot | svart kryss | blir bro när tromben passerat (§6.4) |
-| 14 | `b` | bro/plankor | plankor över vatten | svarta streck | går |
-| 15 | `B` | byggplats | pinnar och snöre | lila ruta | A + trä = bro/stege (§8.4) |
-| 16 | `G` | grotta | öppning i berget | svart v | övergång till sidovy |
-| 17 | `S` | start | gräs | triangel | – |
-| 18 | `M` | mål | gräs | dubbelring | – |
-| 19 | `i` | ensamt träd | en gran | grön prick | **farlig vid åska** (S4) |
-| 20–31 | | reserverade: forsen, översvämmad mark, dimma (en flagga per värld), klätterstig … | | | högst två nya fenomen per värld (§7) |
+| Typ | Tecken | Namn | Uppifrån (4 × 4 tiles) | Kartfärg | Kartsymbol | Fart (px per bildruta) | Regler |
+|---:|:--:|---|---|---|---|---:|---|
+| 0 | `.` | öppen mark | gräs, tuvor | gul | – | 1 | går. Vid tromb: vinden knuffar |
+| 1 | `T` | skog (lättlöpt) | två granar + skogsbotten | vit | – | 0,875 | går. **Farlig vid vind ≥ 3** (S2) |
+| 2 | `#` | tät skog | tätt med kronor | grön | – | 0,5 | går långsamt. Farlig vid vind ≥ 3 |
+| 3 | `=` | stig öst–väst | stig | vit | svart streckad, öst–väst | 1,25 | snabbare |
+| 4 | `\|` | stig nord–syd | stig | vit | svart streckad, nord–syd | 1,25 | snabbare |
+| 5 | `+` | korsning | korsande stigar | vit | svart streckad, båda | 1,25 | **"du är här" på kartan** (beslut 5) |
+| 6 | `~` | myr | gräs och pölar | vit | blå streck | 0,625 | inga landmärken: kompasskurs |
+| 7 | `W` | vatten | vatten | blå | – | – | går inte (sidovy: simma kort) |
+| 8 | `^` | höjd/berg | häll | vit | bruna höjdkurvor | – | går inte. Farlig vid åska |
+| 9 | `v` | dike | dike | gul | blått streck | 0,75 | **skydd** (tromb) |
+| 10 | `u` | sänka | skål | gul | brunt u | 0,875 | **skydd** (tromb, åska) |
+| 11 | `H` | byggnad (fast) | röd stuga | gul | svart ruta | – | **skydd** (bäst). Går inte igenom |
+| 12 | `o` | stort block | sten | gul | svart prick | 1 | lä mot vind 1–2. **Inte skydd** mot tromb |
+| 13 | `L` | fallet träd | stam, krona, rot | gul | svart kryss | 0,75 | går (på stammen): en bro när tromben passerat (§6.4) |
+| 14 | `b` | bro/plankor | plankor över vatten | blå | svarta streck | 1 | går |
+| 15 | `B` | byggplats | pinnar och snöre | gul | lila ruta | 1 | A + trä = bro/stege (§8.4) |
+| 16 | `G` | grotta | öppning i berget | vit | svart v | – | går inte. Övergång till sidovy (M28) |
+| 17 | `S` | start | gräs | gul | triangel (banan) | 1 | **"du är här"** |
+| 18 | `M` | mål | gräs | gul | dubbelring (banan) | 1 | – |
+| 19 | `i` | ensamt träd | en gran | gul | grön prick | 1 | **farlig vid åska** (S4) |
+| 20 | `X` | vindfälle | stammar i kors | vit | svart kryss | – | går inte: blockerar en stig (§6.4) |
+| 21–31 | | reserverade: forsen, översvämmad mark, dimma (en flagga per värld), klätterstig … | | | | | högst två nya fenomen per värld (§7) |
 
+- **Fart** är px per bildruta (60 bildrutor per sekund), i motorn i 1/16 px. "–" = går inte (kollision mot cellens
+  typ, Sixtens fotlåda är 6 × 4 px; vid ett hörn glider han runt). Varianten (bit 5) sätts av generatorn för öppen
+  mark och skog: `((kolumn × 7 + rad × 3) >> 1) & 1`.
 - **Expansion:** en mönstertabell med 16 tile-index per typ (16 B × 32 typer = 512 B, delas av alla världar).
-  Världens tiles bestämmer hur de ser ut. Varianter speglas. Uppmätt i mockupen: att expandera hela skärmen (12 celler)
-  kostar ~5 700 cykler, och en bildruta med expansion och ritning högst 10 895 (§14).
+  Världens tiles bestämmer hur de ser ut. För varianten byter mönstrets halvor plats (spegling
+  vänster-höger provades och delade granarna på 2 × 2 tiles). Uppmätt i mockupen: att expandera hela skärmen (12 celler)
+  kostar ~5 400 cykler, och en bildruta med expansion och ritning högst 10 627 (§14). I spelet (M26) är en bildruta
+  med skärmbyte, två expansioner, ritning och HUD högst 13 613 cykler.
 - **Kartskärmen** läser samma byte: fyllfärg och symbol per typ ur två tabeller med 32 byte var. Det är därför kartan
   *alltid* stämmer med världen: ett cellbyte (fallet träd, löv som blåser bort, översvämning) syns direkt på båda.
 - Kartfärgerna följer orienteringskartans stil (ISOM, förenklad): vit skog, gul öppen mark, grön tät skog, blått
@@ -287,7 +294,7 @@ och bara inom dess radie. Det kontrolleras av generatorn och testerna. Exempel:
 | `T` skog vid ett dike | `L` fallet träd över diket | ny väg (bro) när tromben passerat. Trä att hämta |
 | cell med bit 6 (löv) | samma cell utan bit 6 | en dold kontroll syns |
 | `o` block framför berget | `.` + `G` grotta | en sten flyttas och visar en grotta |
-| stig `=` | `L` fallet träd | stigen blockeras: välj en annan väg |
+| stig `=` | `X` vindfälle | stigen blockeras: välj en annan väg |
 
 Kartan ritar om cellen direkt (beslut 2). Nästa gång kartan öppnas blinkar den ändrade cellen en gång.
 
@@ -474,8 +481,8 @@ kod 4,6 KB, kassett 4,5 KB.
 
 | Del | Byte |
 |---|---:|
-| Cellkarta (max 32 × 21) | 672 |
-| Tilebuffert uppifrån (2 skärmar för glidningen, kolumnvis) | 384 |
+| Cellkarta (max 24 × 15) | 360 |
+| Tilebuffert uppifrån (2 skärmar för glidningen, kolumnvis 32 × 24) | 768 |
 | Sidovyns buffert (6 skärmar × 16 rader, kolumnvis) | 1 536 |
 | Världens tiles uppackade (64 × 32 B) | 2 048 |
 | Font, två bläck (vit och mörk) | 3 328 |
@@ -486,7 +493,7 @@ kod 4,6 KB, kassett 4,5 KB.
 | **Summa** | **~15 KB** |
 
 **Cykler:** mål ≤ 25 000 per bildruta (halva budgeten), som Bo. Uppmätt i mockupen: uppifrån med tromb, 24 partiklar,
-bubbla och HUD ≤ 4 853 (med expansion av hela skärmen högst 10 895. I spelet expanderas bara vid skärmbyte), kartskärmen högst 8 067 per del, sidovyn 2 793, overlays 9 900 (§14).
+bubbla och HUD ≤ 4 853 (med expansion av hela skärmen högst 10 627. I spelet expanderas bara vid skärmbyte), kartskärmen högst 8 067 per del, sidovyn 2 793, overlays 9 900 (§14).
 
 ### 12.4 Kod-overlays (beslut 6)
 
@@ -606,12 +613,12 @@ npx tsx games/sixten/mockup/measure.ts    # bygg, kör 1 200 bildrutor, mät, bi
 npm run qrc -- run games/sixten/mockup/mockup.qrc --frames 161 --dump-frame top.png --scale 4
 ```
 
-**Uppmätt** (`measure.ts`, VM:en, 2026-10-06): kassett 4 482 B (ISA 2), kod 4 624 B, rodata 3 558 B, xdata 488 B
+**Uppmätt** (`measure.ts`, VM:en, 2026-10-07, efter variantändringen i M26): kassett 4 479 B (ISA 2), kod 4 616 B, rodata 3 558 B, xdata 488 B
 (cellkartan packad + två overlays på 164 och 116 B). Inga fel, 0 överskridanden. Högsta cykler per bildruta:
 
 | Scen | Högst | När |
 |---|---:|---|
-| uppifrån (tromb styrka 3) | 10 895 | bildruta 0: expansion + partiklarnas start. Var 8:e bildruta (expansion) ≤ 10 541, övriga ≤ 4 853 |
+| uppifrån (tromb styrka 3) | 10 627 | bildruta 0: expansion + partiklarnas start. Var 8:e bildruta (expansion) ≤ 10 273, övriga ≤ 4 853 |
 | kartskärm | 8 067 | del 3 (nordlinjer + 360 symboler) |
 | sidovy | 2 793 | |
 | overlay A/B | 9 900 | overlay B: 360 `RECTFILL` |

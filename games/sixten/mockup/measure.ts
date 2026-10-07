@@ -25,8 +25,13 @@ mkdirSync(DOCS, { recursive: true });
 const vm = VM.fromCartridge(await parseCartridge(bytes), { seed: 1 });
 const max = [0, 0, 0, 0];
 const at = [0, 0, 0, 0];
+const top = { expand: 0, other: 0 }; // the top-down scene: frames that expand the screen (every 8th) and the rest
 for (let f = 0; f < SCENE * 4; f++) {
   vm.step(0);
+  if (f > 0 && f < SCENE) {
+    const k = f % 8 === 0 ? 'expand' : 'other';
+    top[k] = Math.max(top[k], vm.cyclesLastFrame);
+  }
   const s = Math.floor(f / SCENE);
   if (vm.cyclesLastFrame > max[s]!) {
     max[s] = vm.cyclesLastFrame;
@@ -42,6 +47,7 @@ console.log(`cartridge ${bytes.length} B (ISA ${asm.isaVersion}); code ${s.code.
 console.log(`overruns ${vm.overruns}, fault ${vm.fault ?? 'none'}`);
 console.log('| scen | högst cykler per bildruta | bildruta (i scenen) |\n|---|---:|---:|');
 NAMES.forEach((n, i) => console.log(`| ${n} | ${max[i]} | ${at[i]! - i * SCENE} |`));
+console.log(`top-down after frame 0: frames with the screen expansion max ${top.expand}, the others max ${top.other}`);
 
 // the QR round trip, with the same CLI the other games use
 const cli = (...args: string[]) =>

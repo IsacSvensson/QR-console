@@ -20,6 +20,7 @@ export default defineConfig({
       { test: { name: 'robust', include: ['test/robust/**/*.test.ts'], testTimeout: 600_000 } },
       { test: { name: 'blackbox', include: ['test/blackbox/**/*.test.ts', 'test/blackbox-*.test.ts'], testTimeout: 300_000 } },
       { test: { name: 'bo', include: ['test/bo/**/*.test.ts'], testTimeout: 300_000, hookTimeout: 300_000 } },
+      { test: { name: 'sixten', include: ['test/sixten/**/*.test.ts'], testTimeout: 300_000, hookTimeout: 300_000 } },
       { test: { name: 'games', include: ['test/games/**/*.test.ts'], testTimeout: 120_000 } },
       { test: { name: 'slice', include: ['test/slice/**/*.test.ts'], testTimeout: 120_000 } },
     ],

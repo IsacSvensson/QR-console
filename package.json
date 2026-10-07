@@ -13,7 +13,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.pure.json && tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice --project blackbox --project bo",
+    "test": "vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice --project blackbox --project bo --project sixten",
     "check": "npm run typecheck && npm run lint && npm test",
     "check:console": "npm run typecheck && npm run lint && vitest run --project unit --project cartridge --project transport --project vm --project asm --project qr --project tools --project slice",
     "bench:fountain": "tsx bench/fountain.ts",
@@ -34,7 +34,10 @@
     "blackbox:record": "tsx games/blackbox/tools/record.ts && tsx games/blackbox/tools/pick-frames.ts",
     "test:bo": "vitest run --project bo --reporter=verbose",
     "bo:gen": "tsx games/bo/tools/tiles.ts && tsx games/bo/tools/levels.ts && tsx games/bo/tools/text.ts",
-    "bo:record": "tsx games/bo/tools/record.ts"
+    "bo:record": "tsx games/bo/tools/record.ts",
+    "test:sixten": "vitest run --project sixten --reporter=verbose",
+    "sixten:gen": "tsx games/sixten/tools/art.ts && tsx games/sixten/tools/levels.ts",
+    "sixten:record": "tsx games/sixten/tools/record.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

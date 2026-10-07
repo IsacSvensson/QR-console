@@ -102,4 +102,7 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run blackbox:record [name…]` | re-record bot replays (`games/blackbox/tools/routes.ts`) and pick reference frames, then `npm run refs:games` |
 | `npm run test:bo` | Bo's Skateäventyr (PLAN Part 3): generated data up to date, ROM level table vs `.lvl` sources, every level in RAM vs an independent reader, replays with per-frame hashes and reference checks, DESIGN §3.3 measured |
 | `npm run bo:gen` | regenerate `games/bo/tiles.gen.asm`, `levels.gen.asm` and `levels/*.png` from `tools/tiles.ts` and `levels/*.lvl` |
+| `npm run test:sixten` | Sixtens expedition (PLAN Part 4): generated data up to date, ROM cell tables vs DESIGN §4.1, every level in RAM and every screen vs the `.map` sources, the map screen read back from the framebuffer, replays with per-frame hashes |
+| `npm run sixten:gen` | regenerate `games/sixten/art.gen.asm`, `levels.gen.asm` and `levels/*.png` from `tools/art.ts` and `levels/*.map` |
+| `npm run sixten:record [name…]` | re-record Sixten's bot replays (`games/sixten/tools/routes.ts`), then `npm run refs:games` |
 | `npm run bo:record [name…]` | re-record Bo's bot replays (`games/bo/tools/routes.ts`), then `npm run refs:games` |

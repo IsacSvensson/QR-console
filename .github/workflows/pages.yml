@@ -72,6 +72,9 @@ jobs:
             test: npm run test:blackbox
           - game: bo
             test: npm run test:bo
+          - game: sixten               # no demo GIF before M32
+            test: npm run test:sixten
+            demo: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -81,7 +84,8 @@ jobs:
       - run: npm ci
       - run: ${{ matrix.test }}
       # only reached when the game's tests passed
-      - uses: actions/upload-artifact@v4
+      - if: ${{ matrix.demo != false }}
+        uses: actions/upload-artifact@v4
         with:
           name: demo-${{ matrix.game }}
           path: demo/${{ matrix.game }}.gif
@@ -110,7 +114,7 @@ jobs:
           mkdir -p dist/demo
           {
             echo "### Published demo GIFs"
-            for g in breakout pong blackbox bo; do
+            for g in breakout pong blackbox bo sixten; do
               if [ -f "dist/demo/$g.gif" ]; then echo "- $g: published"; else echo "- $g: **not published** (its tests failed)"; fi
             done
           } >> "$GITHUB_STEP_SUMMARY"

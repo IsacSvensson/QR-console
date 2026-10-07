@@ -221,7 +221,7 @@ const t = (n: string) => {
 };
 
 // ---- cell types --------------------------------------------------------------------------------------------
-// One byte per cell: bits 0-4 type, bit 5 variant (the pattern is mirrored left-right), bit 6 reserved
+// One byte per cell: bits 0-4 type, bit 5 variant (the pattern's upper and lower halves swap), bit 6 reserved
 // (game: "covered by leaves"), bit 7 a control stands here.
 // map fill colours (orienteering style): 15 white forest, 14 yellow open land, 11 green dense forest, 8 water
 // map symbols: 0 none, 1 path E-W, 2 path N-S, 3 path crossing, 4 marsh, 5 contours, 6 ditch, 7 hollow,
@@ -404,7 +404,7 @@ for (const [label, s] of Object.entries(LABELS)) out.push(`${label}: .byte ${[..
 
 out.push('', '; top-down tiles (tile 0 = empty: the open-ground CLS colour shows through)', 'tiles_top:', '    .fill 32');
 for (const [n, a] of TOP_TILES) out.push(`; ${n}`, ...sprite(a));
-out.push('', '; cell patterns: 16 tile indices per cell type (4 rows of 4), mirrored when the variant bit is set', 'patterns:');
+out.push('', '; cell patterns: 16 tile indices per cell type (4 rows of 4); the variant bit swaps rows 0-1 with 2-3', 'patterns:');
 CELLS.forEach((c) => out.push(`    .byte ${patternBytes(c.pattern).join(', ')}   ; ${c.ch} ${c.name}`));
 out.push('', '; the map screen: fill colour and symbol per cell type', `map_fill: .byte ${CELLS.map((c) => c.fill).join(', ')}`, `map_sym:  .byte ${CELLS.map((c) => c.sym).join(', ')}`);
 out.push('', '; the course: start, controls 1..5, goal as (column, row) bytes', `course: .byte ${COURSE.flat().join(', ')}`);
