@@ -26,47 +26,49 @@ CT_GOAL = 18
 CT_LONE_TREE = 19
 CT_WINDFALL = 20
 T_TUFT = 1
-T_FLOOR = 2
-T_SPRUCE0 = 3
-T_SPRUCE1 = 4
-T_SPRUCE2 = 5
-T_SPRUCE3 = 6
-T_LONE0 = 7
-T_LONE1 = 8
-T_LONE2 = 9
-T_LONE3 = 10
-T_DENSE = 11
-T_PATH_H = 12
-T_PATH_V = 13
-T_PATH_X = 14
-T_WATER = 15
-T_WATER2 = 16
-T_MARSH = 17
-T_ROCK = 18
-T_CAVE0 = 19
-T_CAVE1 = 20
-T_CAVE2 = 21
-T_CAVE3 = 22
-T_DITCH_T = 23
-T_DITCH_B = 24
-T_HOLLOW0 = 25
-T_HOLLOW1 = 26
-T_HOLLOW2 = 27
-T_HOLLOW3 = 28
-T_BOULDER0 = 29
-T_BOULDER1 = 30
-T_BOULDER2 = 31
-T_BOULDER3 = 32
-T_HOUSE0 = 33
-T_HOUSE1 = 34
-T_HOUSE2 = 35
-T_HOUSE3 = 36
-T_LOG = 37
-T_LOG_CROWN = 38
-T_LOG_ROOTS = 39
-T_PLANK = 40
-T_STAKE = 41
-T_LEAVES = 42
+T_TUFT_R = 2
+T_TUFT_L = 3
+T_FLOOR = 4
+T_SPRUCE0 = 5
+T_SPRUCE1 = 6
+T_SPRUCE2 = 7
+T_SPRUCE3 = 8
+T_LONE0 = 9
+T_LONE1 = 10
+T_LONE2 = 11
+T_LONE3 = 12
+T_DENSE = 13
+T_PATH_H = 14
+T_PATH_V = 15
+T_PATH_X = 16
+T_WATER = 17
+T_WATER2 = 18
+T_MARSH = 19
+T_ROCK = 20
+T_CAVE0 = 21
+T_CAVE1 = 22
+T_CAVE2 = 23
+T_CAVE3 = 24
+T_DITCH_T = 25
+T_DITCH_B = 26
+T_HOLLOW0 = 27
+T_HOLLOW1 = 28
+T_HOLLOW2 = 29
+T_HOLLOW3 = 30
+T_BOULDER0 = 31
+T_BOULDER1 = 32
+T_BOULDER2 = 33
+T_BOULDER3 = 34
+T_HOUSE0 = 35
+T_HOUSE1 = 36
+T_HOUSE2 = 37
+T_HOUSE3 = 38
+T_LOG = 39
+T_LOG_CROWN = 40
+T_LOG_ROOTS = 41
+T_PLANK = 42
+T_STAKE = 43
+T_LEAVES = 44
 
 .data
 ; bubble font, 1 bit per pixel (bit 7 = leftmost), 8 bytes per glyph
@@ -140,6 +142,26 @@ tiles_top:
 ........
 ...5....
 ..5.5.5.
+...555..
+....5...
+........
+........
+; tuft_r
+.sprite
+........
+........
+.....5..
+...55.5.
+..555...
+...5....
+........
+........
+; tuft_l
+.sprite
+........
+........
+..5.....
+.5.55...
 ...555..
 ....5...
 ........
@@ -558,29 +580,29 @@ E9499E94
 ; cell patterns: 16 tile indices per cell type (4 rows of 4); the variant bit swaps rows 0-1 with 2-3
 patterns:
     .byte 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1   ; . OPEN
-    .byte 3, 4, 2, 2, 5, 6, 2, 2, 2, 2, 3, 4, 2, 2, 5, 6   ; T FOREST
-    .byte 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11   ; # DENSE
-    .byte 2, 2, 2, 2, 12, 12, 12, 12, 2, 2, 2, 2, 2, 2, 2, 2   ; = PATH_EW
-    .byte 2, 13, 2, 2, 2, 13, 2, 2, 2, 13, 2, 2, 2, 13, 2, 2   ; | PATH_NS
-    .byte 2, 13, 2, 2, 12, 14, 12, 12, 2, 13, 2, 2, 2, 13, 2, 2   ; + PATH_X
-    .byte 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17   ; ~ MARSH
-    .byte 15, 16, 15, 16, 16, 15, 16, 15, 15, 16, 15, 16, 16, 15, 16, 15   ; W WATER
-    .byte 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18   ; ^ HILL
-    .byte 0, 1, 0, 0, 23, 23, 23, 23, 24, 24, 24, 24, 0, 0, 1, 0   ; v DITCH
-    .byte 0, 0, 0, 1, 0, 25, 26, 0, 0, 27, 28, 0, 1, 0, 0, 0   ; u HOLLOW
-    .byte 0, 0, 0, 0, 0, 33, 34, 0, 0, 35, 36, 0, 0, 0, 1, 0   ; H HOUSE
-    .byte 1, 0, 0, 0, 0, 29, 30, 0, 0, 31, 32, 0, 0, 0, 0, 1   ; o BOULDER
-    .byte 0, 0, 0, 0, 38, 37, 37, 39, 0, 0, 0, 0, 0, 1, 0, 0   ; L FALLEN
-    .byte 15, 16, 15, 16, 40, 40, 40, 40, 15, 16, 15, 16, 16, 15, 16, 15   ; b BRIDGE
-    .byte 0, 0, 0, 0, 0, 41, 0, 41, 0, 0, 0, 0, 0, 41, 0, 41   ; B BUILD
-    .byte 18, 18, 18, 18, 18, 19, 20, 18, 18, 21, 22, 18, 18, 18, 18, 18   ; G CAVE
+    .byte 5, 6, 4, 4, 7, 8, 4, 4, 4, 4, 5, 6, 4, 4, 7, 8   ; T FOREST
+    .byte 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13   ; # DENSE
+    .byte 4, 4, 4, 4, 14, 14, 14, 14, 4, 4, 4, 4, 4, 4, 4, 4   ; = PATH_EW
+    .byte 4, 15, 4, 4, 4, 15, 4, 4, 4, 15, 4, 4, 4, 15, 4, 4   ; | PATH_NS
+    .byte 4, 15, 4, 4, 14, 16, 14, 14, 4, 15, 4, 4, 4, 15, 4, 4   ; + PATH_X
+    .byte 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19   ; ~ MARSH
+    .byte 17, 18, 17, 18, 18, 17, 18, 17, 17, 18, 17, 18, 18, 17, 18, 17   ; W WATER
+    .byte 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20   ; ^ HILL
+    .byte 0, 1, 0, 0, 25, 25, 25, 25, 26, 26, 26, 26, 0, 0, 1, 0   ; v DITCH
+    .byte 0, 0, 0, 1, 0, 27, 28, 0, 0, 29, 30, 0, 1, 0, 0, 0   ; u HOLLOW
+    .byte 0, 0, 0, 0, 0, 35, 36, 0, 0, 37, 38, 0, 0, 0, 1, 0   ; H HOUSE
+    .byte 1, 0, 0, 0, 0, 31, 32, 0, 0, 33, 34, 0, 0, 0, 0, 1   ; o BOULDER
+    .byte 0, 0, 0, 0, 40, 39, 39, 41, 0, 0, 0, 0, 0, 1, 0, 0   ; L FALLEN
+    .byte 17, 18, 17, 18, 42, 42, 42, 42, 17, 18, 17, 18, 18, 17, 18, 17   ; b BRIDGE
+    .byte 0, 0, 0, 0, 0, 43, 0, 43, 0, 0, 0, 0, 0, 43, 0, 43   ; B BUILD
+    .byte 20, 20, 20, 20, 20, 21, 22, 20, 20, 23, 24, 20, 20, 20, 20, 20   ; G CAVE
     .byte 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0   ; S START
     .byte 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0   ; M GOAL
-    .byte 0, 0, 0, 0, 0, 7, 8, 0, 0, 9, 10, 0, 0, 0, 0, 0   ; i LONE_TREE
-    .byte 0, 0, 0, 0, 38, 37, 37, 39, 39, 37, 37, 38, 0, 1, 0, 0   ; X WINDFALL
+    .byte 0, 0, 0, 0, 0, 9, 10, 0, 0, 11, 12, 0, 0, 0, 0, 0   ; i LONE_TREE
+    .byte 0, 0, 0, 0, 40, 39, 39, 41, 41, 39, 39, 40, 0, 1, 0, 0   ; X WINDFALL
 
 ; per cell type: walking speed (1/16 px per frame, 0 = blocking), map fill colour, map symbol
-cell_speed: .byte 16, 14, 8, 20, 20, 20, 10, 0, 0, 12, 14, 0, 16, 12, 16, 16, 0, 16, 16, 16, 0
+cell_speed: .byte 16, 14, 8, 20, 20, 20, 10, 0, 0, 12, 14, 16, 16, 12, 16, 16, 0, 16, 16, 16, 0
 map_fill:   .byte 14, 15, 11, 15, 15, 15, 15, 8, 15, 14, 14, 14, 14, 14, 8, 14, 15, 14, 14, 14, 15
 map_sym:    .byte 0, 0, 0, 1, 2, 3, 4, 0, 5, 6, 7, 8, 9, 10, 11, 14, 12, 0, 0, 13, 10
 
@@ -674,6 +696,36 @@ spr_body_rt1:
 ...22...
 ...22...
 ...FF...
+........
+spr_crouch_head:
+.sprite
+..4444..
+.444444.
+.4CCCC4.
+.C0CC0C.
+.CCCCCC.
+.299992.
+C299992C
+22999922
+spr_crouch_body:
+.sprite
+.222222.
+.22..22.
+.FF..FF.
+........
+........
+........
+........
+........
+spr_shadow:
+.sprite
+........
+........
+........
+..3333..
+.333333.
+..3333..
+........
 ........
 spr_flag:
 .sprite

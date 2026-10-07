@@ -1,4 +1,4 @@
-# 1-1 Skogsstarten (DESIGN.md §13). The whirlwind, its waypoints and cell changes come in M27.
+# 1-1 Skogsstarten (DESIGN.md §13).
 name: 1-1 SKOGSSTARTEN
 world: 1
 cells:
@@ -24,3 +24,8 @@ controls:
 4 O 10 7
 5 H 21 8
 leaves: 21 8
+whirl: 3              # after control 3: across the field west to east; the spruce falls over the brook (a bridge)
+wp 7 7 3 8 0
+wp 20 7 3 8 60
+change 1 20 7 L
+reveal 1 21 8

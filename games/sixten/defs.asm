@@ -44,6 +44,38 @@ FACE_LT  = 3
 HEARTS   = 5
 PW_NONE  = 0
 PW_CUCUMBER = 1
+PW_CHIPS = 2
+PW_CHOCOLATE = 3
+
+; the whirlwind (DESIGN §6); WARN_FRAMES, STEP_FRAMES, TURN_FRAMES come from levels.gen.asm
+WH_NONE  = 0
+WH_WARN  = 1                ; phases 1-2: clouds and wind, strength 0
+WH_ACTIVE = 2               ; it grows, moves along its legs, waits at waypoints
+WH_DYING = 3                ; phase 6: one strength step down per STEP_FRAMES
+DANGER_S = 3                ; strength from which it hurts inside its radius
+EXPO_FRAMES = 20            ; frames inside the radius, unsheltered, before AJ!
+BRANCH_FRAMES = 60          ; a branch's shadow shows this long before it falls (forest, wind >= 3)
+STILL_CROUCH = 30           ; frames standing still in shelter before Sixten crouches
+INV_FRAMES = 120            ; after AJ!
+N_PART   = 24
+; whirlwind record (8 B), waypoint record (WP_REC B), change (4 B)
+WR_TRIG  = 0
+WR_NWP   = 1
+WR_NCHG  = 2
+WR_WPS   = 4
+WR_CHG   = 6
+WP_X     = 0
+WP_Y     = 2
+WP_S     = 4
+WP_DIR   = 5
+WP_WAIT  = 6
+WP_N     = 8
+WP_QX    = 10
+WP_QY    = 12
+WP_RX    = 14
+WP_RY    = 16
+WP_SX    = 18
+WP_SY    = 19
 
 ; level record (levels.gen.asm)
 LR_HI    = 0
@@ -58,11 +90,15 @@ LR_NCTRL = 10
 LR_WORLD = 11
 LR_NAME  = 12
 LR_CTRLS = 14
+LR_WHIRLS = 16
+LR_NWHIRL = 18
 
 ; ---- sound -----------------------------------------------------------------------------------
 .sfx SFX_BIP, 0, 1760, 6, 10
 .sfx SFX_MAP, 2, 900, 4, 5
 .sfx SFX_COURSE, 1, 1320, 5, 8, -40
+.sfx SFX_AJ, 0, 660, 12, 12, -30
+.sfx SFX_CHANGE, 2, 300, 20, 10, -8
 
 ; ---- RAM -------------------------------------------------------------------------------------
 .var mode
@@ -127,6 +163,42 @@ LR_CTRLS = 14
 .var circ_r
 .var circ_col
 .var tmp0
+.var stamp_k                        ; stamp: the control just stamped + 1
+.var last_cell                      ; where AJ! puts him back: the last stamped control (or the start)
+.var still_t                        ; frames standing still
+.var sheltered                      ; 1 = standing still in a shelter cell (ditch, hollow, cabin)
+.var danger                         ; 1 = inside the radius of a whirlwind of strength >= DANGER_S
+.var expo                           ; frames in danger without shelter
+.var branch_t                       ; frames under a falling branch (forest, wind >= 3)
+.var inv_t                          ; frames of safety after AJ!
+.var n_aj                           ; AJ! count (tests)
+.var wh_state
+.var wh_idx                         ; which whirlwind of the level
+.var wh_wps                         ; its waypoints
+.var wh_chg                         ; its changes
+.var wh_nchg
+.var wh_t                           ; its own clock: frames since its trigger (the map pauses it)
+.var wh_x                           ; centre (foot), 1/16 px
+.var wh_y
+.var wh_ex                          ; remainders of the leg's steps
+.var wh_ey
+.var wh_s                           ; strength 0-5
+.var wh_st                          ; frames since the last strength step
+.var wh_wp                          ; the waypoint it left or waits at
+.var wh_leg                         ; frames left on the leg (0 = at a waypoint)
+.var wh_wait                        ; frames left waiting
+.var wh_wind                        ; the wind's direction (16ths of a turn, 0 = east, 4 = north)
+.var wh_pending                     ; bit k: whirlwind k triggered, waiting for its turn
+.var wh_started                     ; bit k: whirlwind k has started
+.var wh_dirty                       ; a cell changed: expand the view again
+.var bend_on                        ; grass bends towards the whirlwind (strength >= 2)
+.var bend_prev
+.var dt_x                           ; draw_tromb arguments
+.var dt_y
+.var dt_s
+.var dt_l
+.var part_x, N_PART * 2
+.var part_y, N_PART * 2
 .var strbuf, 6
 ; test hooks (as BLACKBOX and Bo): written by tests and tools, read once per frame
 .var dbg_level                      ; n + 1: start level n

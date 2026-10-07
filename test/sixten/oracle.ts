@@ -44,26 +44,35 @@ export const typeOf = (ch: string) => {
 const VARIES = new Set(['.', 'T']);
 
 // ---- the .map sources ------------------------------------------------------------------------------------
-export interface RefLevel { id: string; name: string; rows: string[]; w: number; h: number; controls: { kind: string; c: number; r: number }[]; leaves: Set<string> }
+export interface RefWhirl { trigger: number; wps: { c: number; r: number; s: number; v: number; wait: number }[]; changes: { wp: number; c: number; r: number; ch?: string; reveal?: boolean }[] }
+export interface RefLevel { id: string; name: string; rows: string[]; w: number; h: number; controls: { kind: string; c: number; r: number }[]; leaves: Set<string>; whirls: RefWhirl[] }
 export function levelIds(): string[] {
   const ids = readdirSync(join(GAME_DIR, 'levels')).filter((f) => f.endsWith('.map')).map((f) => f.slice(0, -4));
   return [...ids.filter((i) => !i.startsWith('T')).sort(), ...ids.filter((i) => i.startsWith('T')).sort()];
 }
 export function readLevel(id: string): RefLevel {
-  const L: RefLevel = { id, name: '', rows: [], w: 0, h: 0, controls: [], leaves: new Set() };
+  const L: RefLevel = { id, name: '', rows: [], w: 0, h: 0, controls: [], leaves: new Set(), whirls: [] };
   let section = '';
   for (const raw of readFileSync(join(GAME_DIR, 'levels', `${id}.map`), 'utf8').split(/\r?\n/)) {
-    const line = raw.trimEnd();
+    const line = (section === 'cells' ? raw : raw.split('#')[0]!).trimEnd();
     if (!line) continue;
-    if (section !== 'cells' && line.startsWith('#')) continue;
-    const m = /^(name|world|cells|controls|leaves):\s*(.*)$/.exec(line);
+    const m = /^(name|world|cells|controls|leaves|whirl):\s*(.*)$/.exec(line);
     if (m) {
       if (m[1] === 'name') L.name = m[2]!;
       if (m[1] === 'leaves') {
         const n = m[2]!.split(/\s+/).map(Number);
         for (let i = 0; i < n.length; i += 2) L.leaves.add(`${n[i]},${n[i + 1]}`);
       }
+      if (m[1] === 'whirl') L.whirls.push({ trigger: Number(m[2]), wps: [], changes: [] });
       section = m[1]!;
+      continue;
+    }
+    if (section === 'whirl') {
+      const [k, ...n] = line.trim().split(/\s+/);
+      const w = L.whirls[L.whirls.length - 1]!;
+      if (k === 'wp') w.wps.push({ c: Number(n[0]), r: Number(n[1]), s: Number(n[2]), v: Number(n[3]), wait: Number(n[4]) });
+      if (k === 'change') w.changes.push({ wp: Number(n[0]), c: Number(n[1]), r: Number(n[2]), ch: n[3] });
+      if (k === 'reveal') w.changes.push({ wp: Number(n[0]), c: Number(n[1]), r: Number(n[2]), reveal: true });
       continue;
     }
     if (section === 'cells') L.rows.push(line);

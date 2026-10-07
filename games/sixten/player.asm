@@ -12,6 +12,12 @@ play_frame:
 @walk:
     CALL player_move
     CALL player_cell
+    CALL whirl_update
+    CALL player_hazard
+    CALL whirl_sound
+    LD r0, [mode]                   ; AJ! may have started the level again
+    CMP r0, M_PLAY
+    JNE @draw
     LD r0, [px]
     SHR r0, 11
     LD r1, [py]
@@ -22,9 +28,12 @@ play_frame:
     JNE @slide
     LD r2, [scr_r]
     CMP r1, r2
-    JEQ @draw
+    JEQ @same
 @slide:
     CALL slide_start
+    JMP @draw
+@same:
+    CALL whirl_view
 @draw:
     CALL draw_world
     RET
@@ -263,8 +272,10 @@ player_cell:
     ST [you_here], r1
     RET
 
-; r0 = cell index of a control: stamp it (once)
+; r0 = cell index of a control: stamp it (once); AJ! comes back here; it may start a whirlwind
 stamp:
+    LDI r1, 0
+    ST [stamp_k], r1
     MOV r5, r0
     LD r6, [lv_ptr]
     LDB r7, [r6 + LR_NCTRL]
@@ -289,6 +300,10 @@ stamp:
     LD r2, [n_stamped]
     ADD r2, 1
     ST [n_stamped], r2
+    ST [last_cell], r5
+    MOV r0, r4
+    ADD r0, 1
+    ST [stamp_k], r0
     LDI r0, SFX_BIP
     SYS SFX
 @next:
@@ -296,10 +311,28 @@ stamp:
     ADD r4, 1
     CMP r4, r7
     JLT @k
+    LD r4, [stamp_k]
+    CMP r4, 0
+    JEQ @done
+    SUB r4, 1
+    CALL whirl_trigger
+@done:
     RET
 
-; Sixten: head + body, the body alternates while he walks; facing left = facing right flipped
+; Sixten: head + body, the body alternates while he walks; facing left = facing right flipped. Inside the cabin he
+; is not seen; in shelter he crouches; after AJ! he blinks; a falling branch's shadow grows over him.
 draw_sixten:
+    LD r0, [inv_t]
+    AND r0, 4
+    JNZ @gone
+    LD r0, [cell_i]
+    LDB r0, [r0 + cells]
+    AND r0, 31
+    CMP r0, CT_HOUSE
+    JNE @shown
+@gone:
+    RET
+@shown:
     LD r6, [face]
     LD r1, [px]
     SHR r1, 4
@@ -311,6 +344,33 @@ draw_sixten:
     LD r0, [camy]
     SUB r2, r0
     ADD r2, PLAY_Y - 15
+    LD r0, [branch_t]               ; the branch's shadow at his feet
+    CMP r0, 0
+    JEQ @noshadow
+    PUSH r1
+    PUSH r2
+    LDI r0, spr_shadow
+    ADD r2, 10
+    LDI r3, 0
+    SYS SPR
+    POP r2
+    POP r1
+@noshadow:
+    LD r0, [sheltered]
+    CMP r0, 0
+    JEQ @upright
+    LD r0, [still_t]
+    CMP r0, STILL_CROUCH
+    JB @upright
+    LDI r0, spr_crouch_head
+    ADD r2, 4
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_crouch_body
+    ADD r2, 8
+    SYS SPR
+    RET
+@upright:
     LDI r3, 0
     CMP r6, FACE_LT
     JNE @flip

@@ -10,6 +10,10 @@
 //   controls:                       number, kind (O obligatory, F optional, H hidden), column, row
 //   1 O 6 13
 //   leaves: 21 8                    cells covered by leaves (bit 6)
+//   whirl: 3                        a whirlwind, started when control 3 is stamped (DESIGN §6); then:
+//   wp 7 7 3 8 0                    waypoints: column, row, strength 1-5, speed (1/16 px per frame), wait (frames)
+//   change 1 20 7 L                 at waypoint 1 the cell (20, 7) becomes L (within the whirlwind's radius)
+//   reveal 1 21 8                   at waypoint 1 the leaves blow off (21, 8)
 // Run: npx tsx games/sixten/tools/levels.ts (or npm run sixten:gen)
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -23,6 +27,16 @@ export const MAX_H = 15;
 export const CONTROL_KINDS = { O: 0, F: 1, H: 2 } as const;
 
 export interface Control { n: number; kind: keyof typeof CONTROL_KINDS; c: number; r: number }
+export interface Waypoint { c: number; r: number; s: number; v: number; wait: number }
+export interface Change { wp: number; c: number; r: number; ch?: string; reveal?: boolean }
+export interface Whirl { trigger: number; wps: Waypoint[]; changes: Change[] }
+
+/** DESIGN §6: the warning before the whirlwind grows, one strength step per STEP_FRAMES, the wind turns TURN_FRAMES
+ * before every change of direction, the radius in px for a strength */
+export const WARN_FRAMES = 150;
+export const STEP_FRAMES = 60;
+export const TURN_FRAMES = 120;
+export const radius = (s: number) => 24 + 8 * s;
 export interface Level {
   id: string;
   name: string;
@@ -34,6 +48,7 @@ export interface Level {
   leaves: [number, number][];
   start: [number, number];
   goal: [number, number];
+  whirls: Whirl[];
 }
 
 const LEVEL_DIR = join(GAME_DIR, 'levels');
@@ -47,7 +62,7 @@ export function levelIds(): string[] {
 }
 
 export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id}.map`), 'utf8')): Level {
-  const L: Level = { id, name: '', world: 0, w: 0, h: 0, rows: [], controls: [], leaves: [], start: [-1, -1], goal: [-1, -1] };
+  const L: Level = { id, name: '', world: 0, w: 0, h: 0, rows: [], controls: [], leaves: [], start: [-1, -1], goal: [-1, -1], whirls: [] };
   let section = '';
   const fail = (m: string): never => {
     throw new Error(`${id}.map: ${m}`);
@@ -64,7 +79,10 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
         const n = v!.trim().split(/\s+/).map(Number);
         for (let i = 0; i + 1 < n.length; i += 2) L.leaves.push([n[i]!, n[i + 1]!]);
       } else if (k === 'cells' || k === 'controls') section = k;
-      else fail(`unknown key ${k}`);
+      else if (k === 'whirl') {
+        section = 'whirl';
+        L.whirls.push({ trigger: Number(v!.split('#')[0]!.trim()), wps: [], changes: [] });
+      } else fail(`unknown key ${k}`);
       continue;
     }
     if (section === 'cells') L.rows.push(line);
@@ -72,6 +90,13 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
       const m = /^(\d+)\s+([OFH])\s+(\d+)\s+(\d+)$/.exec(line.trim());
       if (!m) fail(`bad control line '${line}'`);
       L.controls.push({ n: Number(m![1]), kind: m![2] as Control['kind'], c: Number(m![3]), r: Number(m![4]) });
+    } else if (section === 'whirl') {
+      const w = L.whirls[L.whirls.length - 1]!;
+      const t = line.split('#')[0]!.trim().split(/\s+/);
+      if (t[0] === 'wp' && t.length === 6) w.wps.push({ c: Number(t[1]), r: Number(t[2]), s: Number(t[3]), v: Number(t[4]), wait: Number(t[5]) });
+      else if (t[0] === 'change' && t.length === 5) w.changes.push({ wp: Number(t[1]), c: Number(t[2]), r: Number(t[3]), ch: t[4] });
+      else if (t[0] === 'reveal' && t.length === 4) w.changes.push({ wp: Number(t[1]), c: Number(t[2]), r: Number(t[3]), reveal: true });
+      else fail(`bad whirl line '${line}'`);
     } else fail(`unexpected line '${line}'`);
   }
   L.h = L.rows.length;
@@ -101,7 +126,93 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
     if (CELLS[CELL_BY_CH.get(L.rows[c.r]![c.c]!)!]!.speed === 0) fail(`control ${c.n} on a blocking cell`);
   });
   for (const [c, r] of L.leaves) if (c >= L.w || r >= L.h) fail(`leaves outside the level at ${c},${r}`);
+  L.whirls.forEach((w, k) => {
+    const where = `whirl ${k + 1}`;
+    if (!L.controls[w.trigger - 1]) fail(`${where}: no control ${w.trigger}`);
+    if (w.wps.length < 2) fail(`${where}: needs two waypoints`);
+    for (const p of w.wps) {
+      if (p.c >= L.w || p.r >= L.h) fail(`${where}: waypoint outside the level`);
+      if (p.s < 1 || p.s > 5 || p.v < 4 || p.v > 32 || p.wait < 0) fail(`${where}: strength 1-5, speed 4-32, wait >= 0`);
+    }
+    const legs = whirlLegs(w);
+    legs.forEach((g, i) => {
+      if (i + 1 < legs.length && legs[i + 1]!.dir !== g.dir && g.n + w.wps[i + 1]!.wait < TURN_FRAMES)
+        fail(`${where}: leg ${i + 1} and the wait after it last ${g.n + w.wps[i + 1]!.wait} frames: the wind needs ${TURN_FRAMES} to turn before the whirlwind does`);
+    });
+    for (const ch of w.changes) {
+      const p = w.wps[ch.wp];
+      if (!p) fail(`${where}: change at waypoint ${ch.wp}, which does not exist`);
+      const d = Math.hypot((ch.c - p!.c) * 32, (ch.r - p!.r) * 32);
+      if (d > radius(p!.s)) fail(`${where}: the change at ${ch.c},${ch.r} is ${d.toFixed(0)} px from waypoint ${ch.wp}, outside its radius ${radius(p!.s)}`);
+      if (ch.ch && !CELL_BY_CH.has(ch.ch)) fail(`${where}: unknown cell '${ch.ch}'`);
+    }
+  });
   return L;
+}
+
+export interface Leg { n: number; dir: number; q: [number, number]; rem: [number, number]; sign: [number, number] }
+/** the legs between waypoints, as the engine steps them: n frames; per frame q (1/16 px) plus one more 1/16 px
+ * whenever the remainder adds up (exact at the end), so no frame moves more than the speed */
+export function whirlLegs(w: Whirl): Leg[] {
+  const legs: Leg[] = [];
+  for (let i = 0; i + 1 < w.wps.length; i++) {
+    const a = w.wps[i]!;
+    const b = w.wps[i + 1]!;
+    const D = [(b.c - a.c) * 32 * 16, (b.r - a.r) * 32 * 16];
+    const sign: [number, number] = [D[0]! < 0 ? -1 : 1, D[1]! < 0 ? -1 : 1];
+    const dir = (Math.round((Math.atan2(-D[1]!, D[0]!) * 8) / Math.PI) + 16) % 16;
+    for (let n = Math.max(1, Math.ceil(Math.hypot(D[0]!, D[1]!) / a.v)); ; n++) {
+      const q: [number, number] = [Math.floor(Math.abs(D[0]!) / n), Math.floor(Math.abs(D[1]!) / n)];
+      const rem: [number, number] = [Math.abs(D[0]!) % n, Math.abs(D[1]!) % n];
+      let ok = true;
+      const e = [0, 0];
+      for (let f = 0; f < n && ok; f++) {
+        const st = [0, 1].map((k) => {
+          e[k]! += rem[k]!;
+          if (e[k]! >= n) {
+            e[k]! -= n;
+            return q[k]! + 1;
+          }
+          return q[k]!;
+        });
+        ok = Math.hypot(st[0]!, st[1]!) <= a.v + 1e-9; // a leg goes at the speed of the waypoint it leaves
+      }
+      if (ok) {
+        legs.push({ n, dir, q, rem, sign });
+        break;
+      }
+    }
+  }
+  return legs;
+}
+
+/** the whirlwinds of a level (DESIGN §6): records of 8 bytes (trigger control index, waypoints, changes, the two
+ * lists), waypoints of 20 bytes (x, y in 1/16 px; strength, direction of the leg leaving it (255 = last); wait;
+ * the leg's frames, q x/y, remainder x/y, sign x/y), changes of 4 bytes (waypoint, new cell byte, cell index) */
+function whirlAsm(L: Level, n: string): string[] {
+  const out = [`whirls_${n}:`];
+  const bytes = cellBytes(L);
+  L.whirls.forEach((w, k) => out.push(`    .byte ${w.trigger - 1}, ${w.wps.length}, ${w.changes.length}, 0`, `    .word wps_${n}_${k}, chg_${n}_${k}`));
+  L.whirls.forEach((w, k) => {
+    const legs = whirlLegs(w);
+    out.push(`wps_${n}_${k}:`);
+    w.wps.forEach((p, i) => {
+      const g = legs[i];
+      out.push(
+        `    .word ${(p.c * 32 + 16) * 16}, ${(p.r * 32 + 16) * 16}`,
+        `    .byte ${p.s}, ${g ? g.dir : 255}`,
+        `    .word ${p.wait}, ${g ? g.n : 0}, ${g ? g.q[0] * g.sign[0] : 0}, ${g ? g.q[1] * g.sign[1] : 0}, ${g ? g.rem[0] : 0}, ${g ? g.rem[1] : 0}`,
+        `    .byte ${g ? g.sign[0] : 1}, ${g ? g.sign[1] : 1}`,
+      );
+    });
+    out.push(`chg_${n}_${k}:`);
+    for (const ch of w.changes) {
+      const i = ch.r * L.w + ch.c;
+      bytes[i] = ch.reveal ? bytes[i]! & ~0x40 : CELL_BY_CH.get(ch.ch!)! | (bytes[i]! & 0xc0);
+      out.push(`    .byte ${ch.wp}, ${bytes[i]}`, `    .word ${i}`);
+    }
+  });
+  return out;
 }
 
 /** the cell bytes of a level, row-major (DESIGN §4.1) */
@@ -125,12 +236,16 @@ export function generateLevels(): { asm: string; levels: Level[] } {
   const out = [
     '; GENERATED by games/sixten/tools/levels.ts from levels/*.map — do not edit.',
     `LEVEL_COUNT = ${levels.length}`,
-    'LV_REC = 16',
+    'LV_REC = 20',
+    'WP_REC = 20',
+    `WARN_FRAMES = ${WARN_FRAMES}`,
+    `STEP_FRAMES = ${STEP_FRAMES}`,
+    `TURN_FRAMES = ${TURN_FRAMES}`,
     ...levels.map((L, i) => `LEVEL_${lab(L.id).toUpperCase()} = ${i}`),
     '',
     '.data',
     '; per level: far address of the packed cell map (hi, lo), width, height, start column/row, goal column/row,',
-    '; control count, world, name, controls (column, row, kind: 0 obligatory, 1 optional, 2 hidden)',
+    '; control count, world, name, controls (column, row, kind: 0 obligatory, 1 optional, 2 hidden), whirlwinds, count',
     'level_table:',
   ];
   for (const L of levels) {
@@ -139,12 +254,15 @@ export function generateLevels(): { asm: string; levels: Level[] } {
       `    .word cells_${n} >> 16, cells_${n} & 0xFFFF`,
       `    .byte ${L.w}, ${L.h}, ${L.start[0]}, ${L.start[1]}, ${L.goal[0]}, ${L.goal[1]}, ${L.controls.length}, ${L.world}`,
       `    .word name_${n}, ctrls_${n}`,
+      `    .word whirls_${n}`,
+      `    .byte ${L.whirls.length}, 0`,
     );
   }
   for (const L of levels) {
     const n = lab(L.id);
     out.push(`name_${n}: .byte ${[...encode(L.name), 255].join(', ')}   ; ${L.name}`);
     out.push(`ctrls_${n}: .byte ${L.controls.map((c) => `${c.c}, ${c.r}, ${CONTROL_KINDS[c.kind]}`).join(', ')}`);
+    out.push(...whirlAsm(L, n));
   }
   out.push('', '.xdata');
   for (const L of levels) {

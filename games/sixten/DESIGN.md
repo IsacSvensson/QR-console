@@ -185,7 +185,7 @@ bit 4..0   typ (32)
 | 8 | `^` | höjd/berg | häll | vit | bruna höjdkurvor | – | går inte. Farlig vid åska |
 | 9 | `v` | dike | dike | gul | blått streck | 0,75 | **skydd** (tromb) |
 | 10 | `u` | sänka | skål | gul | brunt u | 0,875 | **skydd** (tromb, åska) |
-| 11 | `H` | byggnad (fast) | röd stuga | gul | svart ruta | – | **skydd** (bäst). Går inte igenom |
+| 11 | `H` | byggnad (fast) | röd stuga | gul | svart ruta | 1 | går in (Sixten syns inte där inne): **skydd** (bäst) |
 | 12 | `o` | stort block | sten | gul | svart prick | 1 | lä mot vind 1–2. **Inte skydd** mot tromb |
 | 13 | `L` | fallet träd | stam, krona, rot | gul | svart kryss | 0,75 | går (på stammen): en bro när tromben passerat (§6.4) |
 | 14 | `b` | bro/plankor | plankor över vatten | blå | svarta streck | 1 | går |
@@ -241,10 +241,13 @@ skriver en förhandsbild (`levels/1-1.png`: uppifrån och kartan bredvid varandr
 
 ### 6.1 Objektet
 
-En tromb är ett objekt med 16 byte i RAM (högst två per bana samtidigt): `x, y` (12.4-fixpunkt, px), `riktning`
-(16-dels varv), `fart` (px per bildruta i 1/16), `radie` (px), `styrka` (1–5), `fas` (rotation), `tid kvar`,
-`vägpunkt`, `fas-tillstånd`. Banfilen ger en lista med vägpunkter: *(cell, styrka, fart, väntetid)*. Tromben går
-rakt mot nästa vägpunkt. Styrkan ändras gradvis mellan vägpunkterna (en nivå per sekund, aldrig mer).
+En tromb är ett objekt i RAM: läge (1/16 px), styrka 0–5, vägpunkt, bildrutor kvar på sträckan, väntetid,
+vindriktning (16-dels varv) och en egen klocka. Banfilen ger dess vägpunkter: *(cell, styrka, fart i 1/16 px per
+bildruta, väntetid)* och vilken kontroll som startar den (`whirl:` i `.map`, §4.2). Tromben går rakt mot nästa
+vägpunkt. Generatorn räknar varje sträcka som heltalssteg (Bresenham): exakt framme vid vägpunkten och aldrig mer än
+farten på en bildruta. Styrkan ändras ett steg per sekund (60 bildrutor), aldrig mer. Radien är 24 + 8 × styrka px.
+En tromb i taget (M27): startas en till medan en är aktiv väntar den på sin tur. Banorna har hittills bara en åt
+gången.
 
 **Ingen slump.** Allt är en funktion av vägpunkterna och tiden sedan tromben startade. Den startar på en händelse i
 banan (Sixten stämplar kontroll n, eller går in i en viss cell). Två körningar med olika RNG-frö ger exakt samma
@@ -262,7 +265,9 @@ trombtillstånd i varje bildruta. Tromben **följer aldrig Sixten** och vet inte
 | 6. Dör ut | styrkan sjunker, vinden mojnar, det blir tyst | nej |
 
 **Förvarningsregeln (testas):** från första varningssignalen (fas 1) till att styrkan blir ≥ 3 någonstans på den
-skärm där Sixten står går **minst N = 5 s (300 bildrutor)**. Innan tromben svänger mot en ny vägpunkt vänder vinden
+skärm där Sixten står går **minst N = 5 s (300 bildrutor)**. Motorn: varningen (fas 1–2, styrka 0, vind och löv)
+varar 150 bildrutor, sedan ett styrkesteg per 60, så styrka 3 kommer tidigast 330 bildrutor efter starten. Kartan
+pausar tromben. Skärmbyten gör det inte. Innan tromben svänger mot en ny vägpunkt vänder vinden
 (gräset, löven) **minst 2 s** före. "Jag kunde ha sett det." Utkastets "får inte teleportera" blir testregeln: ingen
 förflyttning per bildruta är större än farten.
 
@@ -273,7 +278,7 @@ förflyttning per bildruta är större än farten.
 | 1 | löv flyger | låg tunn virvel (5 lager), dammring, gula och orange löv |
 | 2 | gräs böjer sig | högre (7 lager), gräset på skärmen böjer sig mot den |
 | 3 | små föremål flyger | 9 lager, pinnar i luften |
-| 4 | träd rör sig | 11 lager, kvistar. Träd på skärmen gungar (tile-växling) |
+| 4 | träd rör sig | 11 lager, kvistar. (Att träden på skärmen gungar, med tile-växling, är inte gjort än) |
 | 5 | stora objekt påverkas | 13 lager, brett moln, plankor i luften |
 
 Varje virvel är 3 + 2 × styrka lager med 4 px mellan, halvbredd 1 + i²/12. Ett mörkt band snurrar runt (rotationen),
@@ -296,15 +301,17 @@ och bara inom dess radie. Det kontrolleras av generatorn och testerna. Exempel:
 | `o` block framför berget | `.` + `G` grotta | en sten flyttas och visar en grotta |
 | stig `=` | `X` vindfälle | stigen blockeras: välj en annan väg |
 
-Kartan ritar om cellen direkt (beslut 2). Nästa gång kartan öppnas blinkar den ändrade cellen en gång.
+Kartan ritar om cellen direkt (beslut 2). (Att den ändrade cellen blinkar en gång nästa gång kartan öppnas kommer
+med M29.)
 
 ### 6.5 Skydd och skada
 
 - **Skada:** inom trombens radie vid styrka ≥ 3, om Sixten *inte* står stilla i en skyddscell (dike, sänka,
-  byggnad): `AJ!`, ett hjärta, tillbaka till senaste kontrollen. I skog inom radien vid vind ≥ 3: en fallande gren (med
-  skugga 1 s innan) ger `AJ!`. Öppen mark: vinden knuffar Sixten (kraft) men gör inte illa utanför radien.
-- **Skydd:** står still i en skyddscell. Efter 0,5 s hukar Sixten, partiklarna når inte in, och vindljudet blir
-  dovt. Det syns utan text (utkastets "här blåser det mindre").
+  stugan): efter 20 bildrutor `AJ!`, ett hjärta, tillbaka till senaste stämplade kontrollen (2 s utan ny skada). I
+  skog inom radien + 64 px vid styrka ≥ 3: en grens skugga växer under honom i 1 s, sedan `AJ!`. Utan hjärtan börjar
+  banan om. (Att vinden knuffar Sixten på öppen mark är inte gjort än: i sidovyn kommer kraften med M28.)
+- **Skydd:** står still i en skyddscell. Efter 0,5 s hukar Sixten och vindljudet blir dovt. I stugan syns han inte
+  alls. Det syns utan text (utkastets "här blåser det mindre").
 - **Lä (vind 1–2, sidovy):** bakom ett block, en vägg eller dikeskanten sett från vinden. Vinden knuffar inte.
 
 ## 7. Världar, banor och fenomen

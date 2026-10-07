@@ -6,6 +6,22 @@ export interface Route {
   run: (bot: Bot) => void;
 }
 
+/** wait (standing still) until the whirlwind is gone */
+function waitOut(bot: Bot) {
+  for (let guard = 0; bot.u('wh_state') !== 0 || bot.u('wh_pending') !== 0; guard++) {
+    if (guard > 6000) throw new Error('the whirlwind never ended');
+    bot.step(0);
+  }
+}
+
+/** T3: stamp control k (it starts whirlwind k), go and stand on (c, r), stay until it is gone */
+function weather(bot: Bot, k: number, c: number, r: number) {
+  const ctrl = [[2, 12], [5, 12], [8, 12], [11, 12], [14, 12]][k - 1]!;
+  bot.walkTo(ctrl[0]!, ctrl[1]!);
+  bot.walkTo(c, r);
+  waitOut(bot);
+}
+
 /** hold a direction until the feet are on column c (moving horizontally), then centre in the cell */
 function runTo(bot: Bot, c: number) {
   bot.walkToPoint(c * 32 + 16, bot.y);
@@ -101,6 +117,38 @@ export const ROUTES: Record<string, Route> = {
       bot.wait(30);
       bot.closeMap();
       bot.wait(10);
+    },
+  },
+  // T3: all five whirlwinds, watched from the safe row 12 (the strengths, the turn of whirlwind 2, the diagonal)
+  'm27-strengths': {
+    seed: 1,
+    run(bot) {
+      bot.startLevel('T3');
+      for (let k = 1; k <= 5; k++) weather(bot, k, [2, 5, 8, 11, 14][k - 1]!, 13);
+      bot.wait(20);
+    },
+  },
+  // T3: whirlwind 3 (strength 3) passes while Sixten stands still in a shelter: the ditch, the hollow, the cabin
+  'm27-ditch': { seed: 1, run: (bot) => (bot.startLevel('T3'), weather(bot, 3, 10, 7), bot.wait(20)) },
+  'm27-hollow': { seed: 1, run: (bot) => (bot.startLevel('T3'), weather(bot, 3, 13, 7), bot.wait(20)) },
+  'm27-cabin': { seed: 1, run: (bot) => (bot.startLevel('T3'), weather(bot, 3, 15, 7), bot.wait(20)) },
+  // T3: the same whirlwind, Sixten in the forest or on open land inside its radius: AJ! and back to control 3
+  'm27-forest': { seed: 1, run: (bot) => (bot.startLevel('T3'), weather(bot, 3, 6, 7), bot.wait(20)) },
+  'm27-open': { seed: 1, run: (bot) => (bot.startLevel('T3'), weather(bot, 3, 20, 7), bot.wait(20)) },
+  // 1-1: control 3 starts the whirlwind; Sixten waits by the lake until it has passed and the spruce lies over the
+  // brook, then walks over it to the revealed control 5
+  'm27-11': {
+    seed: 1,
+    run(bot) {
+      bot.startLevel('1-1');
+      bot.walkTo(6, 13);
+      bot.walkTo(14, 6);
+      bot.walkTo(19, 3);
+      waitOut(bot);
+      bot.level.rows[7] = bot.level.rows[7]!.slice(0, 20) + 'L' + bot.level.rows[7]!.slice(21); // the bridge
+      bot.walkTo(10, 7);
+      bot.walkTo(21, 8);
+      bot.wait(20);
     },
   },
 };

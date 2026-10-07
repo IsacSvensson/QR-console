@@ -76,6 +76,7 @@ debug_hooks:
 .include "mapscr.asm"
 .include "draw.asm"
 .include "card.asm"
+.include "whirl.asm"
 
 .data
 mode_table: .word play_frame, slide_frame, map_frame, card_frame

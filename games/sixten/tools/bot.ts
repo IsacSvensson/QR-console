@@ -98,6 +98,8 @@ export class Bot {
       for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
         const n: [number, number] = [c + dc, r + dr];
         if (!this.walkable(...n) || prev.has(key(...n))) continue;
+        // never through another control: stamping it could start a whirlwind the route did not ask for
+        if (L.controls.some((k) => k.c === n[0] && k.r === n[1]) && (n[0] !== to[0] || n[1] !== to[1])) continue;
         prev.set(key(...n), key(c, r));
         q.push(n);
       }

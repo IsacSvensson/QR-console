@@ -825,3 +825,42 @@ Measurement: ROM 9 078 B (code 5 988, data 3 065, sound 25), xdata 519 B, cartri
 frames), m26-t2 (7 417, all 30 screens, all four slide directions) and m26-11 (1 384): max 13 613 cycles per frame,
 0 overruns. Speeds measured from the replays equal DESIGN §4.1 exactly (e.g. path 40 px and dense forest 16 px in 32
 frames).
+
+## D-042 - Sixten's whirlwind and wind (M27)
+Date: 2026-10-07 - Milestone: M27
+Decision:
+- **Data, not behaviour**: a level's whirlwinds are `whirl:` blocks in its `.map` (the control that starts it,
+  waypoints with strength, speed and wait, cell changes and revealed leaves per waypoint). The generator turns every
+  leg into exact integer steps (q per frame plus a Bresenham remainder, 1/16 px): the whirlwind arrives exactly on
+  the waypoint and no frame moves more than the leg's speed (the generator simulates each leg and lengthens it
+  until that holds). It refuses a change outside the waypoint's radius and a turn that leaves the wind less than
+  TURN_FRAMES (120) to turn first.
+- **The engine never reads Sixten's position or RND for the whirlwind.** Phases: WARN 150 frames (strength 0: wind
+  particles and leaves, its sound), ACTIVE (one strength step per 60 frames towards the waypoint it waits at or goes
+  to; legs; cell changes on arrival), DYING (one step down per 60 frames). Strength 3 comes 330 frames after the
+  trigger at the earliest (PLAN asks >= 300). Its own clock runs in play and slide frames; the map pauses it.
+- **One whirlwind at a time**: a second one triggered while one runs waits its turn (the records allow more; no
+  level needs two at once yet).
+- **Hazard rules (DESIGN 6.5)**: radius 24 + 8 x strength; inside it at strength >= 3 and not standing still in a
+  ditch, hollow or the cabin: AJ! after 20 frames (debris); in forest within radius + 64 px a branch's shadow grows
+  for 60 frames, then AJ!; AJ! = one heart, back to the last stamped control (or the start), 120 frames of safety;
+  no hearts = the level starts again. Chocolate does not protect (tested with hooks; power-up pickups are M29).
+- **The cabin is entered** (speed 1; Sixten is not drawn inside): "a solid building" has to be somewhere one can be.
+  DESIGN 4.1 changed.
+- **What it looks like**: the mockup's funnel (layers, turning band, dust ring, debris by strength); wind particles
+  (4 + 4 x strength) drift with the wind direction at 2 + strength px per frame, so the wind shows where it goes;
+  tufts within 2 x radius bend towards it from strength 2 (the screen is expanded again every 8 frames while it is
+  near, and once when it leaves); noise on channel 2 every 16 frames, louder with strength, halved in shelter.
+- **Not done yet** (recorded in DESIGN): the wind pushing Sixten on open land top-down (the side view's horizontal
+  force comes in M28), trees swaying at strength 4, the changed cell blinking on the next map (M29).
+- **The bot** never paths through a control that is not its target (stamping it would start an unasked-for
+  whirlwind). The M26 tests now read the cell under Sixten live from RAM (whirlwinds change cells; whirl.test.ts
+  checks that they change only as the `.map` lists).
+- **Levels**: T3 (five whirlwinds of strength 1-5 on row 7: open land, forest, ditch, hollow, cabin; whirlwind 2
+  turns north, 5 goes diagonally); 1-1's whirlwind from DESIGN 13 (after control 3, across the field; the spruce
+  falls over the brook and the leaves blow off control 5).
+Measurement: ROM 13 019 B (code 9 336, data 3 642, sound 41), xdata 582 B, cartridge 7 293 B; 10 replays, max 19 716 cycles per frame (a frame with
+the funnel, 24 particles and a screen expansion), 0 overruns. All M27 checks pass: the same whirlwind state for
+seeds 1 and 777 and along six different routes (by its own clock); warning >= 300 frames for every whirlwind of
+every level; the wind turned 120 frames before the one turn; every step <= its speed; cells changed only at
+waypoints within the radius; shelter (ditch, hollow, cabin) keeps all hearts, forest and open land cost one.

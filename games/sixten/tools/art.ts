@@ -96,6 +96,7 @@ const draw = (w: number, h: number, f: (x: number, y: number) => string): Art =>
   Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => f(x, y)).join(''));
 
 const TUFT: Art = ['........', '........', '...5....', '..5.5.5.', '...555..', '....5...', '........', '........'];
+const TUFT_R: Art = ['........', '........', '.....5..', '...55.5.', '..555...', '...5....', '........', '........'];
 const FLOOR: Art = ['44544444', '4B444474', '44445444', '74444454', '44544B44', '44444447', '45474444', '44444544'];
 const SPRUCE: Art = [
   '4444445555444444',
@@ -170,6 +171,8 @@ const LEAVES: Art = ['..9.E...', '.99E94..', '9E949E9.', 'E9499E94', '.94E99E.',
 /** top-down tiles in order; index = position + 1 (tile 0 = empty: the open-ground CLS colour) */
 export const TOP_TILES: [string, Art][] = [
   ['tuft', TUFT],
+  ['tuft_r', TUFT_R],
+  ['tuft_l', mirror(TUFT_R)],
   ['floor', FLOOR],
   ...split(SPRUCE).map((a, i): [string, Art] => [`spruce${i}`, a]),
   ...split(LONE_SPRUCE).map((a, i): [string, Art] => [`lone${i}`, a]),
@@ -227,7 +230,7 @@ export const CELLS: CellType[] = [
   { ch: '^', name: 'HILL', pattern: 'rock rock rock rock / rock rock rock rock / rock rock rock rock / rock rock rock rock', fill: 15, sym: 5, speed: 0 },
   { ch: 'v', name: 'DITCH', pattern: '_ tuft _ _ / ditch_t ditch_t ditch_t ditch_t / ditch_b ditch_b ditch_b ditch_b / _ _ tuft _', fill: 14, sym: 6, speed: 12 },
   { ch: 'u', name: 'HOLLOW', pattern: '_ _ _ tuft / _ hollow0 hollow1 _ / _ hollow2 hollow3 _ / tuft _ _ _', fill: 14, sym: 7, speed: 14 },
-  { ch: 'H', name: 'HOUSE', pattern: '_ _ _ _ / _ house0 house1 _ / _ house2 house3 _ / _ _ tuft _', fill: 14, sym: 8, speed: 0 },
+  { ch: 'H', name: 'HOUSE', pattern: '_ _ _ _ / _ house0 house1 _ / _ house2 house3 _ / _ _ tuft _', fill: 14, sym: 8, speed: 16 },
   { ch: 'o', name: 'BOULDER', pattern: 'tuft _ _ _ / _ boulder0 boulder1 _ / _ boulder2 boulder3 _ / _ _ _ tuft', fill: 14, sym: 9, speed: 16 },
   { ch: 'L', name: 'FALLEN', pattern: '_ _ _ _ / log_crown log log log_roots / _ _ _ _ / _ tuft _ _', fill: 14, sym: 10, speed: 12 },
   { ch: 'b', name: 'BRIDGE', pattern: 'water water2 water water2 / plank plank plank plank / water water2 water water2 / water2 water water2 water', fill: 8, sym: 11, speed: 16 },
@@ -257,6 +260,10 @@ export const SPRITES: Record<string, Art> = {
   spr_head_rt: ['..4444..', '.444444.', '.444CCC.', '.44CC0C.', '..4CCCC.', '...CCC..', '.22999..', '.229999C'],
   spr_body_rt0: ['.229999C', '.22999..', '..9999..', '..2222..', '..2..2..', '.2....2.', 'FF....FF', '........'],
   spr_body_rt1: ['.229999C', '.22999..', '..9999..', '..2222..', '...22...', '...22...', '...FF...', '........'],
+  // crouching (in shelter): 8 x 12, drawn 4 px lower
+  spr_crouch_head: ['..4444..', '.444444.', '.4CCCC4.', '.C0CC0C.', '.CCCCCC.', '.299992.', 'C299992C', '22999922'],
+  spr_crouch_body: ['.222222.', '.22..22.', '.FF..FF.', '........', '........', '........', '........', '........'],
+  spr_shadow: ['........', '........', '........', '..3333..', '.333333.', '..3333..', '........', '........'],
   spr_flag: ['3.......', '3FFFFFF.', '3FFFFF9.', '3FFFF99.', '3FFF999.', '3FF9999.', '3F99999.', '3.......'],
   spr_heart: ['.66.66..', '6666666.', '6666666.', '.66666..', '..666...', '...6....', '........', '........'],
   spr_wood: ['........', '44444447', '47777774', '44444447', '47777774', '44444447', '........', '........'],

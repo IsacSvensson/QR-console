@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BUTTONS } from '@qrc/vm';
 import { generateArt, patternBytes, CELLS } from '../../games/sixten/tools/art';
 import { generateLevels } from '../../games/sixten/tools/levels';
-import { DESIGN_CELLS, GAME_DIR, LEVEL_IDS, type RefLevel, type Sixten, blockingCell, buildSixten, readLevel, refCells, replayNames, runReplay, symbol, typeOf, vmInLevel } from './oracle';
+import { DESIGN_CELLS, GAME_DIR, LEVEL_IDS, type RefLevel, type Sixten, buildSixten, readLevel, refCells, replayNames, runReplay, symbol, typeOf, vmInLevel } from './oracle';
 
 // M26 acceptance: cells, screens, walking, map and compass (PLAN.md Part 4).
 let sx: Sixten;
@@ -174,7 +174,14 @@ describe('the map and the world agree cell for cell', () => {
 });
 
 // ---- the replays ---------------------------------------------------------------------------------
-interface Frame { f: number; mode: number; x16: number; y16: number; input: number; here: number; pw: number; courseSet: number; courseDir: number; courseCtrl: number; steps: number; level: string; slideDx: number; slideDy: number; scr: [number, number] }
+// `under`: the cell byte under his feet, read live from RAM (whirlwinds change cells; whirl.test.ts checks that
+// they change only as the .map says), interpreted with DESIGN §4.1
+interface Frame { f: number; mode: number; x16: number; y16: number; under: number; input: number; here: number; pw: number; courseSet: number; courseDir: number; courseCtrl: number; steps: number; level: string; slideDx: number; slideDy: number; scr: [number, number] }
+/** blocking (DESIGN §4.1: no speed) or outside the level, with the cell as it is in RAM now */
+function liveBlocking(vm: { read8: (a: number) => number }, L: RefLevel, c: number, r: number) {
+  if (c < 0 || r < 0 || c >= L.w || r >= L.h) return true;
+  return DESIGN_CELLS[vm.read8(S('cells') + r * L.w + c) & 31]!.speed16 === 0;
+}
 const runs = new Map<string, { frames: Frame[]; problems: string[]; hashMismatch: number; maxCycles: number; overruns: number; fault: string | null; expectedFrames: number; rfFrames: number }>();
 function play(name: string) {
   const hit = runs.get(name);
@@ -182,12 +189,12 @@ function play(name: string) {
   const frames: Frame[] = [];
   const problems: string[] = [];
   const levels = new Map<string, RefLevel>();
-  const r = runReplay(sx, name, ({ f, u, input }) => {
+  const r = runReplay(sx, name, ({ f, vm, u, input }) => {
     const id = LEVEL_IDS[u('level')]!;
     if (!levels.has(id)) levels.set(id, readLevel(id));
     const L = levels.get(id)!;
     const fr: Frame = {
-      f, mode: u('mode'), x16: u('px'), y16: u('py'), input, here: u('you_here'), pw: u('pw'), courseSet: u('course_set'), courseDir: u('course_dir'), courseCtrl: u('course_ctrl'), steps: u('steps'), level: id,
+      f, mode: u('mode'), x16: u('px'), y16: u('py'), input, under: vm.read8(S('cells') + (u('py') >> 9) * u('lv_w') + (u('px') >> 9)), here: u('you_here'), pw: u('pw'), courseSet: u('course_set'), courseDir: u('course_dir'), courseCtrl: u('course_ctrl'), steps: u('steps'), level: id,
       slideDx: (u('slide_dx') << 16) >> 16, slideDy: (u('slide_dy') << 16) >> 16, scr: [u('scr_c'), u('scr_r')],
     };
     frames.push(fr);
@@ -196,7 +203,7 @@ function play(name: string) {
     const x = fr.x16 >> 4;
     const y = fr.y16 >> 4;
     for (const [cx, cy] of [[x - 3, y - 3], [x + 2, y - 3], [x - 3, y], [x + 2, y]] as const)
-      if (blockingCell(L, Math.floor(cx / 32), Math.floor(cy / 32))) problems.push(`${name} frame ${f + 1}: box corner ${cx},${cy} on a blocking cell`);
+      if (liveBlocking(vm, L, Math.floor(cx / 32), Math.floor(cy / 32))) problems.push(`${name} frame ${f + 1}: box corner ${cx},${cy} on a blocking cell`);
   });
   const out = { frames, problems, hashMismatch: r.hashMismatch, maxCycles: r.maxCycles, overruns: r.vm.overruns, fault: r.vm.fault, expectedFrames: r.expectedFrames, rfFrames: r.rf.frames };
   runs.set(name, out);
@@ -229,8 +236,7 @@ describe('replays', () => {
         const a = fr[i]!;
         const dir = a.input & (BUTTONS.LEFT | BUTTONS.RIGHT);
         if (a.mode !== 0 || !dir || dir === (BUTTONS.LEFT | BUTTONS.RIGHT)) continue;
-        const L = readLevel(a.level);
-        const ch = (k: Frame) => L.rows[k.y16 >> 9]![k.x16 >> 9]!;
+        const ch = (k: Frame) => DESIGN_CELLS[k.under & 31]!.ch;
         const t = ch(fr[i - 1]!);
         let ok = true;
         for (let k = i; k <= i + 32 && ok; k++) {
@@ -256,8 +262,8 @@ describe('replays', () => {
         const L = readLevel(fr.level);
         const c = fr.x16 >> 9;
         const r = fr.y16 >> 9;
-        const ch = L.rows[r]![c]!;
-        const ctrl = L.controls.some((k) => k.c === c && k.r === r) && !L.leaves.has(`${c},${r}`);
+        const ch = DESIGN_CELLS[fr.under & 31]!.ch;
+        const ctrl = (fr.under & 0xc0) === 0x80 && L.controls.some((k) => k.c === c && k.r === r);
         const want = ctrl || ch === '+' || ch === 'S' || fr.pw === 1 ? 1 : 0;
         expect(fr.here, `${name} frame ${fr.f + 1} at ${c},${r} ('${ch}')`).toBe(want);
         here += want;

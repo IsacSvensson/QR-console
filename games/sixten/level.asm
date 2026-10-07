@@ -26,6 +26,16 @@ level_start:
     ST [wood], r0
     ST [face], r0
     ST [walk_t], r0
+    ST [wh_state], r0
+    ST [wh_pending], r0
+    ST [wh_started], r0
+    ST [wh_dirty], r0
+    ST [bend_on], r0
+    ST [bend_prev], r0
+    ST [inv_t], r0
+    ST [expo], r0
+    ST [branch_t], r0
+    ST [still_t], r0
     LDI r0, HEARTS
     ST [hearts], r0
     LDB r1, [r6 + LR_SR]            ; the start cell
@@ -33,6 +43,7 @@ level_start:
     MUL r1, r0
     LDB r0, [r6 + LR_SC]
     ADD r0, r1
+    ST [last_cell], r0
     CALL place_on_cell
     RET
 
@@ -189,6 +200,8 @@ slide_frame:
     LDI r0, M_PLAY
     ST [mode], r0
 @draw:
+    CALL whirl_update               ; the weather does not wait for the slide
+    CALL whirl_sound
     CALL draw_world
     RET
 
@@ -243,6 +256,16 @@ expand:
     JNE @store
     LDI r1, T_LEAVES
 @store:
+    CMP r1, T_TUFT                  ; grass near the whirlwind bends towards it
+    JNE @put
+    MOV r0, r5
+    SHL r0, 2
+    ADD r0, r3
+    MOV r2, r6
+    SHL r2, 2
+    ADD r2, r4
+    CALL bend_tuft
+@put:
     MOV r0, r5
     SHL r0, 2
     ADD r0, r3
@@ -339,5 +362,6 @@ draw_world:
     CALL draw_view
     CALL draw_flags
     CALL draw_sixten
+    CALL draw_whirl
     CALL draw_hud
     RET
