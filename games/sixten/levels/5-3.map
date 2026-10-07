@@ -1,0 +1,38 @@
+# 5-3 Vattnet stiger (DESIGN.md §7): the lake rises over the low shore; the high path stays dry.
+name: 5-3 VATTNET STIGER
+world: 5
+cells:
+TTTTTTTTTTTTTTTT
+TS+==========+.T
+T.|..........|.T
+T.|..WWWWW...|.T
+T.|.WWWWWWW..|.T
+T.|.WWWWWWW..|.T
+T.|..WWWWW...|.T
+T.|..........|.T
+T.+==========+.T
+T..............T
+T.............MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 2 1
+2 O 13 4
+3 O 2 8
+entry: SAND 11 9
+entry: KALKSTEN 4 9
+event: 0 FLOOD 500 0       # the shore round the lake goes under
+cell 3 3 Q
+cell 4 3 Q
+cell 10 3 Q
+cell 3 4 Q
+cell 11 4 Q
+cell 3 5 Q
+cell 11 5 Q
+cell 3 6 Q
+cell 4 6 Q
+cell 10 6 Q
+cell 5 7 Q
+cell 6 7 Q
+cell 7 7 Q
+cell 8 7 Q
+cell 9 7 Q

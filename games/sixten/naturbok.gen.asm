@@ -69,22 +69,22 @@ nb_pics:
     .word nb_pic_21
     .word nb_pic_22
     .word nb_pic_23
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
+    .word nb_pic_24
+    .word nb_pic_25
+    .word nb_pic_26
+    .word nb_pic_27
+    .word nb_pic_28
+    .word nb_pic_29
+    .word nb_pic_30
+    .word nb_pic_31
+    .word nb_pic_32
+    .word nb_pic_33
+    .word nb_pic_34
+    .word nb_pic_35
+    .word nb_pic_36
+    .word nb_pic_37
+    .word nb_pic_38
+    .word nb_pic_39
 nb_texts:
     .word nb_text_0 >> 16, nb_text_0 & 0xFFFF
     .word nb_text_1 >> 16, nb_text_1 & 0xFFFF
@@ -417,6 +417,166 @@ nb_pic_23:   ; LERA
 7777777.
 .77777..
 44444444
+nb_pic_24:   ; ÅSKA
+.sprite
+.333333.
+33333333
+.33E333.
+..EE....
+...EE...
+..EE....
+.EE.....
+E.......
+nb_pic_25:   ; BLIXT
+.sprite
+....EE..
+...EE...
+..EEEE..
+....EE..
+...EE...
+..EE....
+.E......
+E.......
+nb_pic_26:   ; BYMOLN
+.sprite
+..FFFF..
+.FFFFFF.
+FFFFFFFF
+FFFFFFFF
+AAAAAAAA
+3333333.
+..8.8...
+.8.8....
+nb_pic_27:   ; DIMMA
+.sprite
+AAAAAAAA
+A.A.A.A.
+.A.A.A.A
+AAAAAAAA
+A.5A.A.A
+.A5A.A.A
+AA5AAAAA
+A.4.A.A.
+nb_pic_28:   ; BJÖRK
+.sprite
+.BBBB...
+BBBBBB..
+.BBBB...
+..F0....
+..FF....
+..F0....
+..FF....
+.BBBB...
+nb_pic_29:   ; ÖRNBRÄKEN
+.sprite
+5...5...
+.5.5..5.
+..5..5..
+5..55...
+.5.5.5..
+..555...
+...5....
+...5....
+nb_pic_30:   ; KANTARELL
+.sprite
+........
+.EEEEEE.
+EEEEEEEE
+.E9999E.
+...EE...
+...EE...
+..EEEE..
+BBBBBBBB
+nb_pic_31:   ; JÄTTEGRYTA
+.sprite
+AAAAAAAA
+AA3333AA
+A333333A
+A300003A
+A300003A
+A333333A
+AA3333AA
+AAAAAAAA
+nb_pic_32:   ; ÄLG
+.sprite
+4.4..4.4
+.44..44.
+..4444..
+...444..
+.4444444
+.444444.
+.4.4.4.4
+.4.4.4.4
+nb_pic_33:   ; HUGGORM
+.sprite
+........
+.333....
+3030....
+.3333...
+...3333.
+.....333
+..33333.
+333.....
+nb_pic_34:   ; MYRA
+.sprite
+........
+...4....
+..444...
+.44444..
+4444444.
+44444444
+.0.0.0..
+BBBBBBBB
+nb_pic_35:   ; FLUGSVAMP
+.sprite
+........
+.666666.
+66F66F66
+6F6666F6
+...FF...
+...FF...
+..FFFF..
+BBBBBBBB
+nb_pic_36:   ; SAND
+.sprite
+........
+........
+..E.E...
+.E.E.EE.
+EEE.EEEE
+EEEEEEEE
+E7EEE7EE
+EEEEEEEE
+nb_pic_37:   ; KALKSTEN
+.sprite
+FFFFFFFF
+FAFFFFAF
+FF4FFFFF
+F444FFAF
+FF4FFFFF
+FFFFA4FF
+AFFF444F
+FFFFFFFF
+nb_pic_38:   ; DIKE
+.sprite
+BBBBBBBB
+BBBBBBBB
+44444444
+43888834
+33888833
+44444444
+BBBBBBBB
+BBBBBBBB
+nb_pic_39:   ; SÄNKA
+.sprite
+BBBBBBBB
+BB4444BB
+B455554B
+45555554
+45555554
+B455554B
+BB4444BB
+BBBBBBBB
 
 .xdata
 ; the pages: the page count, then LINES_PER_PAGE lines a page, each 255-terminated (an empty line is 255)

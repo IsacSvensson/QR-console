@@ -23,7 +23,9 @@
 //   event: 1 FALL 420 240           a timed change (DESIGN §6.6): started by control 1 (0 = the level's start), FALL
 //   cell 6 1 X                      (trees fall), SLIDE (a landslide) or FLOOD (water rises); it happens 420 frames
 //                                   after the start, with a warning shown for the last 240 (FALL/SLIDE: >= 120);
-//                                   then the listed cells change
+//                                   then the listed cells change. THUNDER has a 5th field, how long the lightning
+//                                   lasts, and no cells (DESIGN §6.6)
+//   fog: 1 / night: 1               only the nearest cells around Sixten can be seen (DESIGN §5)
 // A .side file (DESIGN §3.2): name, wind (1/16 px per frame, + = to the right), right (the compass letter of the
 // right edge: N Ö S V), sky (CLS colour), start (the feet's cell when entering), then 14 rows of tiles (art.ts
 // SIDE_TILES, ' ' = sky), 32-96 columns (2-6 screens).
@@ -45,9 +47,9 @@ export interface Waypoint { c: number; r: number; s: number; v: number; wait: nu
 export interface Change { wp: number; c: number; r: number; ch?: string; reveal?: boolean }
 export interface Whirl { trigger: number; wps: Waypoint[]; changes: Change[] }
 export const POWERUPS = { GURKA: 1, CHIPS: 2, CHOKLAD: 3 } as const;
-export const EVENT_KINDS = { FALL: 1, SLIDE: 2, FLOOD: 3 } as const;
+export const EVENT_KINDS = { FALL: 1, SLIDE: 2, FLOOD: 3, THUNDER: 4 } as const;
 export const EVENT_WARN_MIN = 120;
-export interface LevelEvent { trigger: number; kind: keyof typeof EVENT_KINDS; at: number; warn: number; cells: { c: number; r: number; ch: string }[] }
+export interface LevelEvent { trigger: number; kind: keyof typeof EVENT_KINDS; at: number; warn: number; last: number; cells: { c: number; r: number; ch: string }[] }
 export const WOOD_PER_TREE = 2;
 export const WOOD_PER_BUILD = 2;
 export interface Obj { kind: 'item' | 'entry' | 'build'; c: number; r: number; name?: string; tc?: number; tr?: number; ch?: string }
@@ -77,6 +79,7 @@ export interface Level {
   sides: SideLink[];
   objects: Obj[];
   events: LevelEvent[];
+  fog: number;
 }
 
 const LEVEL_DIR = join(GAME_DIR, 'levels');
@@ -90,7 +93,7 @@ export function levelIds(): string[] {
 }
 
 export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id}.map`), 'utf8')): Level {
-  const L: Level = { id, name: '', world: 0, w: 0, h: 0, rows: [], controls: [], leaves: [], start: [-1, -1], goal: [-1, -1], whirls: [], sides: [], objects: [], events: [] };
+  const L: Level = { id, name: '', world: 0, w: 0, h: 0, rows: [], controls: [], leaves: [], start: [-1, -1], goal: [-1, -1], whirls: [], sides: [], objects: [], events: [], fog: 0 };
   let section = '';
   const fail = (m: string): never => {
     throw new Error(`${id}.map: ${m}`);
@@ -107,10 +110,12 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
         const n = v!.trim().split(/\s+/).map(Number);
         for (let i = 0; i + 1 < n.length; i += 2) L.leaves.push([n[i]!, n[i + 1]!]);
       } else if (k === 'cells' || k === 'controls') section = k;
+      else if (k === 'fog') L.fog |= Number(v) ? 1 : 0;
+      else if (k === 'night') L.fog |= Number(v) ? 2 : 0;
       else if (k === 'event') {
         const t = v!.split('#')[0]!.trim().split(/\s+/);
-        if (t.length !== 4 || !(t[1]! in EVENT_KINDS)) fail(`bad event line '${line}'`);
-        L.events.push({ trigger: Number(t[0]), kind: t[1] as LevelEvent['kind'], at: Number(t[2]), warn: Number(t[3]), cells: [] });
+        if ((t.length !== 4 && !(t.length === 5 && t[1] === 'THUNDER')) || !(t[1]! in EVENT_KINDS)) fail(`bad event line '${line}'`);
+        L.events.push({ trigger: Number(t[0]), kind: t[1] as LevelEvent['kind'], at: Number(t[2]), warn: Number(t[3]), last: Number(t[4] ?? 0), cells: [] });
         section = 'event';
       } else if (k === 'item' || k === 'entry' || k === 'build') {
         const t = v!.split('#')[0]!.trim().split(/\s+/);
@@ -181,7 +186,9 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
   L.events.forEach((e, k) => {
     if (e.trigger > L.controls.length) fail(`event ${k + 1}: no control ${e.trigger}`);
     if (e.kind !== 'FLOOD' && e.warn < EVENT_WARN_MIN) fail(`event ${k + 1}: a ${e.kind} warns at least ${EVENT_WARN_MIN} frames`);
-    if (e.warn > e.at || !e.cells.length || e.cells.length > 16) fail(`event ${k + 1}: warning <= time, 1-16 cells`);
+    if (e.kind === 'THUNDER') {
+      if (e.cells.length || e.last < 60 || e.warn < EVENT_WARN_MIN) fail(`event ${k + 1}: thunder: no cells, warns >= ${EVENT_WARN_MIN}, lasts >= 60`);
+    } else if (e.warn > e.at || !e.cells.length || e.cells.length > 16) fail(`event ${k + 1}: warning <= time, 1-16 cells`);
     for (const c of e.cells) if (c.c >= L.w || c.r >= L.h || !CELL_BY_CH.has(c.ch)) fail(`event ${k + 1}: bad cell ${c.c},${c.r} ${c.ch}`);
   });
   const book = readBook().map((e) => e.name);
@@ -354,7 +361,7 @@ export function generateLevels(): { asm: string; levels: Level[] } {
     '; GENERATED by games/sixten/tools/levels.ts from levels/*.map — do not edit.',
     `LEVEL_COUNT = ${levels.length}`,
     'LV_REC = 32',
-    'EV_REC = 10',
+    'EV_REC = 12',
     `EVENT_WARN_MIN = ${EVENT_WARN_MIN}`,
     'OBJ_REC = 6',
     `WOOD_PER_TREE = ${WOOD_PER_TREE}`,
@@ -379,7 +386,7 @@ export function generateLevels(): { asm: string; levels: Level[] } {
       `    .byte ${L.w}, ${L.h}, ${L.start[0]}, ${L.start[1]}, ${L.goal[0]}, ${L.goal[1]}, ${L.controls.length}, ${L.world}`,
       `    .word name_${n}, ctrls_${n}`,
       `    .word whirls_${n}`,
-      `    .byte ${L.whirls.length}, 0`,
+      `    .byte ${L.whirls.length}, ${L.fog}`,
       `    .word links_${n}`,
       `    .byte ${L.sides.length}, 0`,
       `    .word objs_${n}`,
@@ -407,7 +414,7 @@ export function generateLevels(): { asm: string; levels: Level[] } {
     // events (EV_REC B): trigger (control index + 1, 0 = the start), kind (1 FALL, 2 SLIDE, 3 FLOOD), cell count,
     // when (frames after the trigger), warning (frames before), the cells (4 B: index, new byte)
     out.push(`events_${n}:`);
-    L.events.forEach((e, k) => out.push(`    .byte ${e.trigger}, ${EVENT_KINDS[e.kind]}, ${e.cells.length}, 0`, `    .word ${e.at}, ${e.warn}, evcells_${n}_${k}`));
+    L.events.forEach((e, k) => out.push(`    .byte ${e.trigger}, ${EVENT_KINDS[e.kind]}, ${e.cells.length}, 0`, `    .word ${e.at}, ${e.warn}, evcells_${n}_${k}, ${e.last}`));
     L.events.forEach((e, k) => {
       out.push(`evcells_${n}_${k}:`);
       for (const c of e.cells) {

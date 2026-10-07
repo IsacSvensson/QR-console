@@ -107,6 +107,7 @@ export const TEXTS: Record<string, string> = {
   t_wname5: 'EXPEDITIONEN',
   t_end: 'JAG FÖRSTÅR.',
   t_q: '?',
+  t_thanks: 'TACK FÖR SPELET!',
   t_dir_n: 'N',
   t_dir_w: 'V',
   t_dir_s: 'S',
@@ -199,6 +200,7 @@ const STAKE: Art = ['........', '...4....', '...4E...', '...4.E..', '...4..E.', 
 const STREAM: Art = ['88888888', '8FF88888', '88888FF8', '88888888', '8888FF88', '8FF88888', '88888888', '88FF8888'];
 const STREAM2: Art = ['88888888', '888FF888', '8888888F', 'F8888888', '88FF8888', '88888FF8', '88888888', '8888FF88'];
 const RUBBLE: Art = ['7A3.7A..', 'A37A3A7.', '37A37A3A', '.A3A73A7', '7A3A37A3', 'A37A3A37', '3A7A3A73', 'A3A37A3A'];
+const FELL: Art = ['AB7AAB7A', '7AAB7AAB', 'AB7A3AB7', 'B7AAB7AA', 'AA3B7AAB', '7AAB7A3A', 'AB7AAB7A', 'B7A3AB7A'];
 const LEAVES: Art = ['..9.E...', '.99E94..', '9E949E9.', 'E9499E94', '.94E99E.', '..9E49..', '...9....', '........'];
 
 /** top-down tiles in order; index = position + 1 (tile 0 = empty: the open-ground CLS colour) */
@@ -235,6 +237,7 @@ export const TOP_TILES: [string, Art][] = [
   ['stream', STREAM],
   ['stream2', STREAM2],
   ['rubble', RUBBLE],
+  ['fell', FELL],
 ];
 export const TILE = new Map(TOP_TILES.map(([n], i) => [n, i + 1]));
 export const tileIndex = (n: string) => {
@@ -278,6 +281,7 @@ export const CELLS: CellType[] = [
   { ch: 'X', name: 'WINDFALL', pattern: '_ _ _ _ / log_crown log log log_roots / log_roots log log log_crown / _ tuft _ _', fill: 15, sym: 10, speed: 0 },
   { ch: 'Q', name: 'STREAM', pattern: 'stream stream2 stream stream2 / stream2 stream stream2 stream / stream stream2 stream stream2 / stream2 stream stream2 stream', fill: 8, sym: 15, speed: 6 },
   { ch: 'R', name: 'RUBBLE', pattern: 'rubble rubble rubble rubble / rubble rubble rubble rubble / rubble rubble rubble rubble / rubble rubble rubble rubble', fill: 15, sym: 16, speed: 0 },
+  { ch: 'K', name: 'FELL', pattern: 'fell fell fell fell / fell fell fell fell / fell fell fell fell / fell fell fell fell', fill: 15, sym: 5, speed: 16 },
 ];
 export const CELL_BY_CH = new Map(CELLS.map((c, i) => [c.ch, i]));
 export const patternBytes = (p: string) => {

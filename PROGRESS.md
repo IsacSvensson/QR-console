@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M31 (Sixten: Worlds 4 and 5 and the final) — M26-M30 done
+**Current milestone:** M32 (Sixten: save code, music, delivery) — M26-M31 done
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
 Part 4 (Sixtens expedition) on branch `claude/sixtens-expedition`: planned (DESIGN, mockup, PLAN Part 4, D-040); M26 done
@@ -53,7 +53,7 @@ Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`; planned, not st
 - [x] M28 Side view as a code overlay
 - [x] M29 World 1 and the game around it (budget gate)
 - [x] M30 Worlds 2 and 3
-- [ ] M31 Worlds 4 and 5 and the final
+- [x] M31 Worlds 4 and 5 and the final
 - [ ] M32 Save code, music, delivery
 
 ## Current work
@@ -75,6 +75,9 @@ the code computed independently; budget gate (D-045).
 M30 done — events in level data (falling trees, a landslide, floods: DESIGN §6.6), flowing water (S8), rain, a ground
 colour and a tune per world; levels 2-1 to 3-4 (2-3: a whirlwind opens a cave); tests: safe routes never in flowing
 water, every event at its time with its full warning, everything collected, World 2 map -> World 4 map (D-046).
+M31 done — thunder (lightning windows; lone trees, the fell, water dangerous; kneel in a hollow), fog and night, the
+fell cell, the ending; levels 4-1 to 5-4 (5-4 the strength-5 final); all 40 pictures; one replay from the title to the
+ending; lv_done widened to 32 levels (it overflowed at 16) (D-047).
 **Runtime baseline for Part 4 = 02d7058.**
 
 Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
@@ -129,6 +132,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
 | Sixten mockup (planning) | cartridge 4 479 B (ISA 2); max cycles/frame: top-down 10 627 (with screen expansion; else ≤ 4 853), map 8 067, side view 2 793, overlays 9 900; QR round trip identical | D-040, `games/sixten/mockup/measure.ts` |
+| Sixten, the whole game (M31) | ROM 25.3 KB (code 15.9, data 9.3), xdata 7.8 KB, cartridge 18.5 KB; title -> ending in 36 082 frames (safe) / 49 083 (everything) | test:sixten, D-047 |
 | Sixten after Worlds 2-3 (M30) | ROM 22.9 KB (code 15.1, data 7.8), xdata 7.1 KB, cartridge 16.7 KB | test:sixten, D-046 |
 | Sixten budget gate after World 1 (M29) | ROM 20.6 KB (code 14.3, data 6.3), side overlay 2.0 KB in xdata, xdata 6.4 KB, cartridge 14.9 KB; projected 5 worlds: ROM 27-28 KB, cartridge 21-23 KB | test:sixten, D-045 |
 | Sixten ROM after M28 | 14.1 KB (code 9.6 KB, data 4.4 KB) + the side-view overlay 1 972 B in xdata; xdata 2.7 KB, cartridge 9.0 KB | test:sixten, D-043 |

@@ -13,6 +13,7 @@ C_BLUE   = 8
 C_ORANGE = 9
 C_LGREY  = 10
 C_GREEN  = 11
+C_CYAN   = 13
 C_YELLOW = 14
 C_WHITE  = 15
 
@@ -27,6 +28,7 @@ M_WMAP   = 6                 ; the world map (with the save code)
 M_PAGE   = 7                 ; a nature-book page over the play screen
 M_TALLY  = 8                 ; after the goal
 M_BOOK   = 9                 ; the nature book (from the world map)
+M_END    = 10                ; the ending
 
 ; ---- layout ----------------------------------------------------------------------------------
 PLAY_Y   = 32               ; HUD: two rows of 16 px; the playfield is 4 x 3 cells = 128 x 96
@@ -98,6 +100,7 @@ LR_NAME  = 12
 LR_CTRLS = 14
 LR_WHIRLS = 16
 LR_NWHIRL = 18
+LR_FLAGS = 19                ; bit 0 fog, bit 1 night (DESIGN §5)
 LR_LINKS = 20
 LR_NLINK = 22
 LR_OBJS  = 24
@@ -105,6 +108,8 @@ LR_NOBJ  = 26
 LR_EVENTS = 28
 LR_NEV   = 30
 STREAM_FRAMES = 20          ; frames in flowing water before AJ! (S8)
+THUNDER_FRAMES = 30         ; frames exposed to lightning before AJ! (S4)
+FOG_WIN  = 56               ; what can be seen in fog or at night: a square round Sixten
 ; objects (OBJ_REC B): kind, column, row, argument, target cell
 OB_KIND  = 0
 OB_C     = 1
@@ -288,7 +293,7 @@ SD_HC    = 9
 .var o_mask                         ; the level's obligatory controls (bits)
 .var world                          ; the world on the map (1-5, 6 = the game is done)
 .var wm_sel                         ; the world map: the chosen level of the world
-.var lv_done, 2                     ; levels done: one bit per level index
+.var lv_done, 4                     ; levels done: one bit per level index (up to 32)
 .var lv_goals, 32                   ; per level index: bit 0 done, 1 all controls, 2 every entry
 .var book, 5                        ; the nature book: bit k-1 = entry k found
 .var page_e                         ; the page being read: entry, page
@@ -304,6 +309,8 @@ SD_HC    = 9
 .var ev_done                        ; bit k: event k has happened
 .var ev_warn                        ; bit k: event k shows its warning now
 .var stream_t                       ; frames in flowing water
+.var lightning                      ; 1 = a thunderstorm's lightning is on (DESIGN §6.6)
+.var thunder_t                      ; frames exposed to it
 .var tally_c                        ; the tally: controls, entries of the level found, entries in it
 .var tally_e
 .var tally_n

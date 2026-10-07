@@ -116,7 +116,7 @@ export class Bot {
     }
     this.wait(20);
     this.tap(B.A);
-    if (this.mode !== this.S('M_WMAP')) throw new Error('no world map after the tally');
+    if (this.mode !== this.S('M_WMAP') && this.mode !== this.S('M_END')) throw new Error('no world map after the tally');
   }
   /** stand on or next to an entry and read all its pages */
   read(c: number, r: number) {

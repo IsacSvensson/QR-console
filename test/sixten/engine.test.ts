@@ -71,6 +71,7 @@ const SYMBOL_PIXELS: Record<string, [number, number, number][]> = {
   '+': [[0, 2, BLACK], [2, 2, BLACK], [4, 2, BLACK], [2, 0, BLACK], [2, 4, BLACK]],
   '~': [...line(0, 2, 1, BLUE), ...line(2, 4, 3, BLUE)],
   '^': [...line(0, 4, 1, BROWN), ...line(0, 4, 3, BROWN)],
+  K: [...line(0, 4, 1, BROWN), ...line(0, 4, 3, BROWN)],
   v: line(0, 4, 2, BLUE),
   u: [[1, 1, BROWN], [1, 2, BROWN], [2, 3, BROWN], [3, 2, BROWN], [3, 1, BROWN]],
   H: [...line(1, 3, 1, BLACK), ...line(1, 3, 2, BLACK), ...line(1, 3, 3, BLACK)],

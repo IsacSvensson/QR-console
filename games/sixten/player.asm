@@ -32,6 +32,7 @@ play_frame:
     CALL events_update
     CALL player_hazard
     CALL stream_hazard
+    CALL thunder_hazard
     CALL whirl_sound
     LD r0, [mode]                   ; AJ! may have started the level again
     CMP r0, M_PLAY

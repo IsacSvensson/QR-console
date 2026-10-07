@@ -221,7 +221,8 @@ bit 4..0   typ (32)
 | 20 | `X` | vindfälle | stammar i kors | vit | svart kryss | – | går inte: blockerar en stig (§6.4) |
 | 21 | `Q` | strömmande vatten (fors, översvämning) | vatten med strömmar | blå | vita streck | 0,375 | går, men **farligt** (S8): 20 bildrutor i det = `AJ!` |
 | 22 | `R` | ras | sten och grus | vit | bruna prickar | – | går inte: blockerar (ett ras, §6.6) |
-| 23–31 | | reserverade: dimma (en flagga per värld), klätterstig … | | | | | högst två nya fenomen per värld (§7) |
+| 23 | `K` | kalfjäll | häll och lav | vit | bruna höjdkurvor | 1 | går. **Farligt vid åska** (S4) |
+| 24–31 | | reserverade | | | | | högst två nya fenomen per värld (§7) |
 
 - **Fart** är px per bildruta (60 bildrutor per sekund), i motorn i 1/16 px. "–" = går inte (kollision mot cellens
   typ, Sixtens fotlåda är 6 × 4 px; vid ett hörn glider han runt). Varianten (bit 5) sätts av generatorn för öppen
@@ -261,7 +262,8 @@ skriver en förhandsbild (`levels/1-1.png`: uppifrån och kartan bredvid varandr
     har gått sedan dess. Utan landmärken (myr, dimma, tät skog, där skärmarna ser lika ut) följer man pilen och
     räknar steg.
   - **I sidovy visar pilen åt vilket väderstreck Sixten tittar**, med bokstaven bredvid (`Ö`, `V`, `N`, `S`).
-- Kompassen ljuger aldrig. I dimma (V4) blir skärmen grå, men kompassen och stegräknaren fungerar.
+- Kompassen ljuger aldrig. I dimma (4-2) syns bara en ruta på 56 px runt Sixten, allt annat är grått. På natten (5-2)
+  är det svart. Kompassen och stegräknaren fungerar (`fog:` och `night:` i `.map`).
 
 ## 6. Tromben som system
 
@@ -352,6 +354,7 @@ och naturbokssidor pausar den).
 | fallande träd (storm) | växande skuggor, knak var halvsekund; **minst 120 bildrutor** | cellerna blir vindfällen `X` | `AJ!` om Sixten står där |
 | ras | grus som rinner ned, muller; **minst 120 bildrutor** | cellerna blir ras `R` | `AJ!` om Sixten står där |
 | översvämning | krusningar (eller ingen: vattnet stiger i regnet) | cellerna blir strömmande vatten `Q` | i `Q`: 20 bildrutor = `AJ!` (S8) |
+| åska (M31) | muller; **minst 120 bildrutor** | blixtar under en angiven tid (blixt vid kanten, ett blixtsken var 64:e bildruta) | vid ett ensamt träd (eller bredvid det), på kalfjäll, på en bro eller i vatten: 30 bildrutor = `AJ!` (S4). På knä i en svacka, ett dike eller i stugan: säkert (S5) |
 
 I värld 3 regnar det hela tiden (strimmor över skärmen). Forsen i 3-4 är `Q` från början. Varje värld har sin egen
 markfärg (värld 2 khaki efter stormen, värld 3 blöt mörkgrön) och sin egen musikslinga.
@@ -365,8 +368,8 @@ Högst två nya fenomen per värld. Varje nytt fenomen introduceras ensamt i en 
 | **1 Skogen** | vind, liten tromb (styrka ≤ 3) | 1-1 Skogsstarten (karta, kontroller, den första lilla tromben), 1-2 Sjön (vatten och vägval), 1-3 Berget (höjder, kompass. Grottan = första sidovyn), 1-4 Trombens spår (den första trombbanan: läs vinden, välj väg, det fallna trädet blir bro) | 1-3, 1-4 |
 | **2 Kraften** | fallande träd (stormfälld skog), ras | 2-1 Stormen (kontroll 1 startar stormen: granarna faller över skogsstigen, säkra vägen går över öppen mark), 2-2 Rasbranten (raset begraver stigen under slänten), 2-3 Stenarna (tromben flyttar blocket: grottan öppnas, med sidovy), 2-4 Skogen efter stormen (vindfällen, trä, byggplatsens bro) | 2-3 |
 | **3 Vattnet** | kraftigt regn/översvämning (celler blir strömmande vatten), strömmar | 3-1 Regnet (ängen svämmar över), 3-2 Bäcken svämmar över (låga bron först, sedan stränderna; höga bron är torr), 3-3 Myren (kompasskurs), 3-4 Forsen (bara bron går över) | – |
-| **4 Himlen** | åska (ensamma träd, höjder, svacka), dimma | 4-1 Åskan, 4-2 Dimman (kompass och steg), 4-3 Fjället (kalfjäll + åska), 4-4 Molnens väg (hur ett bymoln ger en tromb) | 4-3 |
-| **5 Expeditionen** | inga. Allt kombineras | 5-1 Kartan och vinden, 5-2 Natten (mörker + kompass, ej nytt fenomen: bara mörkare palett), 5-3 Vattnet stiger, **5-4 Den stora tromben** (finalen, styrka 5) | 5-4 |
+| **4 Himlen** | åska (ensamma träd, kalfjäll, svacka), dimma | 4-1 Åskan (ensamma träd på ett fält, svackor), 4-2 Dimman (kompass och steg), 4-3 Fjället (kalfjäll `K` med ett ensamt träd + åska), 4-4 Molnens väg (ett bymoln ger en tromb, stugan) | – |
+| **5 Expeditionen** | inga. Allt kombineras | 5-1 Kartan och vinden (tromb styrka 4 + storm), 5-2 Natten (mörker + kompass, samma teknik som dimman), 5-3 Vattnet stiger, **5-4 Den stora tromben** (finalen, styrka 5: den samlar sig i väster, korsar fältet och svänger söderut) | – |
 
 **Finalen (5-4):** ingen boss och ingen knapp som stoppar tromben. En stor bana där en styrka 5-tromb följer sina
 vägpunkter genom landskapet. Sixten läser vinden, tar kontrollerna i rätt ordning, söker skydd i stugan och diket,

@@ -1,0 +1,25 @@
+# 4-3 Fjället (DESIGN.md §7): the bare fell (K) is dangerous in a thunderstorm (S4), above all by its lone tree.
+# Control 1 brings the storm: wait in the hollow, cross the fell when it has passed.
+name: 4-3 FJÄLLET
+world: 4
+cells:
+^^^^^^^^^^^^^^^^
+^S..KKKKKKKK..M^
+^...KKKKKKKK...^
+^.u.KKKiKKKK.u.^
+^...KKKKKKKK...^
+^..............^
+^..TTTT..TTTT..^
+^..TTTT..TTTT..^
+^.......v......^
+^.......v......^
+^..............^
+^^^^^^^^^^^^^^^^
+controls:
+1 O 2 5
+2 O 8 9
+3 O 8 2
+4 F 13 3
+entry: ÖRNBRÄKEN 4 7
+entry: JÄTTEGRYTA 13 9
+event: 1 THUNDER 300 240 900

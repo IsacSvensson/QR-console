@@ -7,6 +7,7 @@
 EVK_FALL  = 1
 EVK_SLIDE = 2
 EVK_FLOOD = 3
+EVK_THUNDER = 4
 
 ; level start: no event running
 events_reset:
@@ -31,6 +32,7 @@ ev_ptr:
 events_update:
     LDI r0, 0
     ST [ev_warn], r0
+    ST [lightning], r0
     LDI r5, 0
 @k:
     LD r1, [lv_ptr]
@@ -76,6 +78,24 @@ events_update:
 @check:
     CMP r0, r2
     JB @next
+    LDB r1, [r6 + 1]                ; thunder: lightning from its time for as long as it lasts, then it is over
+    CMP r1, EVK_THUNDER
+    JNE @happen
+    LD r3, [r6 + 10]
+    ADD r2, r3
+    CMP r0, r2
+    JAE @over
+    LDI r1, 1
+    ST [lightning], r1
+    JMP @next
+@over:
+    LDI r1, 1
+    SHL r1, r5
+    LD r0, [ev_done]
+    OR r0, r1
+    ST [ev_done], r0
+    JMP @next
+@happen:
     CALL ev_happen
 @next:
     ADD r5, 1
@@ -123,6 +143,163 @@ ev_happen:
     ST [wh_dirty], r0
     LDI r0, SFX_CHANGE
     SYS SFX
+    RET
+
+; lightning (DESIGN §1.3 S4): by a lone tree (or next to one), on the bare fell, on a bridge or in water,
+; THUNDER_FRAMES unsheltered: AJ!. Kneeling in a hollow, a ditch or the cabin is safe (S5).
+thunder_hazard:
+    LDI r1, 0
+    LD r0, [lightning]
+    CMP r0, 0
+    JEQ @set
+    LD r0, [mode]
+    CMP r0, M_PLAY
+    JNE @set
+    LD r0, [sheltered]
+    CMP r0, 0
+    JNE @set
+    LD r0, [cell_i]
+    CALL thunder_cell
+    CMP r0, 0
+    JEQ @set
+    LD r1, [thunder_t]
+    ADD r1, 1
+    CMP r1, THUNDER_FRAMES
+    JB @set
+    LDI r1, 0
+    ST [thunder_t], r1
+    CALL aj
+    RET
+@set:
+    ST [thunder_t], r1
+    RET
+
+; r0 = cell -> r0 = 1 if lightning makes it dangerous: a lone tree or a cell next to one, the fell, a bridge, water
+thunder_cell:
+    MOV r5, r0
+    LDB r1, [r0 + cells]
+    AND r1, 31
+    CMP r1, CT_FELL
+    JEQ @yes
+    CMP r1, CT_BRIDGE
+    JEQ @yes
+    CMP r1, CT_STREAM
+    JEQ @yes
+    CMP r1, CT_LONE_TREE
+    JEQ @yes
+    LD r2, [lv_w]                   ; the four neighbours (inside the level)
+    LD r3, [lv_h]
+    MUL r3, r2
+    MOV r0, r5
+    ADD r0, 1
+    CALL @lone
+    MOV r0, r5
+    SUB r0, 1
+    CALL @lone
+    MOV r0, r5
+    ADD r0, r2
+    CALL @lone
+    MOV r0, r5
+    SUB r0, r2
+    CALL @lone
+    LDI r0, 0
+    RET
+@yes:
+    LDI r0, 1
+    RET
+@lone:                              ; r0 = a neighbour: if it is a lone tree, return 1 from thunder_cell
+    CMP r0, r3
+    JAE @not
+    LDB r1, [r0 + cells]
+    AND r1, 31
+    CMP r1, CT_LONE_TREE
+    JNE @not
+    POP r1                          ; out of @lone and of thunder_cell with 1
+    LDI r0, 1
+    RET
+@not:
+    RET
+
+; lightning on screen: every 64 frames a flash at the border and a bolt down to a lone tree (or the middle)
+draw_lightning:
+    LD r0, [lightning]
+    CMP r0, 0
+    JEQ @done
+    LD r0, [tick]
+    AND r0, 63
+    CMP r0, 3
+    JAE @done
+    LDI r0, 0
+    LDI r1, PLAY_Y
+    LDI r2, 128
+    LDI r3, 96
+    LDI r4, C_WHITE
+    SYS RECT
+    LD r0, [tick]                   ; the bolt's x: from the clock (not RND)
+    SHR r0, 6
+    MUL r0, 37
+    AND r0, 127
+    LDI r1, PLAY_Y
+    MOV r2, r0
+    ADD r2, 6
+    LDI r3, PLAY_Y + 30
+    LDI r4, C_YELLOW
+    SYS LINE
+    MOV r0, r2
+    MOV r1, r3
+    SUB r2, 8
+    ADD r3, 30
+    SYS LINE
+    MOV r0, r2
+    MOV r1, r3
+    ADD r2, 5
+    ADD r3, 30
+    SYS LINE
+@done:
+    RET
+
+; fog or night (the level's flags): everything but a square round Sixten is grey (fog) or black (night)
+draw_fog:
+    LD r0, [lv_ptr]
+    LDB r0, [r0 + LR_FLAGS]
+    CMP r0, 0
+    JEQ @done
+    LDI r4, C_LGREY
+    AND r0, 2
+    JZ @col
+    LDI r4, C_BLACK
+@col:
+    LD r5, [px]                     ; the square's top-left on screen
+    SHR r5, 4
+    LD r0, [camx]
+    SUB r5, r0
+    SUB r5, FOG_WIN / 2
+    LD r6, [py]
+    SHR r6, 4
+    LD r0, [camy]
+    SUB r6, r0
+    ADD r6, PLAY_Y - 8 - FOG_WIN / 2
+    LDI r0, 0                       ; above it
+    LDI r1, PLAY_Y
+    LDI r2, 128
+    MOV r3, r6
+    SUB r3, PLAY_Y
+    SYS RECTFILL
+    MOV r1, r6                      ; below it
+    ADD r1, FOG_WIN
+    LDI r3, 128
+    SUB r3, r1
+    SYS RECTFILL
+    MOV r1, r6                      ; left of it
+    MOV r2, r5
+    LDI r3, FOG_WIN
+    SYS RECTFILL
+    MOV r0, r5                      ; right of it
+    ADD r0, FOG_WIN
+    LDI r2, 128
+    SUB r2, r0
+    SYS RECTFILL
+@done:
     RET
 
 ; the warnings' sound: a creak (falling trees) or a rumble (a slide) every 30 frames

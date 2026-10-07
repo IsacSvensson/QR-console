@@ -372,6 +372,8 @@ draw_world:
     CALL draw_sixten
     CALL draw_whirl
     CALL draw_rain
+    CALL draw_fog
+    CALL draw_lightning
     CALL draw_hud
     RET
 

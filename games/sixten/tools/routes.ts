@@ -335,6 +335,155 @@ function world23All(bot: Bot) {
   bot.finish();
 }
 
+// ---- Worlds 4 and 5 and the ending (M31) ----
+/** the safe route also keeps off lone trees and the cells next to them (thunder, S4) */
+function avoidLightning(bot: Bot) {
+  bot.level.rows.forEach((row, r) =>
+    [...row].forEach((ch, c) => {
+      if (ch !== 'i') return;
+      for (const [dc, dr] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) bot.avoid.add(`${c + dc!},${r + dr!}`);
+    }),
+  );
+}
+/** stand still in shelter until the weather (the whirlwind and every started event) is over */
+function waitWeather(bot: Bot) {
+  shelterUntilGone(bot);
+  waitEvents(bot);
+  bot.wait(10);
+}
+function world45Safe(bot: Bot) {
+  bot.playChosen('4-1');
+  avoidHazards(bot);
+  avoidLightning(bot);
+  bot.walkTo(2, 2);
+  bot.walkTo(3, 5);
+  waitWeather(bot);
+  bot.walkTo(12, 4);
+  bot.walkTo(6, 9);
+  bot.finish();
+  bot.playChosen('4-2');
+  for (const [c, r] of [[2, 1], [11, 3], [12, 7]] as const) bot.walkTo(c, r);
+  bot.finish();
+  bot.playChosen('4-3');
+  avoidLightning(bot);
+  bot.walkTo(2, 5);
+  bot.walkTo(2, 3);
+  waitWeather(bot);
+  bot.walkTo(8, 9);
+  bot.walkTo(8, 2);
+  bot.finish();
+  bot.playChosen('4-4');
+  bot.walkTo(1, 4);
+  bot.walkTo(7, 4);
+  bot.walkTo(7, 5);
+  waitWeather(bot);
+  bot.walkTo(12, 8);
+  bot.finish();
+  bot.playChosen('5-1');
+  avoidHazards(bot);
+  bot.walkTo(2, 3);
+  bot.walkTo(3, 4);
+  waitWeather(bot);
+  bot.walkTo(11, 7);
+  bot.walkTo(3, 9);
+  bot.finish();
+  bot.playChosen('5-2');
+  for (const [c, r] of [[2, 1], [13, 3], [6, 9]] as const) bot.walkTo(c, r);
+  bot.finish();
+  bot.playChosen('5-3');
+  avoidHazards(bot);
+  for (const [c, r] of [[2, 1], [13, 4], [2, 8]] as const) bot.walkTo(c, r);
+  bot.finish();
+  bot.playChosen('5-4');
+  bot.walkTo(8, 2);
+  bot.walkTo(5, 10);
+  bot.walkTo(11, 7);
+  waitWeather(bot);
+  bot.walkTo(20, 7);
+  bot.finish();
+}
+function world45All(bot: Bot) {
+  bot.playChosen('4-1');
+  avoidLightning(bot);
+  bot.walkTo(2, 2);
+  bot.walkTo(3, 5);
+  waitWeather(bot);
+  bot.read(6, 3); // ÅSKA
+  bot.read(12, 8); // BLIXT
+  bot.walkTo(12, 4);
+  bot.walkTo(6, 9);
+  bot.finish();
+  bot.playChosen('4-2');
+  bot.walkTo(2, 1); // a crossing and control 1: he knows where he is
+  bot.openMap();
+  bot.wait(20);
+  bot.tap(B.A); // the course to control 2, through the fog
+  bot.settle();
+  bot.walkTo(11, 3);
+  bot.walkTo(12, 7);
+  bot.walkTo(7, 9); // 4
+  bot.read(7, 8); // BJÖRK
+  bot.read(5, 5); // DIMMA
+  bot.finish();
+  bot.playChosen('4-3');
+  avoidLightning(bot);
+  bot.walkTo(2, 5);
+  bot.walkTo(2, 3);
+  waitWeather(bot);
+  bot.avoid.clear();
+  bot.walkTo(8, 9);
+  bot.read(4, 7); // ÖRNBRÄKEN
+  bot.read(13, 9); // JÄTTEGRYTA
+  bot.walkTo(13, 3); // 4
+  bot.walkTo(8, 2);
+  bot.finish();
+  bot.playChosen('4-4');
+  bot.walkTo(1, 4);
+  bot.walkTo(7, 4);
+  bot.walkTo(7, 5);
+  waitWeather(bot);
+  bot.read(12, 1); // BYMOLN
+  bot.read(4, 8); // KANTARELL
+  bot.walkTo(12, 8);
+  bot.finish();
+  bot.playChosen('5-1');
+  avoidHazards(bot);
+  bot.walkTo(2, 3);
+  bot.walkTo(3, 4);
+  waitWeather(bot);
+  bot.read(13, 2); // ÄLG
+  bot.read(8, 9); // MYRA
+  bot.walkTo(11, 7);
+  bot.walkTo(3, 9);
+  bot.finish();
+  bot.playChosen('5-2');
+  bot.walkTo(2, 1);
+  bot.read(8, 2); // HUGGORM
+  bot.walkTo(13, 3);
+  bot.walkTo(10, 7); // 4
+  bot.read(3, 8); // FLUGSVAMP
+  bot.walkTo(6, 9);
+  bot.finish();
+  bot.playChosen('5-3');
+  avoidHazards(bot);
+  bot.walkTo(2, 1);
+  bot.walkTo(13, 4);
+  bot.read(11, 9); // SAND
+  bot.read(4, 9); // KALKSTEN
+  bot.walkTo(2, 8);
+  bot.finish();
+  bot.playChosen('5-4');
+  bot.walkTo(8, 2);
+  bot.read(9, 2); // SÄNKA
+  bot.read(8, 5); // DIKE
+  bot.walkTo(5, 10);
+  bot.walkTo(11, 7);
+  waitWeather(bot);
+  bot.walkTo(20, 7);
+  bot.walkTo(19, 12); // 4
+  bot.finish();
+}
+
 /** hold a direction until the feet are on column c (moving horizontally), then centre in the cell */
 function runTo(bot: Bot, c: number) {
   bot.walkToPoint(c * 32 + 16, bot.y);
@@ -485,6 +634,9 @@ export const ROUTES: Record<string, Route> = {
   // Worlds 2 and 3 after World 1, from the World 2 map to the World 4 map
   'm30-safe': { seed: 1, run: (bot) => (world1Safe(bot), world23Safe(bot), bot.wait(30)) },
   'm30-all': { seed: 1, run: (bot) => (world1All(bot), world23All(bot), bot.wait(30)) },
+  // the whole game, title to ending: on the safe routes, and collecting everything
+  'm31-safe': { seed: 1, run: (bot) => (world1Safe(bot), world23Safe(bot), world45Safe(bot), bot.wait(60)) },
+  'm31-all': { seed: 1, run: (bot) => (world1All(bot), world23All(bot), world45All(bot), bot.wait(60)) },
   // 1-1: control 3 starts the whirlwind; Sixten waits by the lake until it has passed and the spruce lies over the
   // brook, then walks over it to the revealed control 5
   'm27-11': {

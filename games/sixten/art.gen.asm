@@ -4,7 +4,7 @@ FONT_GLYPHS = 48
 G_0 = 30
 G_SLASH = 47
 G_DASH = 45
-CELL_TYPES = 23
+CELL_TYPES = 24
 CT_OPEN = 0
 CT_FOREST = 1
 CT_DENSE = 2
@@ -28,6 +28,7 @@ CT_LONE_TREE = 19
 CT_WINDFALL = 20
 CT_STREAM = 21
 CT_RUBBLE = 22
+CT_FELL = 23
 T_TUFT = 1
 T_TUFT_R = 2
 T_TUFT_L = 3
@@ -75,6 +76,7 @@ T_LEAVES = 44
 T_STREAM = 45
 T_STREAM2 = 46
 T_RUBBLE = 47
+T_FELL = 48
 ST_SOLID = 1
 ST_CLIMB = 2
 
@@ -165,6 +167,7 @@ t_wname4: .byte 8, 9, 13, 12, 5, 14, 255   ; HIMLEN
 t_wname5: .byte 5, 24, 16, 5, 4, 9, 20, 9, 15, 14, 5, 14, 255   ; EXPEDITIONEN
 t_end: .byte 10, 1, 7, 0, 6, 29, 18, 19, 20, 27, 18, 42, 255   ; JAG FÖRSTÅR.
 t_q: .byte 41, 255   ; ?
+t_thanks: .byte 20, 1, 3, 11, 0, 6, 29, 18, 0, 19, 16, 5, 12, 5, 20, 40, 255   ; TACK FÖR SPELET!
 t_dir_n: .byte 14, 255   ; N
 t_dir_w: .byte 22, 255   ; V
 t_dir_s: .byte 19, 255   ; S
@@ -644,6 +647,16 @@ A37A3A7.
 A37A3A37
 3A7A3A73
 A3A37A3A
+; fell
+.sprite
+AB7AAB7A
+7AAB7AAB
+AB7A3AB7
+B7AAB7AA
+AA3B7AAB
+7AAB7A3A
+AB7AAB7A
+B7A3AB7A
 
 ; cell patterns: 16 tile indices per cell type (4 rows of 4); the variant bit swaps rows 0-1 with 2-3
 patterns:
@@ -670,11 +683,12 @@ patterns:
     .byte 0, 0, 0, 0, 40, 39, 39, 41, 41, 39, 39, 40, 0, 1, 0, 0   ; X WINDFALL
     .byte 45, 46, 45, 46, 46, 45, 46, 45, 45, 46, 45, 46, 46, 45, 46, 45   ; Q STREAM
     .byte 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47   ; R RUBBLE
+    .byte 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48   ; K FELL
 
 ; per cell type: walking speed (1/16 px per frame, 0 = blocking), map fill colour, map symbol
-cell_speed: .byte 16, 14, 8, 20, 20, 20, 10, 0, 0, 12, 14, 16, 16, 12, 16, 16, 0, 16, 16, 16, 0, 6, 0
-map_fill:   .byte 14, 15, 11, 15, 15, 15, 15, 8, 15, 14, 14, 14, 14, 14, 8, 14, 15, 14, 14, 14, 15, 8, 15
-map_sym:    .byte 0, 0, 0, 1, 2, 3, 4, 0, 5, 6, 7, 8, 9, 10, 11, 14, 12, 0, 0, 13, 10, 15, 16
+cell_speed: .byte 16, 14, 8, 20, 20, 20, 10, 0, 0, 12, 14, 16, 16, 12, 16, 16, 0, 16, 16, 16, 0, 6, 0, 16
+map_fill:   .byte 14, 15, 11, 15, 15, 15, 15, 8, 15, 14, 14, 14, 14, 14, 8, 14, 15, 14, 14, 14, 15, 8, 15, 15
+map_sym:    .byte 0, 0, 0, 1, 2, 3, 4, 0, 5, 6, 7, 8, 9, 10, 11, 14, 12, 0, 0, 13, 10, 15, 16, 5
 
 ; side-view tiles and their flags (0 background, 1 solid, 2 climbable); tile 0 = sky
 side_attr: .byte 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 2, 2, 0, 1, 1, 1, 1, 1, 1, 1

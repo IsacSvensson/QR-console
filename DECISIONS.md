@@ -976,3 +976,28 @@ Decision:
 Measurement: ROM 23 489 B (code 15 456, data 7 944, sound 89), xdata 7 263 B, cartridge 17 137 B. m30-safe 19 983
 frames (title -> World 4 map; no heart lost in Worlds 2-3, never in flowing water), m30-all 28 441 frames (every
 control, all 24 entries of Worlds 1-3). 146 Sixten checks pass.
+
+## D-047 - Sixten's Worlds 4 and 5, the final and the ending (M31)
+Date: 2026-10-07 - Milestone: M31
+Decision:
+- **Thunder** is a fourth event kind (THUNDER, with a duration: `event: 1 THUNDER 360 240 900`): a warning (>= 120
+  frames, the creak/rumble), then lightning for the duration, then over; no cells change. While it lasts, a lone tree
+  or a cell next to one, the bare fell (new cell type 23 `K`, walkable), a bridge or flowing water are dangerous:
+  30 frames there unsheltered = AJ!. Kneeling still in a hollow, a ditch or the cabin is safe. Open land and forest are
+  not marked dangerous: SMHI's advice names lone trees, heights, open flat ground and water; the game teaches the first
+  three that it can show clearly and does not claim more (open flat ground stays neutral rather than a second rule).
+  On screen: a white flash at the border and a bolt every 64 frames (its x from the clock, not RND).
+- **Fog and night** are level flags (`fog: 1`, `night: 1`, the level record's flags byte): everything but a 56-px
+  square round Sixten is grey (fog) or black (night); the map, the course and the step counter work as always.
+- **The ending**: after the last level's tally the world becomes 6 and the ending shows (JAG FÖRSTÅR., the nature
+  book's count, TACK FÖR SPELET!); A goes back to the title.
+- **Levels**: 4-1 Åskan, 4-2 Dimman, 4-3 Fjället, 4-4 Molnens väg (a whirlwind and the cabin), 5-1 Kartan och vinden
+  (strength 4 + a storm), 5-2 Natten, 5-3 Vattnet stiger (a flood), 5-4 Den stora tromben (24 x 15: strength 5 gathers
+  for 300 frames in the west, crosses the field, turns south). Tunes for Worlds 4 and 5; all 40 nature-book pictures.
+- **A bug found and fixed**: `lv_done` had 16 bits for 24 level indices; World 5's levels read and wrote the next
+  variable, so the world map took 5-1 to 5-3 as done. Now 32 bits.
+Measurement: ROM 25 920 B (code 16 328, data 9 503, sound 89), xdata 8 034 B, cartridge 18 953 B (under 25 KB). m31-safe
+(36 082 frames) and m31-all (49 083 frames: every control, all 40 entries) both go from the title to the ending
+without losing a heart. All M31 checks pass (the lightning on exactly from its time for its duration, its warning
+whole; the safe route never by a lone tree, on the fell or on water while it lasts; a course in the fog reaches its
+control; the flags in ROM).

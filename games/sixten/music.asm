@@ -39,7 +39,7 @@ music_tick:
     RET
 
 .data
-tunes:  .word tune_w1, tune_w2, tune_w3, tune_w1, tune_w1
+tunes:  .word tune_w1, tune_w2, tune_w3, tune_w4, tune_w5
 tune_w1:
     .word 659, 784, 880, 784, 659, 0, 587, 659
     .word 523, 587, 659, 784, 880, 0, 784, 0
@@ -55,4 +55,14 @@ tune_w3:                            ; Vattnet: flowing, steps up and down
     .word 698, 659, 587, 523, 494, 523, 587, 0
     .word 523, 587, 659, 587, 523, 587, 659, 880
     .word 784, 698, 659, 587, 523, 0, 523, 0
+tune_w4:                            ; Himlen: high and wide
+    .word 784, 0, 1047, 0, 988, 880, 784, 0
+    .word 659, 0, 784, 880, 784, 0, 659, 0
+    .word 698, 0, 880, 0, 1047, 988, 880, 0
+    .word 784, 698, 659, 587, 659, 0, 523, 0
+tune_w5:                            ; Expeditionen: World 1's tune, a fourth higher
+    .word 880, 1047, 1175, 1047, 880, 0, 784, 880
+    .word 698, 784, 880, 1047, 1175, 0, 1047, 0
+    .word 880, 1047, 1175, 1397, 1175, 1047, 880, 0
+    .word 784, 880, 784, 698, 784, 0, 698, 0
 .code

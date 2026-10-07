@@ -66,6 +66,13 @@ wmap_enter:
     ST [mode], r0
     CALL world_advance
     CALL code_make
+    LD r0, [world]                  ; every world done: the ending
+    CMP r0, WORLDS
+    JLE @map
+    LDI r0, M_END
+    ST [mode], r0
+    RET
+@map:
     LDI r0, 0                       ; select the first level not done (or the last)
     ST [wm_sel], r0
 @find:
@@ -367,6 +374,67 @@ wm_stop:
     ADD r5, 1
     JMP @goal
 @done:
+    RET
+
+; ---- the ending (DESIGN §7): it is quiet, Sixten looks at his map: JAG FÖRSTÅR. -------------------------------
+; A: back to the title (the world map keeps the code of the finished game)
+end_frame:
+    SYS BTNP
+    AND r0, BTN_A
+    JZ @draw
+    LDI r0, M_TITLE
+    ST [mode], r0
+    RET
+@draw:
+    LDI r0, C_CYAN
+    SYS CLS
+    LDI r0, 0
+    LDI r1, 96
+    LDI r2, 128
+    LDI r3, 32
+    LDI r4, C_GREEN
+    SYS RECTFILL
+    LDI r0, t_end
+    LDI r1, 28
+    LDI r2, 24
+    LDI r3, font_d
+    CALL draw_text
+    LDI r0, spr_head_up             ; Sixten, from behind, looking out over the field with his map
+    LDI r1, 60
+    LDI r2, 80
+    LDI r3, 0
+    SYS SPR
+    LDI r0, spr_body_up0
+    LDI r2, 88
+    SYS SPR
+    LDI r0, t_book                  ; the nature book: n/40
+    LDI r1, 16
+    LDI r2, 44
+    LDI r3, font_d
+    CALL draw_text
+    MOV r5, r0
+    LDI r6, 0
+    LDI r4, 0
+@count:
+    MOV r0, r6
+    PUSH r4
+    CALL book_has
+    POP r4
+    ADD r4, r0
+    ADD r6, 1
+    CMP r6, NB_COUNT
+    JLT @count
+    MOV r0, r4
+    ADD r5, 6
+    MOV r1, r5
+    LDI r2, 46
+    LDI r3, C_NAVY
+    SYS NUM
+    LDI r0, t_thanks
+    LDI r1, 16
+    LDI r2, 110
+    LDI r3, font_w
+    CALL draw_text
     RET
 
 ; ---- the tally --------------------------------------------------------------------------------
@@ -727,10 +795,11 @@ book_frame:
     RET
 
 .data
-world_count:  .byte 4, 4, 4, 0, 0
+world_count:  .byte 4, 4, 4, 4, 4
 world_levels: .byte LEVEL_1_1, LEVEL_1_2, LEVEL_1_3, LEVEL_1_4
               .byte LEVEL_2_1, LEVEL_2_2, LEVEL_2_3, LEVEL_2_4
               .byte LEVEL_3_1, LEVEL_3_2, LEVEL_3_3, LEVEL_3_4
-              .fill 8
+              .byte LEVEL_4_1, LEVEL_4_2, LEVEL_4_3, LEVEL_4_4
+              .byte LEVEL_5_1, LEVEL_5_2, LEVEL_5_3, LEVEL_5_4
 world_names:  .word t_wname1, t_wname2, t_wname3, t_wname4, t_wname5
 .code

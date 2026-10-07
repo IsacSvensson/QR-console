@@ -45,7 +45,7 @@ function frames(name: string, seed?: number): Fr[] {
   cache.set(key, out);
   return out;
 }
-const WHIRL_REPLAYS = ['m27-strengths', 'm27-ditch', 'm27-hollow', 'm27-cabin', 'm27-forest', 'm27-open', 'm27-11', 'm29-safe', 'm29-all', 'm30-safe', 'm30-all'];
+const WHIRL_REPLAYS = ['m27-strengths', 'm27-ditch', 'm27-hollow', 'm27-cabin', 'm27-forest', 'm27-open', 'm27-11', 'm29-safe', 'm29-all', 'm30-safe', 'm30-all', 'm31-safe', 'm31-all'];
 
 /** the frames of each run of a whirlwind (from its trigger to when it is gone), per level and index */
 function runsOf(fr: Fr[]) {
