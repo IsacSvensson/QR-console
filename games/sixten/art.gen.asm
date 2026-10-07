@@ -3,6 +3,7 @@
 FONT_GLYPHS = 48
 G_0 = 30
 G_SLASH = 47
+G_DASH = 45
 CELL_TYPES = 21
 CT_OPEN = 0
 CT_FOREST = 1
@@ -135,9 +136,35 @@ t_lg_hill: .byte 8, 29, 10, 4, 255   ; HÖJD
 t_lg_path: .byte 19, 20, 9, 7, 255   ; STIG
 t_lg_marsh: .byte 13, 25, 18, 255   ; MYR
 t_dir_e: .byte 29, 255   ; Ö
+t_enter: .byte 7, 27, 0, 9, 14, 255   ; GÅ IN
+t_build: .byte 2, 25, 7, 7, 255   ; BYGG
+t_take: .byte 20, 1, 0, 20, 18, 28, 255   ; TA TRÄ
+t_title1: .byte 19, 9, 24, 20, 5, 14, 19, 255   ; SIXTENS
+t_title2: .byte 5, 24, 16, 5, 4, 9, 20, 9, 15, 14, 255   ; EXPEDITION
+t_start: .byte 1, 46, 0, 19, 20, 1, 18, 20, 1, 255   ; A: STARTA
+t_world: .byte 22, 28, 18, 12, 4, 255   ; VÄRLD
+t_soon: .byte 2, 1, 14, 15, 18, 14, 1, 0, 11, 15, 13, 13, 5, 18, 0, 19, 14, 1, 18, 20, 255   ; BANORNA KOMMER SNART
+t_code: .byte 11, 15, 4, 46, 255   ; KOD:
+t_book: .byte 14, 1, 20, 21, 18, 2, 15, 11, 255   ; NATURBOK
+t_done: .byte 11, 12, 1, 18, 40, 255   ; KLAR!
+t_tctrl: .byte 11, 15, 14, 20, 18, 15, 12, 12, 5, 18, 255   ; KONTROLLER
+t_tbook: .byte 14, 1, 20, 21, 18, 2, 15, 11, 255   ; NATURBOK
+t_thearts: .byte 8, 10, 28, 18, 20, 1, 14, 255   ; HJÄRTAN
+t_more: .byte 1, 46, 0, 13, 5, 18, 255   ; A: MER
+t_close: .byte 1, 46, 0, 19, 20, 28, 14, 7, 255   ; A: STÄNG
+t_new: .byte 14, 25, 40, 255   ; NY!
+t_wname1: .byte 19, 11, 15, 7, 5, 14, 255   ; SKOGEN
+t_wname2: .byte 11, 18, 1, 6, 20, 5, 14, 255   ; KRAFTEN
+t_wname3: .byte 22, 1, 20, 20, 14, 5, 20, 255   ; VATTNET
+t_wname4: .byte 8, 9, 13, 12, 5, 14, 255   ; HIMLEN
+t_wname5: .byte 5, 24, 16, 5, 4, 9, 20, 9, 15, 14, 5, 14, 255   ; EXPEDITIONEN
+t_end: .byte 10, 1, 7, 0, 6, 29, 18, 19, 20, 27, 18, 42, 255   ; JAG FÖRSTÅR.
+t_q: .byte 41, 255   ; ?
 t_dir_n: .byte 14, 255   ; N
 t_dir_w: .byte 22, 255   ; V
 t_dir_s: .byte 19, 255   ; S
+; the save code's alphabet (DESIGN §10.2, as BLACKBOX's): no I O 0 1
+code_alpha: .byte 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 32, 33, 34, 35, 36, 37, 38, 39
 
 ; top-down tiles (tile 0 = empty)
 tiles_top:
@@ -947,6 +974,26 @@ spr_sc_body:
 .22.22..
 FF..FF..
 ........
+........
+spr_chips:
+.sprite
+........
+.EEEEE..
+E9E9E9E.
+E99999E.
+E9E9E9E.
+E99999E.
+.EEEEE..
+........
+spr_chocolate:
+.sprite
+........
+44444444
+43434343
+44444444
+43434343
+44444444
+66666666
 ........
 spr_shadow:
 .sprite

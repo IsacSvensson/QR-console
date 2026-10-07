@@ -24,6 +24,9 @@ controls:
 4 O 10 7
 5 H 21 8
 leaves: 21 8
+item: GURKA 15 5
+entry: RÄV 6 9
+entry: GRAN 12 6
 whirl: 3              # after control 3: across the field west to east; the spruce falls over the brook (a bridge)
 wp 7 7 3 8 0
 wp 20 7 3 8 60

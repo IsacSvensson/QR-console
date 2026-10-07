@@ -82,9 +82,10 @@ draw_hud_top:
     LDI r3, font_w
     CALL draw_text
     LD r0, [pw]
-    CMP r0, PW_CUCUMBER
-    JNE @hearts
-    LDI r0, spr_cucumber
+    CMP r0, 0
+    JEQ @hearts
+    SHL r0, 1
+    LD r0, [r0 + pw_sprites]
     LDI r1, 76
     LDI r2, 4
     LDI r3, 0
@@ -123,7 +124,7 @@ draw_hud_hints:
     LDI r2, 17
     LDI r3, font_w
     CALL draw_text
-    LDI r0, t_look
+    LD r0, [a_label]
     LDI r1, 34
     LDI r2, 17
     LDI r3, font_w

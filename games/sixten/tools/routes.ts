@@ -63,6 +63,121 @@ function cave(bot: Bot) {
   leaveSide(bot, B.L);
 }
 
+// ---- World 1 (M29) ----
+/** the safe route never steps on a power-up */
+function avoidItems(bot: Bot) {
+  for (const o of bot.level.objects) if (o.kind === 'item') bot.avoid.add(`${o.c},${o.r}`);
+}
+/** wait standing still on the current cell until the whirlwind is gone */
+function shelterUntilGone(bot: Bot) {
+  waitOut(bot);
+  bot.wait(10);
+}
+/** 1-3's cave: in at the south foot, two climbs, out at the north end */
+function cave13(bot: Bot) {
+  bot.walkTo(12, 9);
+  enterSide(bot, B.U);
+  sideWalk(bot, 54);
+  bot.hold(B.R | B.A, 30); // over the stone
+  sideWalk(bot, 124);
+  holdUntil(bot, B.U, () => sy(bot) <= 57, 'climbing to the middle shelf');
+  bot.hold(B.U | B.R, 10);
+  sideWalk(bot, 252);
+  holdUntil(bot, B.U, () => sy(bot) <= 33, 'climbing to the top shelf');
+  bot.hold(B.U | B.R, 10);
+  leaveSide(bot, B.R);
+}
+/** World 1 on its safe routes (DESIGN §13.2): only the obligatory controls, in order; no wood, no power-up, no
+ * compass course; shelter when the whirlwind comes */
+function world1Safe(bot: Bot) {
+  bot.toWorldMap();
+  // 1-1: control 3 starts the whirlwind: into the ditch at once, out when it is gone; the long way over the spång
+  bot.playChosen('1-1');
+  avoidItems(bot);
+  for (const [c, r] of [[6, 13], [14, 6], [19, 3]] as const) bot.walkTo(c, r);
+  bot.walkTo(18, 8);
+  shelterUntilGone(bot);
+  bot.walkTo(10, 7);
+  bot.finish();
+  // 1-2: round the west side, over the footbridge to the islet
+  bot.playChosen('1-2');
+  avoidItems(bot);
+  for (const [c, r] of [[11, 1], [2, 7], [11, 7]] as const) bot.walkTo(c, r);
+  bot.finish();
+  // 1-3: through the cave
+  bot.playChosen('1-3');
+  avoidItems(bot);
+  for (const [c, r] of [[5, 11], [19, 10]] as const) bot.walkTo(c, r);
+  cave13(bot);
+  bot.walkTo(11, 2);
+  bot.finish();
+  // 1-4: control 2 starts the whirlwind: into the cabin until it is gone; the long way round the brook
+  bot.playChosen('1-4');
+  avoidItems(bot);
+  for (const [c, r] of [[4, 2], [5, 8]] as const) bot.walkTo(c, r);
+  bot.walkTo(12, 9);
+  shelterUntilGone(bot);
+  bot.setCell(8, 6, 'L');
+  bot.setCell(9, 6, 'L');
+  bot.walkTo(20, 9);
+  bot.finish();
+}
+/** World 1 collecting everything: every control (optional and hidden ones too), every entry, the power-ups, wood
+ * from the fallen spruces and the building site's shortcut */
+function world1All(bot: Bot) {
+  bot.toWorldMap();
+  bot.playChosen('1-1');
+  bot.walkTo(6, 13);
+  bot.read(6, 9); // RÄV
+  bot.walkTo(14, 6);
+  bot.read(12, 6); // GRAN
+  bot.walkTo(15, 5); // gurka
+  bot.walkTo(19, 3);
+  bot.walkTo(18, 8);
+  shelterUntilGone(bot);
+  bot.setCell(20, 7, 'L');
+  bot.walkTo(10, 7);
+  bot.walkTo(21, 8); // 5, its leaves blown off
+  bot.finish();
+  bot.playChosen('1-2');
+  bot.walkTo(11, 1);
+  bot.read(13, 3); // BLÅBÄR
+  bot.read(3, 4); // IGELKOTT
+  bot.walkTo(3, 10); // chips
+  bot.walkTo(2, 7);
+  bot.walkTo(11, 7);
+  bot.walkTo(21, 6);
+  bot.finish();
+  bot.playChosen('1-3');
+  bot.walkTo(5, 11);
+  bot.walkTo(19, 10);
+  cave13(bot);
+  bot.walkTo(13, 3); // gurka
+  bot.walkTo(11, 2);
+  bot.read(16, 2); // VIND
+  bot.read(3, 2); // FLYTTBLOCK
+  bot.walkTo(21, 2);
+  bot.finish();
+  bot.playChosen('1-4');
+  bot.walkTo(4, 2);
+  bot.read(12, 4); // TROMB
+  bot.walkTo(5, 8);
+  bot.walkTo(5, 10);
+  shelterUntilGone(bot);
+  bot.setCell(8, 6, 'L');
+  bot.setCell(9, 6, 'L');
+  bot.walkTo(8, 6);
+  bot.tap(B.A); // wood from the fallen spruce
+  bot.walkTo(10, 7); // 4, its leaves blown off
+  bot.walkTo(14, 8);
+  bot.tap(B.R); // face the brook
+  bot.tap(B.A); // build the bridge
+  bot.setCell(17, 8, 'b');
+  bot.walkTo(20, 9);
+  bot.read(20, 3); // ROTVÄLTA
+  bot.finish();
+}
+
 /** hold a direction until the feet are on column c (moving horizontally), then centre in the cell */
 function runTo(bot: Bot, c: number) {
   bot.walkToPoint(c * 32 + 16, bot.y);
@@ -207,6 +322,9 @@ export const ROUTES: Record<string, Route> = {
       bot.wait(10);
     },
   },
+  // World 1 from the title to the World 2 map on the safe routes, and once more collecting everything
+  'm29-safe': { seed: 1, run: (bot) => (world1Safe(bot), bot.wait(30)) },
+  'm29-all': { seed: 1, run: (bot) => (world1All(bot), bot.wait(30)) },
   // 1-1: control 3 starts the whirlwind; Sixten waits by the lake until it has passed and the spruce lies over the
   // brook, then walks over it to the revealed control 5
   'm27-11': {

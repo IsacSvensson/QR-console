@@ -295,6 +295,11 @@ sd_step:
     AND r1, BTN_RIGHT
     OV JZ, @left
     LDI r5, SD_WALK
+    LD r0, [pw]                     ; chips: 1.5 x
+    CMP r0, PW_CHIPS
+    OV JNE, @rspeed
+    LDI r5, SD_WALK * 3 / 2
+@rspeed:
     LDI r0, 0
     ST [sd_face], r0
     OV JMP, @wind
@@ -303,6 +308,11 @@ sd_step:
     AND r1, BTN_LEFT
     OV JZ, @wind
     LDI r5, 0 - SD_WALK
+    LD r0, [pw]
+    CMP r0, PW_CHIPS
+    OV JNE, @lspeed
+    LDI r5, 0 - SD_WALK * 3 / 2
+@lspeed:
     LDI r0, 1
     ST [sd_face], r0
 @wind:

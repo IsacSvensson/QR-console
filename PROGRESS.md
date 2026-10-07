@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M29 (Sixten: World 1, budget gate) — M26-M28 done
+**Current milestone:** M30 (Sixten: Worlds 2 and 3) — M26-M29 done
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
 Part 4 (Sixtens expedition) on branch `claude/sixtens-expedition`: planned (DESIGN, mockup, PLAN Part 4, D-040); M26 done
@@ -51,7 +51,7 @@ Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`; planned, not st
 - [x] M26 Engine: cells, screens, walking, map and compass
 - [x] M27 The whirlwind and the wind
 - [x] M28 Side view as a code overlay
-- [ ] M29 World 1 and the game around it (budget gate)
+- [x] M29 World 1 and the game around it (budget gate)
 - [ ] M30 Worlds 2 and 3
 - [ ] M31 Worlds 4 and 5 and the final
 - [ ] M32 Save code, music, delivery
@@ -68,6 +68,10 @@ random (seeds, routes), warning >= 300 frames, the wind turns 120 frames first, 
 M28 done — side views (`levels/*.side`, `side:` links) run by a code overlay copied from xdata to 0xE000: walk, jump,
 climb, crouch, a horizontal wind with the lee, exits back to cells; T4 (cave, ravine, cliff); tests: the overlay is in
 RAM before it runs and runs only in side frames, its jumps stay inside it, the wind and the lee match the source (D-043).
+M29 done — title, world map with the save code, tally, nature-book pages and book, power-ups, wood and building sites,
+music; levels 1-1 to 1-4 (1-3 through a cave side view, 1-4 the first whirlwind level); NATURBOK.md (40 entries, checked
+by Claude, D-044); tests: safe routes, everything collected, 1-1's rules, sites optional, power-ups, texts = NATURBOK.md,
+the code computed independently; budget gate (D-045).
 **Runtime baseline for Part 4 = 02d7058.**
 
 Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
@@ -122,6 +126,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
 | Sixten mockup (planning) | cartridge 4 479 B (ISA 2); max cycles/frame: top-down 10 627 (with screen expansion; else ≤ 4 853), map 8 067, side view 2 793, overlays 9 900; QR round trip identical | D-040, `games/sixten/mockup/measure.ts` |
+| Sixten budget gate after World 1 (M29) | ROM 20.6 KB (code 14.3, data 6.3), side overlay 2.0 KB in xdata, xdata 6.4 KB, cartridge 14.9 KB; projected 5 worlds: ROM 27-28 KB, cartridge 21-23 KB | test:sixten, D-045 |
 | Sixten ROM after M28 | 14.1 KB (code 9.6 KB, data 4.4 KB) + the side-view overlay 1 972 B in xdata; xdata 2.7 KB, cartridge 9.0 KB | test:sixten, D-043 |
 | Sixten ROM after M27 | 12.7 KB (code 9.1 KB, data 3.6 KB), xdata 0.6 KB, cartridge 7.1 KB; max 19 716 cycles/frame (funnel + particles + screen expansion) | test:sixten, D-042 |
 | Sixten ROM after M26 | 9.1 KB (code 6.0 KB, data 3.1 KB), xdata 0.5 KB, cartridge 5.2 KB; max 13 613 cycles/frame (a slide's first frame) | test:sixten, D-041 |

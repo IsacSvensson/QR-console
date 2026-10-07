@@ -1,0 +1,21 @@
+# 1-3: the cave through the mountain: in at the south foot, up two climbs, out on the north side.
+name: GROTTAN
+wind: 0
+right: N
+sky: 0
+start: 1 10
+cells:
+################################################
+################################################
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkr################
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkr################
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkr################
+kkkkkkkkkkkkkkkr################################
+kkkkkkkkkkkkkkkr################################
+kkkkkkkkkkkkkkkr################################
+kkkkkkkkokkkkkkr################################
+################################################
+################################################
+################################################

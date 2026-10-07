@@ -68,6 +68,8 @@ export const encode = (s: string) =>
     return k;
   });
 
+export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
 /** fixed texts: asm label -> text */
 export const TEXTS: Record<string, string> = {
   t_go: 'GÅ',
@@ -81,6 +83,30 @@ export const TEXTS: Record<string, string> = {
   t_lg_path: 'STIG',
   t_lg_marsh: 'MYR',
   t_dir_e: 'Ö',
+  t_enter: 'GÅ IN',
+  t_build: 'BYGG',
+  t_take: 'TA TRÄ',
+  t_title1: 'SIXTENS',
+  t_title2: 'EXPEDITION',
+  t_start: 'A: STARTA',
+  t_world: 'VÄRLD',
+  t_soon: 'BANORNA KOMMER SNART',
+  t_code: 'KOD:',
+  t_book: 'NATURBOK',
+  t_done: 'KLAR!',
+  t_tctrl: 'KONTROLLER',
+  t_tbook: 'NATURBOK',
+  t_thearts: 'HJÄRTAN',
+  t_more: 'A: MER',
+  t_close: 'A: STÄNG',
+  t_new: 'NY!',
+  t_wname1: 'SKOGEN',
+  t_wname2: 'KRAFTEN',
+  t_wname3: 'VATTNET',
+  t_wname4: 'HIMLEN',
+  t_wname5: 'EXPEDITIONEN',
+  t_end: 'JAG FÖRSTÅR.',
+  t_q: '?',
   t_dir_n: 'N',
   t_dir_w: 'V',
   t_dir_s: 'S',
@@ -312,6 +338,8 @@ export const SPRITES: Record<string, Art> = {
   // side view: crouching in the lee, facing right
   spr_sc_head: ['..4444..', '.444444.', '.44CCCC.', '.4CC0CC.', '..CCCCC.', '.229999.', '2229999C', '2229999C'],
   spr_sc_body: ['22299999', '.2299999', '..22222.', '.222222.', '.22.22..', 'FF..FF..', '........', '........'],
+  spr_chips: ['........', '.EEEEE..', 'E9E9E9E.', 'E99999E.', 'E9E9E9E.', 'E99999E.', '.EEEEE..', '........'],
+  spr_chocolate: ['........', '44444444', '43434343', '44444444', '43434343', '44444444', '66666666', '........'],
   spr_shadow: ['........', '........', '........', '..3333..', '.333333.', '..3333..', '........', '........'],
   spr_flag: ['3.......', '3FFFFFF.', '3FFFFF9.', '3FFFF99.', '3FFF999.', '3FF9999.', '3F99999.', '3.......'],
   spr_heart: ['.66.66..', '6666666.', '6666666.', '.66666..', '..666...', '...6....', '........', '........'],
@@ -335,6 +363,7 @@ export function generateArt(): string {
     `FONT_GLYPHS = ${ORDER.length}`,
     `G_0 = ${ORDER.indexOf('0')}`,
     `G_SLASH = ${ORDER.indexOf('/')}`,
+    `G_DASH = ${ORDER.indexOf('-')}`,
     `CELL_TYPES = ${CELLS.length}`,
     ...CELLS.map((c, i) => `CT_${c.name} = ${i}`),
     ...TOP_TILES.map(([n], i) => `T_${n.toUpperCase()} = ${i + 1}`),
@@ -352,6 +381,7 @@ export function generateArt(): string {
   }
   out.push('');
   for (const [label, s] of Object.entries(TEXTS)) out.push(`${label}: .byte ${[...encode(s), 255].join(', ')}   ; ${s}`);
+  out.push(`; the save code's alphabet (DESIGN §10.2, as BLACKBOX's): no I O 0 1`, `code_alpha: .byte ${encode(CODE_ALPHABET).join(', ')}`);
   out.push('', '; top-down tiles (tile 0 = empty)', 'tiles_top:', '    .fill 32');
   for (const [n, a] of TOP_TILES) out.push(`; ${n}`, ...sprite(a));
   out.push('', '; cell patterns: 16 tile indices per cell type (4 rows of 4); the variant bit swaps rows 0-1 with 2-3', 'patterns:');

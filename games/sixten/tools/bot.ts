@@ -70,6 +70,7 @@ export class Bot {
   /** start a level from the level card, with buttons: → until it shows the level, then A */
   startLevel(id: string) {
     if (!this.inputs.length) this.step(0);
+    if (this.mode === this.S('M_TITLE')) this.tap(B.B); // the title's B: the level card
     if (this.mode !== this.S('M_CARD')) throw new Error('startLevel: not on the level card');
     const want = this.ids.indexOf(id);
     for (let guard = 0; this.u('card_sel') !== want; guard++) {
@@ -81,9 +82,52 @@ export class Bot {
     this.settle();
   }
 
+  /** cells the routes must not walk onto (e.g. power-ups on a safe route), as "c,r" */
+  avoid = new Set<string>();
   walkable(c: number, r: number) {
     const L = this.level;
-    return c >= 0 && r >= 0 && c < L.w && r < L.h && CELLS.find((t) => t.ch === L.rows[r]![c])!.speed > 0;
+    return c >= 0 && r >= 0 && c < L.w && r < L.h && CELLS.find((t) => t.ch === L.rows[r]![c])!.speed > 0 && !this.avoid.has(`${c},${r}`);
+  }
+  /** a cell of the bot's copy of the level changes (a whirlwind, a building) */
+  setCell(c: number, r: number, ch: string) {
+    const row = this.level.rows[r]!;
+    this.level.rows[r] = row.slice(0, c) + ch + row.slice(c + 1);
+  }
+  /** from the title: A to the world map */
+  toWorldMap() {
+    if (!this.inputs.length) this.step(0);
+    if (this.mode === this.S('M_TITLE')) this.tap(B.A);
+    if (this.mode !== this.S('M_WMAP')) throw new Error('not on the world map');
+  }
+  /** on the world map: A starts the chosen level */
+  playChosen(id: string) {
+    if (this.mode !== this.S('M_WMAP')) throw new Error('not on the world map');
+    this.tap(B.A);
+    this.level = parseLevel(id);
+    this.avoid = new Set();
+    this.settle();
+  }
+  /** walk onto the goal, through the tally, back on the world map */
+  finish() {
+    this.walkTo(...this.level.goal);
+    for (let i = 0; this.mode !== this.S('M_TALLY'); i++) {
+      if (i > 10) throw new Error('the goal did not end the level');
+      this.step(0);
+    }
+    this.wait(20);
+    this.tap(B.A);
+    if (this.mode !== this.S('M_WMAP')) throw new Error('no world map after the tally');
+  }
+  /** stand on or next to an entry and read all its pages */
+  read(c: number, r: number) {
+    this.walkTo(c, r);
+    this.tap(B.A);
+    if (this.mode !== this.S('M_PAGE')) throw new Error(`no page at ${c},${r}`);
+    for (let i = 0; this.mode === this.S('M_PAGE'); i++) {
+      if (i > 5) throw new Error('the page never closed');
+      this.wait(10);
+      this.tap(B.A);
+    }
   }
   /** shortest 4-neighbour path over walkable cells (the level source, as the bot knows the map) */
   path(to: [number, number]): [number, number][] {
@@ -113,6 +157,7 @@ export class Bot {
   walkToPoint(tx: number, ty: number) {
     for (let guard = 0; this.x !== tx || this.y !== ty; guard++) {
       if (guard > 3000) throw new Error(`stuck at ${this.x},${this.y} going to ${tx},${ty}`);
+      if (this.mode === this.S('M_TALLY')) return; // the goal ended the level
       this.settle();
       const b = this.x < tx ? B.R : this.x > tx ? B.L : this.y < ty ? B.D : B.U;
       // do not overshoot by more than the remaining distance: on the last pixels tap instead of hold
@@ -127,6 +172,7 @@ export class Bot {
   /** walk to a cell along the shortest path, through cell centres (feet FEET_DY into the cell) */
   walkTo(c: number, r: number) {
     for (const [pc, pr] of this.path([c, r])) {
+      if (this.mode === this.S('M_TALLY')) return;
       const [cc, cr] = this.cell;
       if (pc !== cc) this.walkToPoint(pc * 32 + 16, this.y);
       else if (pr !== cr) this.walkToPoint(this.x, pr * 32 + 20);

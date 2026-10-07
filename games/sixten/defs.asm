@@ -22,6 +22,11 @@ M_SLIDE  = 1
 M_MAP    = 2
 M_CARD   = 3                 ; the level card before a level (until the title and world map exist, M29)
 M_SIDE   = 4                 ; a side view: its engine is a code overlay at OVL_RAM
+M_TITLE  = 5
+M_WMAP   = 6                 ; the world map (with the save code)
+M_PAGE   = 7                 ; a nature-book page over the play screen
+M_TALLY  = 8                 ; after the goal
+M_BOOK   = 9                 ; the nature book (from the world map)
 
 ; ---- layout ----------------------------------------------------------------------------------
 PLAY_Y   = 32               ; HUD: two rows of 16 px; the playfield is 4 x 3 cells = 128 x 96
@@ -95,6 +100,20 @@ LR_WHIRLS = 16
 LR_NWHIRL = 18
 LR_LINKS = 20
 LR_NLINK = 22
+LR_OBJS  = 24
+LR_NOBJ  = 26
+; objects (OBJ_REC B): kind, column, row, argument, target cell
+OB_KIND  = 0
+OB_C     = 1
+OB_R     = 2
+OB_ARG   = 3
+OB_TGT   = 4
+OK_ITEM  = 1
+OK_ENTRY = 2
+OK_BUILD = 3
+PW_FRAMES = 900             ; a power-up lasts 15 s
+MAX_HARVEST = 8
+WORLDS   = 5
 ; side link (8 B) and side view record (16 B), levels.gen.asm
 SL_CELL  = 0
 SL_SIDE  = 2
@@ -126,6 +145,11 @@ SD_HC    = 9
 .sfx SFX_MAP, 2, 900, 4, 5
 .sfx SFX_COURSE, 1, 1320, 5, 8, -40
 .sfx SFX_AJ, 0, 660, 12, 12, -30
+.sfx SFX_PLING, 0, 1568, 10, 9, 40
+.sfx SFX_POWER, 0, 880, 16, 10, 60
+.sfx SFX_WOOD, 2, 400, 6, 10
+.sfx SFX_BUILD, 0, 523, 14, 10, 30
+.sfx SFX_GOAL, 0, 1047, 24, 11, 20
 .sfx SFX_CHANGE, 2, 300, 20, 10, -8
 
 ; ---- RAM -------------------------------------------------------------------------------------
@@ -250,6 +274,30 @@ SD_HC    = 9
 .var sd_dir                         ; the compass arrow: the way he faces (16ths)
 .var ovl_loaded                     ; which overlay is in OVL_RAM (1 = the side view)
 .var map_ret                        ; the mode the map returns to
+.var pw_t                           ; frames left of the power-up
+.var obj_taken                      ; bit k: object k taken (a power-up) or built (a site)
+.var harvest, MAX_HARVEST * 2       ; fallen trees already taken wood from (cell + 1)
+.var n_harvest
+.var face_cell                      ; the cell Sixten faces
+.var a_label                        ; what A does now (a text)
+.var o_mask                         ; the level's obligatory controls (bits)
+.var world                          ; the world on the map (1-5, 6 = the game is done)
+.var wm_sel                         ; the world map: the chosen level of the world
+.var lv_done, 2                     ; levels done: one bit per level index
+.var lv_goals, 32                   ; per level index: bit 0 done, 1 all controls, 2 every entry
+.var book, 5                        ; the nature book: bit k-1 = entry k found
+.var page_e                         ; the page being read: entry, page
+.var page_n
+.var page_new                       ; 1 = found just now
+.var nbuf, 140                      ; its pages, unpacked
+.var code_bits, 8
+.var code_str, 11                   ; the save code as glyphs (255-terminated)
+.var mus_t                          ; music: frames to the next step, the step
+.var mus_i
+.var sel_keep
+.var tally_c                        ; the tally: controls, entries of the level found, entries in it
+.var tally_e
+.var tally_n
 .var dbg_level                      ; n + 1: start level n
 .var dbg_goto                       ; cell + 1: put Sixten on that cell
 .var dbg_cell                       ; cell + 1: write dbg_cell_v into it

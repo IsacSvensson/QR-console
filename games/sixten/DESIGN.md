@@ -367,7 +367,7 @@ Rymden (utkastets planeter och stjärnor) och sten/järn är inte med (§11 frå
 | **Chips** | fart | Sixten springer 1,5 × och hoppar längre i sidovy. Musiken går snabbare (som Bos pommes) | före öppna sträckor där man vill hinna till ett skydd |
 | **Choklad** | stå emot vinden | vinden knuffar inte Sixten (styrka 1–2, sidovyns vågräta kraft). **Skyddar inte mot tromben** (styrka ≥ 3 i radien skadar ändå, S1) | i blåsiga sidovyer och på öppna fält |
 
-En powerup i taget. En ny ersätter den gamla.
+En powerup i taget, tagen genom att gå på den. En ny ersätter den gamla. Varar 900 bildrutor (15 s).
 
 ### 8.2 Naturboken (40 uppslag)
 
@@ -401,10 +401,10 @@ en bock.
 
 ### 8.4 Trä
 
-- Trä kommer **bara** från tromben: ett fallet träd (`L`) ger 1–3 plankor när tromben passerat. A bredvid stammen,
+- Trä kommer **bara** från tromben: ett fallet träd (`L`) ger 2 plankor (en gång per träd) när tromben passerat. A bredvid stammen,
   inte vid rotvältan (S7).
 - Byggplatser (`B`) är markerade med pinnar och snöre uppifrån och med lila på kartan. `A: BYGG` med tillräckligt trä
-  gör cellen till en bro eller en stege (cellbyte).
+  gör en cell till en bro eller en stege (cellbyte; `build:` i `.map` anger vilken). Det kostar 2 plankor.
 - **Alltid frivilligt:** varje byggplats är en genväg eller vägen till en frivillig kontroll eller ett
   naturboksuppslag. Säkra vägen (testas med botrutten) kräver aldrig trä.
 
@@ -431,14 +431,14 @@ Skärmarna runt spelet följer Bo: titel, världskarta (banorna med tre målikon
 
 ### 10.2 Sparkoden
 
-**10 tecken ur 32 = 50 bitar**, BLACKBOX:s alfabet (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`: inga I/O, inga 0/1), med en
-nyckel per position (XOR) som BLACKBOX:s access codes:
+**10 tecken ur 32 = 50 bitar**, BLACKBOX:s alfabet (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`: inga I/O, inga 0/1). Tecken j
+är bitarna 5j–5j+4 (högsta först) XOR (7j + 3) mod 32. Bitarna, högsta först i varje fält:
 
 | Bitar | Innehåll |
 |---:|---|
 | 3 | värld 1–5 (6 = spelet klart) |
 | 40 | naturboken, ett uppslag per bit |
-| 7 | kontrollsumma (summan av de 43 bitarna × positionsvikter, mod 128) |
+| 7 | kontrollsumma: summan av (i + 1) för varje satt bit i = 0–42, mod 128 |
 
 Koden visas på världskartan och i slutet. Banornas kontroller och trä sparas inte (världens banor kan spelas om).
 Kontrollsumman gör att 1 av 128 slumpkoder slinker igenom. Det är okej för ett barnspel, och omöjliga koder (värld
@@ -467,6 +467,14 @@ utanför 1–6) avvisas också. **Förslag:** om naturboken växer över 40 upps
 | 15 | Antal världar och banor? | **5 × 4 = 20** (beslut 10), med budgetgrind efter V1 |
 
 ## 12. Budget
+
+### 12.0 Budgetgrinden efter värld 1 (M29, uppmätt 2026-10-07)
+
+ROM **20,6 KB** (kod 14,3 KB, data 6,3 KB), sidomotorn 2,0 KB i xdata, xdata totalt 6,4 KB, kassett **14,9 KB**.
+Största koden: tromben 3,0 KB, skärmarna 2,5 KB, kartskärmen 2,4 KB, Sixten 1,4 KB, objekten 1,4 KB, banan 1,3 KB.
+Framräknat till fem världar (sex fenomen à ~0,35 KB, kodinmatning 0,6 KB, slutet 0,5 KB, musik; 32 bilder och 16
+banor till): ROM **27–28 KB** av 32, xdata 10–12 KB, kassett **21–23 KB** (samma kompression som nu). Under målet
+25 KB: ingen nedskärning behövs (D-045).
 
 ### 12.1 Kalibrering mot Bo och BLACKBOX (uppmätt ur assemblerns listning, 2026-10-06)
 
@@ -617,9 +625,10 @@ mark, `o` (under 2) stort block, `u` (under 4) sänka, `v` dike, `H` klubbstugan
 den långa vägen söderut över spången (`b`) → mål. Den kräver ingen kompasskurs, inget trä och ingen sidovy. Grottan
 (`G`) är 1-1:s hemlighet men leder ingenstans förrän 1-3.
 
-**Reglerna för 1-1 (testas i M29, som Bos FIRST10 §8):** ingen tromb före kontroll 3. Ingen skog inom trombens
-radie som Sixten *måste* passera. Förvarning ≥ 5 s. Skyddsceller (dike, sänka) högst 2 celler från varje punkt på den
-säkra vägen medan tromben är aktiv. Första kontrollen högst 6 celler från start.
+**Reglerna för 1-1 (testas i M29, som Bos FIRST10 §8):** ingen tromb före kontroll 3. På den säkra vägen är Sixten
+aldrig i skog inom trombens radie. Förvarning ≥ 5 s. Medan tromben har styrka ≥ 3 finns en skyddscell (dike, sänka,
+stuga) högst 2 celler från honom på den säkra vägen. Första kontrollen högst 6 celler från start. (Den säkra vägen
+går efter kontroll 3 rakt ned i diket vid (18, 8) och väntar där tills tromben är borta.)
 
 ## 14. Mockupen (`mockup/`)
 

@@ -11,6 +11,7 @@ WWWWWWWW
 .......M
 controls:
 1 O 0 3
+item: CHOKLAD 0 2
 side: 4 1 T4-cave 4 2 4 2         # cell, side view, out at the left edge -> cell, out at the right edge -> cell
 side: 1 4 T4-ravine 1 3 1 5
 side: 6 2 T4-cliff 6 3 6 0

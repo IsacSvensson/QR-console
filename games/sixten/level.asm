@@ -38,6 +38,8 @@ level_start:
     ST [still_t], r0
     LDI r0, HEARTS
     ST [hearts], r0
+    CALL objs_reset
+    LD r6, [lv_ptr]
     LDB r1, [r6 + LR_SR]            ; the start cell
     LD r0, [lv_w]
     MUL r1, r0
@@ -361,6 +363,7 @@ draw_world:
     SYS CLS
     CALL draw_view
     CALL draw_flags
+    CALL draw_objs
     CALL draw_sixten
     CALL draw_whirl
     CALL draw_hud

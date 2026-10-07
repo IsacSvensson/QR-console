@@ -1,0 +1,28 @@
+# 1-2 Sjön (DESIGN.md §7): water and route choice. The lake splits the way: west round it, east round it, or over
+# the footbridge to the islet. Chips on the west path.
+name: 1-2 SJÖN
+world: 1
+cells:
+TTTTTTTTTTTTTTTTTTTTTTTT
+TS=========+========+TTT
+T|TTTTTTTTT|TTTTTTTT|TTT
+T|...TTTT..|..TTTTTT|TTT
+T|....WWWWWWWWWWW.T.|TTT
+T|...WWWWWWWWWWWWW..|.TT
+T|..WWWWWWWWWWWWWW..|.TT
+T|..WWWWWW.u.WWWWW..|..T
+T|..WWWWWWWbWWWWWW..|..T
+T|...WWWWWWbWWWWWW..|.TT
+T+====+....|..WWW.==+.TT
+TTTTTT|....+======+TTTTT
+TTTTTT|TTTTTTTTTTT|TTTTT
+TTTTTT+===========+====M
+TTTTTTTTTTTTTTTTTTTTTTTT
+controls:
+1 O 11 1
+2 O 2 7
+3 O 11 7
+4 F 21 6
+item: CHIPS 3 10
+entry: IGELKOTT 3 4
+entry: BLÅBÄR 13 3

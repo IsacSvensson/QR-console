@@ -912,3 +912,40 @@ Decision:
   forest) is worse, and levels put the cabin on the safe route where they can. Flagged for the human in PROGRESS.
 - **The `.overlay` directive** (D-040): not done. The OV/OJ macro convention works (M28) and keeps the assembler
   unchanged.
+
+## D-045 - Sixten's World 1 and the game around it; the budget gate (M29)
+Date: 2026-10-07 - Milestone: M29
+Decision:
+- **Screens**: a title (A: the world map; B: the level card with every level, which the test replays use), the world
+  map (the world's levels as stops on a path, each with three marks: done, every control, every entry; a level opens
+  when the one before it is done; B: the nature book; the save code at the bottom), the tally after the goal (controls,
+  the level's entries, hearts), a nature-book page over the play screen (the picture at 2 x, the name, NY! the first
+  time, two lines a page, A: more / close), the nature book (the world's 8 entries, found or "?", n of 40). When every
+  level of a world is done the next world opens; Worlds 2-5 show "BANORNA KOMMER SNART" until their levels exist.
+- **The goal**: the M cell with every obligatory control stamped (controls in any order; the order is shown by the
+  course on the map).
+- **Objects** (`item:`, `entry:`, `build:` in `.map`, 6-byte records): power-ups are taken by walking onto them and
+  last 900 frames (a test hook's power-up, with no time, lasts); entries open with A on or facing their cell; a fallen
+  tree gives 2 wood once (A on or facing it; up to 8 trees a level); a building site with 2 wood makes its target cell
+  the new type (1-4: a bridge over the brook). The HUD's A word follows what A would do (UNDERSÖK, GÅ IN, BYGG, TA TRÄ).
+  Chips: 1.5 x speed top-down and in side views, the music 10 -> 7 frames a note.
+- **NATURBOK.md** holds all 40 entries (8 a world, the save code's bit order); `tools/naturbok.ts` wraps the texts
+  (20 characters a line, 2 lines a page, at most 3 pages) into packed xdata blocks; pictures exist for World 1's 8
+  (the rest show "?" until their worlds).
+- **The save code** (DESIGN 10.2, now exact): world 3 bits + book 40 bits + checksum 7 bits (the sum of i + 1 over the
+  set bits, mod 128); character j = bits 5j..5j+4 XOR (7j + 3) mod 32 in BLACKBOX's alphabet. Shown on the world map;
+  entering a code is M32.
+- **World 1**: 1-1 as DESIGN 13 (its safe route waits out the whirlwind in the ditch at (18, 8)), 1-2 Sjön (the lake,
+  the islet's footbridge), 1-3 Berget (the mountain splits the level; the cave side view `1-3-grottan` is the way
+  through: two climbs, out on the north side), 1-4 Trombens spår (control 2 starts a strength-3 whirlwind; the cabin is
+  on the safe route; two spruces fall, wood, the building site's bridge is the shortcut). Music: one 32-note loop.
+- **DESIGN 13.2's shelter rule** is checked while the whirlwind is at strength >= 3 (it was "while it is active",
+  which includes the harmless warning, when Sixten is still at control 3 by the lake).
+- **Budget gate**: measured ROM 20 618 B (code 14 268, data 6 269, sound 81), the side overlay 2 004 B in xdata, xdata
+  6 396 B, cartridge 14 923 B. Projection for five worlds (six phenomena ~0.35 KB each, code entry 0.6 KB, the ending
+  0.5 KB, 32 more pictures and 16 more levels): ROM 27-28 KB, xdata 10-12 KB, cartridge 21-23 KB at today's ratio
+  (55 %). Under 32 KB and under the 25 KB target: no cuts. Should code grow more, the screens (2.5 KB) go into an
+  overlay next.
+Measurement: replays m29-safe (9 910 frames: title -> 1-1 .. 1-4 on safe routes -> the World 2 map, no heart lost, no
+wood, no power-up, no course) and m29-all (12 864 frames: every control, every World 1 entry, both power-ups, wood and
+the bridge); all 15 M29 checks pass, and the 86 earlier Sixten checks.

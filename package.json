@@ -36,7 +36,7 @@
     "bo:gen": "tsx games/bo/tools/tiles.ts && tsx games/bo/tools/levels.ts && tsx games/bo/tools/text.ts",
     "bo:record": "tsx games/bo/tools/record.ts",
     "test:sixten": "vitest run --project sixten --reporter=verbose",
-    "sixten:gen": "tsx games/sixten/tools/art.ts && tsx games/sixten/tools/levels.ts",
+    "sixten:gen": "tsx games/sixten/tools/art.ts && tsx games/sixten/tools/naturbok.ts && tsx games/sixten/tools/levels.ts",
     "sixten:record": "tsx games/sixten/tools/record.ts"
   },
   "devDependencies": {

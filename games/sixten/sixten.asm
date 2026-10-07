@@ -5,6 +5,7 @@
 
 .include "art.gen.asm"                ; first: defs.asm sizes RAM from their constants
 .include "levels.gen.asm"
+.include "naturbok.gen.asm"
 .include "defs.asm"
 .code                               ; levels.gen.asm ends in .xdata
 
@@ -17,7 +18,9 @@ init:
     CALL unpack_font
     LDI r0, LEVEL_1_1
     ST [card_sel], r0
-    LDI r0, M_CARD
+    LDI r0, 1
+    ST [world], r0
+    LDI r0, M_TITLE
     ST [mode], r0
     RET
 
@@ -26,6 +29,14 @@ update:
     ADD r0, 1
     ST [tick], r0
     CALL debug_hooks
+    LD r0, [mode]                   ; the music plays in the levels
+    CMP r0, M_SLIDE
+    JLE @music
+    CMP r0, M_SIDE
+    JNE @dispatch
+@music:
+    CALL music_tick
+@dispatch:
     LD r0, [mode]
     SHL r0, 1
     LD r0, [r0 + mode_table]
@@ -78,8 +89,12 @@ debug_hooks:
 .include "card.asm"
 .include "whirl.asm"
 .include "side.asm"
+.include "objects.asm"
+.include "screens.asm"
+.include "code.asm"
+.include "music.asm"
 .include "sideovl.asm"
 .code
 
 .data
-mode_table: .word play_frame, slide_frame, map_frame, card_frame, OVL_RAM
+mode_table: .word play_frame, slide_frame, map_frame, card_frame, OVL_RAM, title_frame, wmap_frame, page_frame, tally_frame, book_frame

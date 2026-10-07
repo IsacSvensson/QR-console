@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BUTTONS } from '@qrc/vm';
 import { generateArt, patternBytes, CELLS } from '../../games/sixten/tools/art';
 import { generateLevels } from '../../games/sixten/tools/levels';
+import { generateBook } from '../../games/sixten/tools/naturbok';
 import { DESIGN_CELLS, GAME_DIR, LEVEL_IDS, type RefLevel, type Sixten, buildSixten, readLevel, refCells, replayNames, runReplay, symbol, typeOf, vmInLevel } from './oracle';
 
 // M26 acceptance: cells, screens, walking, map and compass (PLAN.md Part 4).
@@ -19,6 +20,7 @@ describe('Sixten build', () => {
   it('generated data files are up to date with the art and the level sources', () => {
     expect(readFileSync(join(GAME_DIR, 'art.gen.asm'), 'utf8')).toBe(generateArt());
     expect(readFileSync(join(GAME_DIR, 'levels.gen.asm'), 'utf8')).toBe(generateLevels().asm);
+    expect(readFileSync(join(GAME_DIR, 'naturbok.gen.asm'), 'utf8')).toBe(generateBook());
   });
 
   it('reports the cartridge and ROM size', () => {
@@ -199,7 +201,7 @@ function play(name: string) {
     };
     frames.push(fr);
     // Sixten's box (DESIGN §4.1: 6 x 4 px at the feet) never overlaps a blocking cell (in a level: not on the card)
-    if (fr.mode === S('M_CARD')) return;
+    if (![S('M_PLAY'), S('M_SLIDE'), S('M_MAP')].includes(fr.mode)) return; // in a level, top-down
     const x = fr.x16 >> 4;
     const y = fr.y16 >> 4;
     for (const [cx, cy] of [[x - 3, y - 3], [x + 2, y - 3], [x - 3, y], [x + 2, y]] as const)

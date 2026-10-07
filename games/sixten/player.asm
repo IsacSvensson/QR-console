@@ -11,14 +11,21 @@ play_frame:
     CALL map_open
     RET
 @side:
-    AND r1, BTN_A                   ; A facing a side view's cell: into the side view
+    AND r1, BTN_A                   ; A: into a side view, or an entry's page, a building, wood
     JZ @walk
     CALL try_side
     LD r0, [mode]
     CMP r0, M_SIDE
-    JNE @walk
+    JNE @act
+    RET
+@act:
+    CALL act_a
+    LD r0, [mode]
+    CMP r0, M_PLAY
+    JEQ @walk
     RET
 @walk:
+    CALL pw_tick
     CALL player_move
     CALL player_cell
     CALL whirl_update
@@ -56,6 +63,13 @@ player_move:
     LDB r1, [r1 + cells]
     AND r1, 31
     LDB r5, [r1 + cell_speed]       ; 1/16 px per frame
+    LD r1, [pw]                     ; chips: 1.5 x
+    CMP r1, PW_CHIPS
+    JNE @speed
+    MOV r1, r5
+    SHR r1, 1
+    ADD r5, r1
+@speed:
     MOV r1, r0
     AND r1, BTN_LEFT | BTN_RIGHT
     JZ @vertical
@@ -255,6 +269,8 @@ player_cell:
     ADD r1, 1
     ST [steps], r1
 @stamp:
+    CALL obj_pickup
+    LD r0, [cell_i]
     LDB r1, [r0 + cells]
     AND r1, 0xC0
     CMP r1, 0x80                    ; a control, not under leaves
@@ -279,6 +295,12 @@ player_cell:
     LDI r1, 0
 @set:
     ST [you_here], r1
+    CALL face_update
+    LD r0, [mode]
+    CMP r0, M_PLAY
+    JNE @done
+    CALL goal_check
+@done:
     RET
 
 ; r0 = cell index of a control: stamp it (once); AJ! comes back here; it may start a whirlwind
