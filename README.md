@@ -109,8 +109,8 @@ packages/qr         QR frames, GIF, distortion simulator, decoders
 packages/tools      qrc CLI, reference generation, demo, y4m
 apps/web            PWA: scanner (worker), library (IndexedDB), player (canvas + WebAudio)
 games/              hello, breakout, pong (source, cartridge, references, replay, checks), blackbox;
-                    bo = Bo's Skateäventyr, planned (DESIGN.md + a VM-rendered mockup, PLAN.md Part 3)
-                    sixten = Sixtens expedition, planned (DESIGN.md + a VM-rendered mockup, PLAN.md Part 4)
+                    bo = Bo's Skateäventyr (PLAN.md Part 3, GUIDE.md for parents)
+                    sixten = Sixtens expedition (PLAN.md Part 4, GUIDE.md for parents)
 bench/              benchmark scripts and results
 e2e/                Playwright tests and fixtures
 ```

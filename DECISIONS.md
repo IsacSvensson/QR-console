@@ -1001,3 +1001,27 @@ Measurement: ROM 25 920 B (code 16 328, data 9 503, sound 89), xdata 8 034 B, ca
 without losing a heart. All M31 checks pass (the lightning on exactly from its time for its duration, its warning
 whole; the safe route never by a lone tree, on the fell or on water while it lasts; a course in the fog reaches its
 control; the flags in ROM).
+
+## D-048 - Sixten's save code entry, music checks and delivery (M32)
+Date: 2026-10-07 - Milestone: M32
+Decision:
+- **Entering a code**: the title's B opens a code screen (ten A's, the cursor on the first; UP/DOWN change the
+  character, LEFT/RIGHT move, A tries it, B goes back). The level card for the test levels, which was the title's B
+  until now, moved to B with DOWN held, so the bot's `startLevel` presses both; the card replays were recorded again
+  (same frames, the same frame counts). A code is taken when its checksum matches and its world is 1-6; it sets the
+  world, the book and every level of the worlds before it as done (none of its own world: the code does not hold
+  them), then opens the world map, where `code_make` shows the same code again (or the ending for world 6). A wrong
+  code: `FEL KOD. FÖRSÖK IGEN` for 120 frames and the AJ sound; nothing changes.
+- **The tests' encoder** reads DESIGN §10.2 (its field table and its alphabet) and is the test's own; the bot has its
+  own copy for the m32-code route. Round trip: worlds 1-6 x 12 books from a seeded generator (seed 32, printed in the
+  test name) plus the empty and the full book, typed in with the buttons; 20 corrupted codes (the ones the reference
+  decoder would also take, 1 in 128, are skipped) and worlds 0 and 7 with a right checksum are rejected.
+- **Music checks** follow the notes of square channel 1 (8 frames, volume 3) in m31-all: in each world's levels every
+  note is the next sounding step of that world's tune (all steps heard); none outside the levels. The whirlwind's
+  noise is 180 + 60 s Hz at volume 2 s + 3 (half in shelter), strengths 1-5 all heard.
+- **Delivery**: `sixten` in the demo list, the e2e fixtures and a Playwright project; the CI matrix publishes its GIF
+  (the `demo: false` flag is gone). `games/sixten/GUIDE.md` in Swedish.
+Measurement: ROM 27 012 B (code 17 344, data 9 579, sound 89), xdata 8 034 B, cartridge 19 459 B; code.asm 1 352 B
+(the design guessed 0.5-0.6 KB for the code: the entry screen is most of it). `demo/sixten.gif`: 113 frames (K = 75 +
+38 repair), 16.9 s loop, 1.58 MB; decoded back byte-identical. The fake-camera e2e scan: 75/75 blocks, the first frame
+equals the VM reference. Not verified: scanning on a real phone, reading the code screen in 128 x 128 on a phone.

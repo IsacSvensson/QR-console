@@ -149,6 +149,11 @@ t_take: .byte 20, 1, 0, 20, 18, 28, 255   ; TA TRÄ
 t_title1: .byte 19, 9, 24, 20, 5, 14, 19, 255   ; SIXTENS
 t_title2: .byte 5, 24, 16, 5, 4, 9, 20, 9, 15, 14, 255   ; EXPEDITION
 t_start: .byte 1, 46, 0, 19, 20, 1, 18, 20, 1, 255   ; A: STARTA
+t_start_b: .byte 2, 46, 0, 19, 11, 18, 9, 22, 0, 11, 15, 4, 255   ; B: SKRIV KOD
+t_code_in: .byte 19, 11, 18, 9, 22, 0, 4, 9, 14, 0, 11, 15, 4, 255   ; SKRIV DIN KOD
+t_wrong: .byte 6, 5, 12, 0, 11, 15, 4, 42, 0, 6, 29, 18, 19, 29, 11, 0, 9, 7, 5, 14, 255   ; FEL KOD. FÖRSÖK IGEN
+t_code_a: .byte 1, 46, 0, 11, 12, 1, 18, 255   ; A: KLAR
+t_code_b: .byte 2, 46, 0, 20, 9, 12, 12, 2, 1, 11, 1, 255   ; B: TILLBAKA
 t_world: .byte 22, 28, 18, 12, 4, 255   ; VÄRLD
 t_soon: .byte 2, 1, 14, 15, 18, 14, 1, 0, 11, 15, 13, 13, 5, 18, 0, 19, 14, 1, 18, 20, 255   ; BANORNA KOMMER SNART
 t_code: .byte 11, 15, 4, 46, 255   ; KOD:

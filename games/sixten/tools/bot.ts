@@ -7,7 +7,7 @@ import { buildCartridge } from '@qrc/asm';
 import { parseCartridge } from '@qrc/cartridge';
 import { includeFrom } from '@qrc/tools';
 import { BUTTONS, VM } from '@qrc/vm';
-import { CELLS } from './art';
+import { CELLS, CODE_ALPHABET } from './art';
 import { type Level, levelIds, parseLevel } from './levels';
 import { GAME_DIR } from './util';
 
@@ -17,6 +17,22 @@ export async function loadGame(seed = 1) {
   const { bytes, asm } = await buildCartridge(readFileSync(join(GAME_DIR, 'sixten.asm'), 'utf8'), { file: 'sixten.asm', resolveInclude: includeFrom(GAME_DIR) });
   const vm = VM.fromCartridge(await parseCartridge(bytes), { seed });
   return { vm, sym: asm.symbols, bytes };
+}
+
+/** the save code of a world and the entries found (1-40), as DESIGN §10.2 (the bot's own copy; the tests have theirs) */
+export function saveCode(world: number, entries: number[]) {
+  const bits: number[] = [];
+  for (let k = 2; k >= 0; k--) bits.push((world >> k) & 1);
+  for (let e = 1; e <= 40; e++) bits.push(entries.includes(e) ? 1 : 0);
+  const sum = bits.reduce((s, b, i) => s + b * (i + 1), 0) % 128;
+  for (let k = 6; k >= 0; k--) bits.push((sum >> k) & 1);
+  let code = '';
+  for (let j = 0; j < 10; j++) {
+    let v = 0;
+    for (let t = 0; t < 5; t++) v = v * 2 + bits[j * 5 + t]!;
+    code += CODE_ALPHABET[v ^ ((7 * j + 3) & 31)];
+  }
+  return code;
 }
 
 export class Bot {
@@ -70,7 +86,7 @@ export class Bot {
   /** start a level from the level card, with buttons: → until it shows the level, then A */
   startLevel(id: string) {
     if (!this.inputs.length) this.step(0);
-    if (this.mode === this.S('M_TITLE')) this.tap(B.B); // the title's B: the level card
+    if (this.mode === this.S('M_TITLE')) this.tap(B.B | B.D); // the title's B with DOWN held: the level card
     if (this.mode !== this.S('M_CARD')) throw new Error('startLevel: not on the level card');
     const want = this.ids.indexOf(id);
     for (let guard = 0; this.u('card_sel') !== want; guard++) {
@@ -98,6 +114,22 @@ export class Bot {
     if (!this.inputs.length) this.step(0);
     if (this.mode === this.S('M_TITLE')) this.tap(B.A);
     if (this.mode !== this.S('M_WMAP')) throw new Error('not on the world map');
+  }
+  /** from the title: B, the code typed in with UP/DOWN and RIGHT, then A */
+  enterCode(code: string) {
+    if (!this.inputs.length) this.step(0);
+    if (this.mode === this.S('M_TITLE')) this.tap(B.B);
+    if (this.mode !== this.S('M_CODE')) throw new Error('not on the code screen');
+    [...code].forEach((ch, j) => {
+      const want = CODE_ALPHABET.indexOf(ch);
+      for (let guard = 0; this.vm.read8(this.S('code_in') + j) !== want; guard++) {
+        if (guard > 16) throw new Error(`cannot type ${ch}`);
+        this.tap((want - this.vm.read8(this.S('code_in') + j) + 32) % 32 <= 16 ? B.U : B.D);
+      }
+      if (j < code.length - 1) this.tap(B.R);
+    });
+    this.tap(B.A);
+    if (this.mode !== this.S('M_WMAP') && this.mode !== this.S('M_END')) throw new Error(`code ${code} not taken`);
   }
   /** on the world map: A starts the chosen level */
   playChosen(id: string) {

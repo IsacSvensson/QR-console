@@ -72,9 +72,8 @@ jobs:
             test: npm run test:blackbox
           - game: bo
             test: npm run test:bo
-          - game: sixten               # no demo GIF before M32
+          - game: sixten
             test: npm run test:sixten
-            demo: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

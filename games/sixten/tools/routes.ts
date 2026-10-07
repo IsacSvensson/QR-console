@@ -1,5 +1,5 @@
 // Routes for the bot (bot.ts): what Sixten does in each replay. Recorded by record.ts into ../replays/<name>.json.
-import { B, type Bot } from './bot';
+import { B, type Bot, saveCode } from './bot';
 
 export interface Route {
   seed: number;
@@ -637,6 +637,18 @@ export const ROUTES: Record<string, Route> = {
   // the whole game, title to ending: on the safe routes, and collecting everything
   'm31-safe': { seed: 1, run: (bot) => (world1Safe(bot), world23Safe(bot), world45Safe(bot), bot.wait(60)) },
   'm31-all': { seed: 1, run: (bot) => (world1All(bot), world23All(bot), world45All(bot), bot.wait(60)) },
+  // M32: a code for World 3 with the entries of Worlds 1 and 2 typed in on the title's code screen, then 3-1 played
+  'm32-code': {
+    seed: 1,
+    run(bot) {
+      bot.enterCode(saveCode(3, [...Array(16)].map((_, i) => i + 1)));
+      bot.playChosen('3-1');
+      avoidHazards(bot);
+      for (const [c, r] of [[3, 3], [9, 6], [12, 2]] as const) bot.walkTo(c, r);
+      bot.finish();
+      bot.wait(30);
+    },
+  },
   // 1-1: control 3 starts the whirlwind; Sixten waits by the lake until it has passed and the spruce lies over the
   // brook, then walks over it to the revealed control 5
   'm27-11': {

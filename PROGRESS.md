@@ -2,12 +2,12 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M32 (Sixten: save code, music, delivery) — M26-M31 done
+**Current milestone:** none — Part 4 (Sixten) M26-M32 done; next: the human's manual acceptance (PLAN Part 4)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
-Part 4 (Sixtens expedition) on branch `claude/sixtens-expedition`: planned (DESIGN, mockup, PLAN Part 4, D-040); M26 done
-(the top-down engine, D-041), M27 done (the whirlwind and the wind, D-042), M28 done (the side view as a code
-overlay, D-043). Open decisions taken by Claude on the human's word (D-044).
+Part 4 (Sixtens expedition) on branch `claude/sixtens-expedition`: complete, M26-M32 done (D-041 - D-048); ROM 27.0 KB
+of 32 KB, cartridge 19.0 KB. Open decisions taken by Claude on the human's word (D-044). Next: the fact ticks, the feel
+test and the Sixten test (PLAN Part 4 *Manual acceptance*).
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -46,7 +46,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M24 Worlds 4 and 5, the theft and the ending
 - [x] M25 Picture codes, music, delivery
 
-Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`; planned, not started)
+Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`)
 
 - [x] M26 Engine: cells, screens, walking, map and compass
 - [x] M27 The whirlwind and the wind
@@ -54,7 +54,7 @@ Part 4 — SIXTENS EXPEDITION (design: `games/sixten/DESIGN.md`; planned, not st
 - [x] M29 World 1 and the game around it (budget gate)
 - [x] M30 Worlds 2 and 3
 - [x] M31 Worlds 4 and 5 and the final
-- [ ] M32 Save code, music, delivery
+- [x] M32 Save code, music, delivery
 
 ## Current work
 
@@ -78,6 +78,10 @@ water, every event at its time with its full warning, everything collected, Worl
 M31 done — thunder (lightning windows; lone trees, the fell, water dangerous; kneel in a hollow), fog and night, the
 fell cell, the ending; levels 4-1 to 5-4 (5-4 the strength-5 final); all 40 pictures; one replay from the title to the
 ending; lv_done widened to 32 levels (it overflowed at 16) (D-047).
+M32 done — the code screen (title B; DOWN+B the level card), the VM's decoder; tests: every code round-trips (worlds
+1-6 x seeded books + empty + full), wrong checksums and worlds 0/7 rejected, a replay enters a code and plays 3-1; the
+five tunes heard in order, the whirlwind's noise follows its strength; `demo/sixten.gif`, the e2e scan, CI publishes
+it; GUIDE.md, REPORT (D-048).
 **Runtime baseline for Part 4 = 02d7058.**
 
 Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
@@ -132,6 +136,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
 | Sixten mockup (planning) | cartridge 4 479 B (ISA 2); max cycles/frame: top-down 10 627 (with screen expansion; else ≤ 4 853), map 8 067, side view 2 793, overlays 9 900; QR round trip identical | D-040, `games/sixten/mockup/measure.ts` |
+| Sixten delivered (M32) | ROM 27.0 KB (code 17.3, data 9.6), xdata 7.8 KB, cartridge 19 459 B; `demo/sixten.gif` 113 frames, 16.9 s loop, decodes back identical; e2e scan 75/75 blocks | test:sixten, demo, test:e2e, D-048 |
 | Sixten, the whole game (M31) | ROM 25.3 KB (code 15.9, data 9.3), xdata 7.8 KB, cartridge 18.5 KB; title -> ending in 36 082 frames (safe) / 49 083 (everything) | test:sixten, D-047 |
 | Sixten after Worlds 2-3 (M30) | ROM 22.9 KB (code 15.1, data 7.8), xdata 7.1 KB, cartridge 16.7 KB | test:sixten, D-046 |
 | Sixten budget gate after World 1 (M29) | ROM 20.6 KB (code 14.3, data 6.3), side overlay 2.0 KB in xdata, xdata 6.4 KB, cartridge 14.9 KB; projected 5 worlds: ROM 27-28 KB, cartridge 21-23 KB | test:sixten, D-045 |

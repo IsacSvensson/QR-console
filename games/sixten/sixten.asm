@@ -98,4 +98,4 @@ debug_hooks:
 .code
 
 .data
-mode_table: .word play_frame, slide_frame, map_frame, card_frame, OVL_RAM, title_frame, wmap_frame, page_frame, tally_frame, book_frame, end_frame
+mode_table: .word play_frame, slide_frame, map_frame, card_frame, OVL_RAM, title_frame, wmap_frame, page_frame, tally_frame, book_frame, end_frame, code_frame

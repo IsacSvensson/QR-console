@@ -1,6 +1,6 @@
 # SIXTENS EXPEDITION — designdokument
 
-Status: **under implementation** (M26–M28 klara). De öppna frågorna och granskningen besluts av Claude på
+Status: **implementerat** (M26–M32 klara; guide för föräldrar: `GUIDE.md`). De öppna frågorna och granskningen besluts av Claude på
 människans uppdrag 2026-10-07 (D-044). Implementeras enligt PLAN.md Part 4 (M26–M32). Detta dokument, människans designutkast (de 38 avsnitten) och banfilerna (`levels/*.map`, skapas från
 M26) är specifikationen och testernas facit. Där utkastet och de tio låsta besluten (§1) krockar gäller besluten,
 och krocken står utskriven i §1.2. Frågorna i §11 har förslag som gäller om inget annat bestäms innan M26 börjar.
@@ -462,6 +462,10 @@ Skärmarna runt spelet följer Bo: titel, världskarta (banorna med tre målikon
 | 7 | kontrollsumma: summan av (i + 1) för varje satt bit i = 0–42, mod 128 |
 
 Koden visas på världskartan och i slutet. Banornas kontroller och trä sparas inte (världens banor kan spelas om).
+**Inmatning (M32):** B på titelskärmen öppnar kodskärmen (tio `A`, markören på det första). ↑/↓ byter tecken, ←/→
+flyttar markören, A provar koden och B går tillbaka. En godtagen kod ger världen, naturboken och alla banor i
+världarna före den som klara, och öppnar världskartan (värld 6: slutet). Annars `FEL KOD. FÖRSÖK IGEN`. ↓ + B på
+titelskärmen öppnar bankortet med testbanorna.
 Kontrollsumman gör att 1 av 128 slumpkoder slinker igenom. Det är okej för ett barnspel, och omöjliga koder (värld
 utanför 1–6) avvisas också. **Förslag:** om naturboken växer över 40 uppslag stryks uppslag, inte kontrollsumman.
 

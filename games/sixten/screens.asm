@@ -3,7 +3,7 @@
 .code
 
 ; ---- the title -------------------------------------------------------------------------------
-; A: the world map; B: the level card (the test levels)
+; A: the world map; B: the code screen; B with DOWN held: the level card (the test levels)
 title_frame:
     SYS BTNP
     MOV r7, r0
@@ -14,6 +14,12 @@ title_frame:
 @b:
     AND r7, BTN_B
     JZ @draw
+    SYS BTN
+    AND r0, BTN_DOWN
+    JNZ @card
+    CALL code_enter
+    RET
+@card:
     LDI r0, M_CARD
     ST [mode], r0
     RET
@@ -53,7 +59,12 @@ title_frame:
     JNZ @done
     LDI r0, t_start
     LDI r1, 37
-    LDI r2, 112
+    LDI r2, 110
+    LDI r3, font_d
+    CALL draw_text
+    LDI r0, t_start_b
+    LDI r1, 28
+    LDI r2, 119
     LDI r3, font_d
     CALL draw_text
 @done:

@@ -29,6 +29,7 @@ M_PAGE   = 7                 ; a nature-book page over the play screen
 M_TALLY  = 8                 ; after the goal
 M_BOOK   = 9                 ; the nature book (from the world map)
 M_END    = 10                ; the ending
+M_CODE   = 11                ; entering a save code (from the title)
 
 ; ---- layout ----------------------------------------------------------------------------------
 PLAY_Y   = 32               ; HUD: two rows of 16 px; the playfield is 4 x 3 cells = 128 x 96
@@ -122,6 +123,7 @@ OK_BUILD = 3
 PW_FRAMES = 900             ; a power-up lasts 15 s
 MAX_HARVEST = 8
 WORLDS   = 5
+CODE_ERR_FRAMES = 120
 ; side link (8 B) and side view record (16 B), levels.gen.asm
 SL_CELL  = 0
 SL_SIDE  = 2
@@ -302,6 +304,10 @@ SD_HC    = 9
 .var nbuf, 140                      ; its pages, unpacked
 .var code_bits, 8
 .var code_str, 11                   ; the save code as glyphs (255-terminated)
+.var code_in, 10                    ; the code screen: the characters entered (0-31), the cursor, frames of FEL KOD
+.var code_pos
+.var code_err
+.var code_show, 2
 .var mus_t                          ; music: frames to the next step, the step
 .var mus_i
 .var sel_keep
