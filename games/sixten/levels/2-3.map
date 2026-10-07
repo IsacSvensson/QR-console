@@ -1,0 +1,30 @@
+# 2-3 Stenarna (DESIGN.md §7): a whirlwind moves a boulder away from the hill and opens a cave (a side view through
+# the hill). Control 1 is in a hollow: the shelter is where the whirlwind starts.
+name: 2-3 STENARNA
+world: 2
+cells:
+TTTTTTTTTTTTTTTT
+TS....TTTT^^^^^T
+T.....TTTT^^^^^T
+T..u...........T
+T......o.......T
+T....^^^^^^....T
+T....^^^^^^....T
+T..............T
+T..TTTT..TTTT..T
+T..TTTT..TTTT..T
+T.............MT
+TTTTTTTTTTTTTTTT
+controls:
+1 O 3 3
+2 O 12 7
+3 O 2 9
+entry: EKORRE 12 9
+entry: HACKSPETT 4 9
+whirl: 1               # strength 3 along row 4; at the boulder it moves it and the hill opens
+wp 1 4 3 8 0
+wp 7 4 3 8 30
+wp 13 4 3 8 30
+change 1 7 4 .
+change 1 7 5 G
+side: 7 5 2-3-grottan 7 4 7 7 G   # the cave through the hill, once the whirlwind has opened it (G)

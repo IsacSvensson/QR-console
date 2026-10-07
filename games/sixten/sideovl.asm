@@ -568,7 +568,8 @@ sd_wind_draw:
     OV JLT, @y
     LDI r0, 0
 @y:
-    LD r1, [tick]
+    LD r1, [tick]                   ; (kept positive: MOD is signed)
+    AND r1, 0x3FFF
     MOV r2, r6
     MUL r2, 29
     ADD r1, r2

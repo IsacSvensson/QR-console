@@ -102,6 +102,9 @@ LR_LINKS = 20
 LR_NLINK = 22
 LR_OBJS  = 24
 LR_NOBJ  = 26
+LR_EVENTS = 28
+LR_NEV   = 30
+STREAM_FRAMES = 20          ; frames in flowing water before AJ! (S8)
 ; objects (OBJ_REC B): kind, column, row, argument, target cell
 OB_KIND  = 0
 OB_C     = 1
@@ -117,6 +120,7 @@ WORLDS   = 5
 ; side link (8 B) and side view record (16 B), levels.gen.asm
 SL_CELL  = 0
 SL_SIDE  = 2
+SL_NEEDS = 3                ; 0, or the cell type + 1 the link needs
 SL_EXITL = 4
 SL_EXITR = 6
 SR_HI    = 0
@@ -150,6 +154,7 @@ SD_HC    = 9
 .sfx SFX_WOOD, 2, 400, 6, 10
 .sfx SFX_BUILD, 0, 523, 14, 10, 30
 .sfx SFX_GOAL, 0, 1047, 24, 11, 20
+.sfx SFX_CREAK, 2, 160, 10, 7, -6
 .sfx SFX_CHANGE, 2, 300, 20, 10, -8
 
 ; ---- RAM -------------------------------------------------------------------------------------
@@ -295,6 +300,10 @@ SD_HC    = 9
 .var mus_t                          ; music: frames to the next step, the step
 .var mus_i
 .var sel_keep
+.var ev_t, 16                       ; per event: frames since it started (0xFFFF = not yet)
+.var ev_done                        ; bit k: event k has happened
+.var ev_warn                        ; bit k: event k shows its warning now
+.var stream_t                       ; frames in flowing water
 .var tally_c                        ; the tally: controls, entries of the level found, entries in it
 .var tally_e
 .var tally_n

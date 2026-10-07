@@ -241,6 +241,6 @@ describe('the side view', () => {
 
   it('the level list has the side-view test level', () => {
     expect(LEVEL_IDS).toContain('T4');
-    expect(SIDE_IDS).toEqual(['1-3-grottan', 'T4-cave', 'T4-cliff', 'T4-ravine']);
+    expect(SIDE_IDS).toEqual(['1-3-grottan', '2-3-grottan', 'T4-cave', 'T4-cliff', 'T4-ravine']);
   });
 });

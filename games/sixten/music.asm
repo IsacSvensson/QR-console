@@ -22,7 +22,13 @@ music_tick:
     AND r0, 31
     ST [mus_i], r0
     SHL r6, 1
-    LD r1, [r6 + tune_w1]
+    LD r0, [lv_ptr]                 ; the level's world's tune
+    LDB r0, [r0 + LR_WORLD]
+    SUB r0, 1
+    SHL r0, 1
+    LD r0, [r0 + tunes]
+    ADD r6, r0
+    LD r1, [r6]
     CMP r1, 0
     JEQ @rest
     LDI r0, 1
@@ -33,9 +39,20 @@ music_tick:
     RET
 
 .data
+tunes:  .word tune_w1, tune_w2, tune_w3, tune_w1, tune_w1
 tune_w1:
     .word 659, 784, 880, 784, 659, 0, 587, 659
     .word 523, 587, 659, 784, 880, 0, 784, 0
     .word 659, 784, 880, 1047, 880, 784, 659, 0
     .word 587, 659, 587, 523, 587, 0, 523, 0
+tune_w2:                            ; Kraften: lower, in minor
+    .word 440, 0, 523, 440, 392, 0, 440, 0
+    .word 349, 392, 440, 523, 494, 0, 440, 0
+    .word 440, 0, 523, 587, 523, 494, 440, 0
+    .word 392, 440, 349, 330, 349, 0, 330, 0
+tune_w3:                            ; Vattnet: flowing, steps up and down
+    .word 523, 587, 659, 587, 523, 587, 659, 784
+    .word 698, 659, 587, 523, 494, 523, 587, 0
+    .word 523, 587, 659, 587, 523, 587, 659, 880
+    .word 784, 698, 659, 587, 523, 0, 523, 0
 .code

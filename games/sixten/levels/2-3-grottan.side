@@ -1,0 +1,21 @@
+# 2-3: the cave the whirlwind opened, through the hill.
+name: GROTTAN
+wind: 0
+right: S
+sky: 0
+start: 1 10
+cells:
+################################
+################################
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkr########kkkkkkkkkkkk
+kkkkkkkkkkkr########kkkkkkkkkkkk
+kkkkkkkkkkkr########kkkkkkkkkkkk
+################################
+################################
+################################

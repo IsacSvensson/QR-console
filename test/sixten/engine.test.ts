@@ -81,6 +81,8 @@ const SYMBOL_PIXELS: Record<string, [number, number, number][]> = {
   B: [...line(1, 3, 1, 1), [1, 2, 1], [3, 2, 1], ...line(1, 3, 3, 1)],
   G: [[1, 1, BLACK], [2, 2, BLACK], [2, 3, BLACK], [3, 1, BLACK]],
   i: [...line(1, 3, 1, 11), ...line(1, 3, 2, 11), ...line(1, 3, 3, 11)],
+  Q: [...line(1, 3, 1, 15), ...line(2, 4, 3, 15)],
+  R: [[1, 1, BROWN], [3, 1, BROWN], [2, 3, BROWN]],
 };
 
 /** compares the map screen in the framebuffer with DESIGN §4.1, cell by cell; returns the differences */

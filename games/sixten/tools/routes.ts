@@ -178,6 +178,163 @@ function world1All(bot: Bot) {
   bot.finish();
 }
 
+// ---- Worlds 2 and 3 (M30) ----
+/** the safe route keeps off every cell an event will change, off flowing water, and off power-ups */
+function avoidHazards(bot: Bot) {
+  avoidItems(bot);
+  for (const e of bot.level.events) for (const c of e.cells) bot.avoid.add(`${c.c},${c.r}`);
+  bot.level.rows.forEach((row, r) => [...row].forEach((ch, c) => ch === 'Q' && bot.avoid.add(`${c},${r}`)));
+}
+/** wait until every event of the level that has started has happened, then the bot's map follows */
+function waitEvents(bot: Bot) {
+  const n = bot.level.events.length;
+  for (let guard = 0; ; guard++) {
+    const done = bot.u('ev_done');
+    const t = [...Array(n)].map((_, k) => bot.vm.read16(bot.S('ev_t') + 2 * k));
+    if (t.every((x, k) => x === 0xffff || (done >> k) & 1)) break;
+    if (guard > 3000) throw new Error('the events never happened');
+    bot.step(0);
+  }
+  bot.level.events.forEach((e, k) => {
+    if ((bot.u('ev_done') >> k) & 1) for (const c of e.cells) bot.setCell(c.c, c.r, c.ch);
+  });
+}
+function world23Safe(bot: Bot) {
+  // 2-1: the storm: the open land along the west edge, never the forest
+  bot.playChosen('2-1');
+  avoidHazards(bot);
+  bot.level.rows.forEach((row, r) => [...row].forEach((ch, c) => ch === 'T' && bot.avoid.add(`${c},${r}`)));
+  bot.walkTo(3, 1);
+  bot.walkTo(2, 7);
+  bot.walkTo(2, 10);
+  bot.finish();
+  // 2-2: round the slope through the south
+  bot.playChosen('2-2');
+  avoidHazards(bot);
+  for (const [c, r] of [[2, 3], [7, 9], [12, 6]] as const) bot.walkTo(c, r);
+  bot.finish();
+  // 2-3: in the hollow while the whirlwind passes
+  bot.playChosen('2-3');
+  avoidHazards(bot);
+  bot.walkTo(3, 3);
+  shelterUntilGone(bot);
+  bot.setCell(7, 4, '.');
+  bot.setCell(7, 5, 'G');
+  bot.walkTo(12, 7);
+  bot.walkTo(2, 9);
+  bot.finish();
+  // 2-4: the long way over the footbridge
+  bot.playChosen('2-4');
+  avoidHazards(bot);
+  for (const [c, r] of [[3, 5], [9, 10], [14, 4]] as const) bot.walkTo(c, r);
+  bot.finish();
+  // World 3: off every flooded cell and the rapids
+  bot.playChosen('3-1');
+  avoidHazards(bot);
+  for (const [c, r] of [[3, 3], [9, 6], [12, 2]] as const) bot.walkTo(c, r);
+  bot.finish();
+  bot.playChosen('3-2');
+  avoidHazards(bot);
+  for (const [c, r] of [[3, 2], [11, 5]] as const) bot.walkTo(c, r);
+  bot.finish();
+  bot.playChosen('3-3');
+  avoidHazards(bot);
+  for (const [c, r] of [[2, 3], [7, 6], [13, 2]] as const) bot.walkTo(c, r);
+  bot.finish();
+  bot.playChosen('3-4');
+  avoidHazards(bot);
+  for (const [c, r] of [[5, 2], [12, 2], [2, 8]] as const) bot.walkTo(c, r);
+  bot.finish();
+}
+function world23All(bot: Bot) {
+  bot.playChosen('2-1');
+  avoidItems(bot);
+  bot.walkTo(3, 1);
+  bot.read(2, 4); // STORM
+  bot.walkTo(2, 7);
+  waitEvents(bot); // the spruces have fallen
+  bot.avoid.clear();
+  bot.walkTo(1, 9); // choklad
+  bot.walkTo(9, 4); // 3, through the forest after the storm
+  bot.read(7, 9); // KORP
+  bot.finish();
+  bot.playChosen('2-2');
+  avoidHazards(bot);
+  bot.walkTo(2, 3);
+  bot.read(3, 10); // RULLSTENSÅS
+  bot.walkTo(7, 9);
+  bot.walkTo(12, 6);
+  bot.walkTo(14, 9); // 4
+  bot.read(13, 10); // GRANIT
+  bot.finish();
+  bot.playChosen('2-3');
+  bot.walkTo(3, 3);
+  shelterUntilGone(bot);
+  bot.setCell(7, 4, '.');
+  bot.setCell(7, 5, 'G');
+  bot.read(4, 9); // HACKSPETT
+  bot.walkTo(7, 4);
+  enterSide(bot, B.D); // the cave the whirlwind opened
+  sideWalk(bot, 92);
+  holdUntil(bot, B.U, () => sy(bot) <= 65, 'climbing the roots');
+  bot.hold(B.U | B.R, 10);
+  leaveSide(bot, B.R);
+  bot.walkTo(12, 7);
+  bot.read(12, 9); // EKORRE
+  bot.walkTo(2, 9);
+  bot.finish();
+  bot.playChosen('2-4');
+  bot.walkTo(3, 5);
+  bot.read(6, 5); // TALL
+  bot.walkTo(3, 1);
+  bot.tap(B.A); // wood
+  bot.walkTo(3, 3);
+  bot.tap(B.A); // wood
+  bot.read(4, 7); // LINGON
+  bot.walkTo(2, 9); // 4
+  bot.walkTo(9, 10);
+  bot.walkTo(11, 5);
+  bot.tap(B.R);
+  bot.tap(B.A); // the bridge
+  bot.setCell(12, 5, 'b');
+  bot.walkTo(14, 4);
+  bot.finish();
+  bot.playChosen('3-1');
+  avoidHazards(bot);
+  bot.walkTo(3, 3);
+  bot.read(5, 8); // GRODA
+  bot.walkTo(9, 6);
+  bot.read(11, 8); // REGN
+  bot.walkTo(12, 2);
+  bot.finish();
+  bot.playChosen('3-2');
+  avoidHazards(bot);
+  bot.walkTo(3, 2);
+  bot.read(10, 1); // BÄCK
+  bot.walkTo(11, 5);
+  bot.walkTo(3, 9); // 3, the long way round on the dry paths
+  bot.read(6, 10); // BÄVER
+  bot.finish();
+  bot.playChosen('3-3');
+  bot.walkTo(2, 3);
+  bot.walkTo(2, 7); // gurka
+  bot.walkTo(7, 6);
+  bot.read(10, 8); // VITMOSSA
+  bot.read(5, 9); // MYR
+  bot.walkTo(13, 2);
+  bot.finish();
+  bot.playChosen('3-4');
+  avoidHazards(bot);
+  bot.avoid.delete('9,9');
+  bot.walkTo(5, 2);
+  bot.walkTo(12, 2);
+  bot.read(13, 5); // LERA
+  bot.read(9, 7); // KÄLLA
+  bot.walkTo(9, 9); // chips
+  bot.walkTo(2, 8);
+  bot.finish();
+}
+
 /** hold a direction until the feet are on column c (moving horizontally), then centre in the cell */
 function runTo(bot: Bot, c: number) {
   bot.walkToPoint(c * 32 + 16, bot.y);
@@ -325,6 +482,9 @@ export const ROUTES: Record<string, Route> = {
   // World 1 from the title to the World 2 map on the safe routes, and once more collecting everything
   'm29-safe': { seed: 1, run: (bot) => (world1Safe(bot), bot.wait(30)) },
   'm29-all': { seed: 1, run: (bot) => (world1All(bot), bot.wait(30)) },
+  // Worlds 2 and 3 after World 1, from the World 2 map to the World 4 map
+  'm30-safe': { seed: 1, run: (bot) => (world1Safe(bot), world23Safe(bot), bot.wait(30)) },
+  'm30-all': { seed: 1, run: (bot) => (world1All(bot), world23All(bot), bot.wait(30)) },
   // 1-1: control 3 starts the whirlwind; Sixten waits by the lake until it has passed and the spruce lies over the
   // brook, then walks over it to the revealed control 5
   'm27-11': {

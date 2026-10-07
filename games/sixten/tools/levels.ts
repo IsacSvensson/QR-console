@@ -15,10 +15,15 @@
 //   change 1 20 7 L                 at waypoint 1 the cell (20, 7) becomes L (within the whirlwind's radius)
 //   reveal 1 21 8                   at waypoint 1 the leaves blow off (21, 8)
 //   side: 4 1 T4-cave 4 2 4 2       a side view (levels/T4-cave.side) starts with A facing cell (4, 1); leaving it at
-//                                   its left edge puts Sixten on (4, 2), at its right edge on (4, 2) (DESIGN §3.3)
+//                                   its left edge puts Sixten on (4, 2), at its right edge on (4, 2) (DESIGN §3.3);
+//                                   an 8th field (a cell character) makes it open only while the cell is of that type
 //   item: GURKA 15 5                a power-up on a cell (GURKA, CHIPS, CHOKLAD), taken by walking onto it (§8.1)
 //   entry: RÄV 6 9                  a nature-book entry (NATURBOK.md) on a cell: A next to it opens its page (§8.2)
 //   build: 14 8 17 8 b              a building site (a B cell) at (14, 8): with 2 wood, A makes (17, 8) a b (§8.4)
+//   event: 1 FALL 420 240           a timed change (DESIGN §6.6): started by control 1 (0 = the level's start), FALL
+//   cell 6 1 X                      (trees fall), SLIDE (a landslide) or FLOOD (water rises); it happens 420 frames
+//                                   after the start, with a warning shown for the last 240 (FALL/SLIDE: >= 120);
+//                                   then the listed cells change
 // A .side file (DESIGN §3.2): name, wind (1/16 px per frame, + = to the right), right (the compass letter of the
 // right edge: N Ö S V), sky (CLS colour), start (the feet's cell when entering), then 14 rows of tiles (art.ts
 // SIDE_TILES, ' ' = sky), 32-96 columns (2-6 screens).
@@ -40,10 +45,13 @@ export interface Waypoint { c: number; r: number; s: number; v: number; wait: nu
 export interface Change { wp: number; c: number; r: number; ch?: string; reveal?: boolean }
 export interface Whirl { trigger: number; wps: Waypoint[]; changes: Change[] }
 export const POWERUPS = { GURKA: 1, CHIPS: 2, CHOKLAD: 3 } as const;
+export const EVENT_KINDS = { FALL: 1, SLIDE: 2, FLOOD: 3 } as const;
+export const EVENT_WARN_MIN = 120;
+export interface LevelEvent { trigger: number; kind: keyof typeof EVENT_KINDS; at: number; warn: number; cells: { c: number; r: number; ch: string }[] }
 export const WOOD_PER_TREE = 2;
 export const WOOD_PER_BUILD = 2;
 export interface Obj { kind: 'item' | 'entry' | 'build'; c: number; r: number; name?: string; tc?: number; tr?: number; ch?: string }
-export interface SideLink { c: number; r: number; side: string; exitL: [number, number]; exitR: [number, number] }
+export interface SideLink { c: number; r: number; side: string; exitL: [number, number]; exitR: [number, number]; needs?: string }
 export interface Side { id: string; name: string; wind: number; right: string; sky: number; start: [number, number]; rows: string[]; w: number }
 export const SIDE_ROWS = 14;
 export const RIGHT_DIR: Record<string, number> = { 'Ö': 0, N: 4, V: 8, S: 12 };
@@ -68,6 +76,7 @@ export interface Level {
   whirls: Whirl[];
   sides: SideLink[];
   objects: Obj[];
+  events: LevelEvent[];
 }
 
 const LEVEL_DIR = join(GAME_DIR, 'levels');
@@ -81,7 +90,7 @@ export function levelIds(): string[] {
 }
 
 export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id}.map`), 'utf8')): Level {
-  const L: Level = { id, name: '', world: 0, w: 0, h: 0, rows: [], controls: [], leaves: [], start: [-1, -1], goal: [-1, -1], whirls: [], sides: [], objects: [] };
+  const L: Level = { id, name: '', world: 0, w: 0, h: 0, rows: [], controls: [], leaves: [], start: [-1, -1], goal: [-1, -1], whirls: [], sides: [], objects: [], events: [] };
   let section = '';
   const fail = (m: string): never => {
     throw new Error(`${id}.map: ${m}`);
@@ -98,7 +107,12 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
         const n = v!.trim().split(/\s+/).map(Number);
         for (let i = 0; i + 1 < n.length; i += 2) L.leaves.push([n[i]!, n[i + 1]!]);
       } else if (k === 'cells' || k === 'controls') section = k;
-      else if (k === 'item' || k === 'entry' || k === 'build') {
+      else if (k === 'event') {
+        const t = v!.split('#')[0]!.trim().split(/\s+/);
+        if (t.length !== 4 || !(t[1]! in EVENT_KINDS)) fail(`bad event line '${line}'`);
+        L.events.push({ trigger: Number(t[0]), kind: t[1] as LevelEvent['kind'], at: Number(t[2]), warn: Number(t[3]), cells: [] });
+        section = 'event';
+      } else if (k === 'item' || k === 'entry' || k === 'build') {
         const t = v!.split('#')[0]!.trim().split(/\s+/);
         if (k === 'build') {
           if (t.length !== 5) fail(`bad build line '${line}'`);
@@ -109,8 +123,8 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
         }
       } else if (k === 'side') {
         const t = v!.split('#')[0]!.trim().split(/\s+/);
-        if (t.length !== 7) fail(`bad side line '${line}'`);
-        L.sides.push({ c: Number(t[0]), r: Number(t[1]), side: t[2]!, exitL: [Number(t[3]), Number(t[4])], exitR: [Number(t[5]), Number(t[6])] });
+        if (t.length !== 7 && t.length !== 8) fail(`bad side line '${line}'`);
+        L.sides.push({ c: Number(t[0]), r: Number(t[1]), side: t[2]!, exitL: [Number(t[3]), Number(t[4])], exitR: [Number(t[5]), Number(t[6])], needs: t[7] });
       } else if (k === 'whirl') {
         section = 'whirl';
         L.whirls.push({ trigger: Number(v!.split('#')[0]!.trim()), wps: [], changes: [] });
@@ -122,6 +136,10 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
       const m = /^(\d+)\s+([OFH])\s+(\d+)\s+(\d+)$/.exec(line.trim());
       if (!m) fail(`bad control line '${line}'`);
       L.controls.push({ n: Number(m![1]), kind: m![2] as Control['kind'], c: Number(m![3]), r: Number(m![4]) });
+    } else if (section === 'event') {
+      const t = line.split('#')[0]!.trim().split(/\s+/);
+      if (t[0] !== 'cell' || t.length !== 4) fail(`bad event line '${line}'`);
+      L.events[L.events.length - 1]!.cells.push({ c: Number(t[1]), r: Number(t[2]), ch: t[3]! });
     } else if (section === 'whirl') {
       const w = L.whirls[L.whirls.length - 1]!;
       const t = line.split('#')[0]!.trim().split(/\s+/);
@@ -159,6 +177,13 @@ export function parseLevel(id: string, text = readFileSync(join(LEVEL_DIR, `${id
   });
   for (const [c, r] of L.leaves) if (c >= L.w || r >= L.h) fail(`leaves outside the level at ${c},${r}`);
   if (L.objects.length > 16) fail('at most 16 objects');
+  if (L.events.length > 8) fail('at most 8 events');
+  L.events.forEach((e, k) => {
+    if (e.trigger > L.controls.length) fail(`event ${k + 1}: no control ${e.trigger}`);
+    if (e.kind !== 'FLOOD' && e.warn < EVENT_WARN_MIN) fail(`event ${k + 1}: a ${e.kind} warns at least ${EVENT_WARN_MIN} frames`);
+    if (e.warn > e.at || !e.cells.length || e.cells.length > 16) fail(`event ${k + 1}: warning <= time, 1-16 cells`);
+    for (const c of e.cells) if (c.c >= L.w || c.r >= L.h || !CELL_BY_CH.has(c.ch)) fail(`event ${k + 1}: bad cell ${c.c},${c.r} ${c.ch}`);
+  });
   const book = readBook().map((e) => e.name);
   for (const o of L.objects) {
     if (o.c >= L.w || o.r >= L.h) fail(`${o.kind} outside the level`);
@@ -328,7 +353,9 @@ export function generateLevels(): { asm: string; levels: Level[] } {
   const out = [
     '; GENERATED by games/sixten/tools/levels.ts from levels/*.map — do not edit.',
     `LEVEL_COUNT = ${levels.length}`,
-    'LV_REC = 28',
+    'LV_REC = 32',
+    'EV_REC = 10',
+    `EVENT_WARN_MIN = ${EVENT_WARN_MIN}`,
     'OBJ_REC = 6',
     `WOOD_PER_TREE = ${WOOD_PER_TREE}`,
     `WOOD_PER_BUILD = ${WOOD_PER_BUILD}`,
@@ -357,6 +384,8 @@ export function generateLevels(): { asm: string; levels: Level[] } {
       `    .byte ${L.sides.length}, 0`,
       `    .word objs_${n}`,
       `    .byte ${L.objects.length}, 0`,
+      `    .word events_${n}`,
+      `    .byte ${L.events.length}, 0`,
     );
   }
   for (const L of levels) {
@@ -375,9 +404,20 @@ export function generateLevels(): { asm: string; levels: Level[] } {
       const target = o.kind === 'build' ? o.tr! * L.w + o.tc! : 0;
       out.push(`    .byte ${{ item: 1, entry: 2, build: 3 }[o.kind]}, ${o.c}, ${o.r}, ${arg}`, `    .word ${target}`);
     }
+    // events (EV_REC B): trigger (control index + 1, 0 = the start), kind (1 FALL, 2 SLIDE, 3 FLOOD), cell count,
+    // when (frames after the trigger), warning (frames before), the cells (4 B: index, new byte)
+    out.push(`events_${n}:`);
+    L.events.forEach((e, k) => out.push(`    .byte ${e.trigger}, ${EVENT_KINDS[e.kind]}, ${e.cells.length}, 0`, `    .word ${e.at}, ${e.warn}, evcells_${n}_${k}`));
+    L.events.forEach((e, k) => {
+      out.push(`evcells_${n}_${k}:`);
+      for (const c of e.cells) {
+        const i = c.r * L.w + c.c;
+        out.push(`    .word ${i}`, `    .byte ${CELL_BY_CH.get(c.ch)! | (bytes[i]! & 0xc0)}, 0`);
+      }
+    });
     out.push(`links_${n}:`);
     for (const s of L.sides)
-      out.push(`    .word ${s.r * L.w + s.c}`, `    .byte ${sideIds().indexOf(s.side)}, 0`, `    .word ${s.exitL[1] * L.w + s.exitL[0]}, ${s.exitR[1] * L.w + s.exitR[0]}`);
+      out.push(`    .word ${s.r * L.w + s.c}`, `    .byte ${sideIds().indexOf(s.side)}, ${s.needs ? CELL_BY_CH.get(s.needs)! + 1 : 0}`, `    .word ${s.exitL[1] * L.w + s.exitL[0]}, ${s.exitR[1] * L.w + s.exitR[0]}`);
   }
   // side views (16 B): far address of the packed tiles (column-major, SIDE_ROWS a column), columns, sky, the
   // compass direction of the right edge (16ths of a turn), wind (1/16 px per frame), start x, y (feet, 1/16 px)

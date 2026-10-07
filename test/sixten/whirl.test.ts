@@ -45,7 +45,7 @@ function frames(name: string, seed?: number): Fr[] {
   cache.set(key, out);
   return out;
 }
-const WHIRL_REPLAYS = ['m27-strengths', 'm27-ditch', 'm27-hollow', 'm27-cabin', 'm27-forest', 'm27-open', 'm27-11', 'm29-safe', 'm29-all'];
+const WHIRL_REPLAYS = ['m27-strengths', 'm27-ditch', 'm27-hollow', 'm27-cabin', 'm27-forest', 'm27-open', 'm27-11', 'm29-safe', 'm29-all', 'm30-safe', 'm30-all'];
 
 /** the frames of each run of a whirlwind (from its trigger to when it is gone), per level and index */
 function runsOf(fr: Fr[]) {
@@ -165,6 +165,8 @@ describe('the world changes only where and when the whirlwind is', () => {
           // a building site's target (DESIGN §8.4), built: the only change that is not the whirlwind's
           const site = L.objects.find((o) => o.kind === 'build' && o.tc === c && o.tr === r);
           if (site && b.cells[k] === (typeOf(site.ch!).type | (a.cells[k]! & 0xc0))) continue;
+          // an event's cell (DESIGN §6.6; when it happens is checked in world23.test.ts)
+          if (L.events.some((e) => e.cells.some((x) => x.c === c && x.r === r && b.cells[k] === (typeOf(x.ch).type | (a.cells[k]! & 0xc0))))) continue;
           const W = L.whirls[b.w.idx]!;
           const ch = W.changes.find((x) => x.c === c && x.r === r);
           expect(ch, `${name} frame ${b.f + 1}: cell ${c},${r} changed`).toBeTruthy();
@@ -188,6 +190,12 @@ describe('the world changes only where and when the whirlwind is', () => {
           want[i] = ch.reveal ? want[i]! & ~0x40 : typeOf(ch.ch!).type | (want[i]! & 0xc0);
         }
       });
+      for (const e of L.events)
+        for (const x of e.cells) {
+          const i = x.r * L.w + x.c;
+          const v = typeOf(x.ch).type | (want[i]! & 0xc0);
+          if (last.cells[i] === v) want[i] = v;
+        }
       for (const o of L.objects) {
         if (o.kind !== 'build') continue;
         const i = o.tr! * L.w + o.tc!;

@@ -29,7 +29,9 @@ play_frame:
     CALL player_move
     CALL player_cell
     CALL whirl_update
+    CALL events_update
     CALL player_hazard
+    CALL stream_hazard
     CALL whirl_sound
     LD r0, [mode]                   ; AJ! may have started the level again
     CMP r0, M_PLAY

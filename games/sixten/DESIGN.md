@@ -219,7 +219,9 @@ bit 4..0   typ (32)
 | 18 | `M` | mål | gräs | gul | dubbelring (banan) | 1 | – |
 | 19 | `i` | ensamt träd | en gran | gul | grön prick | 1 | **farlig vid åska** (S4) |
 | 20 | `X` | vindfälle | stammar i kors | vit | svart kryss | – | går inte: blockerar en stig (§6.4) |
-| 21–31 | | reserverade: forsen, översvämmad mark, dimma (en flagga per värld), klätterstig … | | | | | högst två nya fenomen per värld (§7) |
+| 21 | `Q` | strömmande vatten (fors, översvämning) | vatten med strömmar | blå | vita streck | 0,375 | går, men **farligt** (S8): 20 bildrutor i det = `AJ!` |
+| 22 | `R` | ras | sten och grus | vit | bruna prickar | – | går inte: blockerar (ett ras, §6.6) |
+| 23–31 | | reserverade: dimma (en flagga per värld), klätterstig … | | | | | högst två nya fenomen per värld (§7) |
 
 - **Fart** är px per bildruta (60 bildrutor per sekund), i motorn i 1/16 px. "–" = går inte (kollision mot cellens
   typ, Sixtens fotlåda är 6 × 4 px; vid ett hörn glider han runt). Varianten (bit 5) sätts av generatorn för öppen
@@ -338,6 +340,22 @@ med M29.)
   alls. Det syns utan text (utkastets "här blåser det mindre").
 - **Lä (vind 1–2, sidovy):** bakom ett block, en vägg eller dikeskanten sett från vinden. Vinden knuffar inte.
 
+### 6.6 Andra fenomen: händelser (M30)
+
+Fallande träd, ras och översvämning är **händelser** i banfilen (`event:` i `.map`): vilken kontroll som startar
+den (eller banans start), typ, när den sker (bildrutor efter starten), hur länge varningen syns innan, och vilka
+celler som ändras. Som tromben: ingen slump, och den vet inte var Sixten är. Klockan går i spel och skärmbyten (kartan
+och naturbokssidor pausar den).
+
+| Typ | Varning (syns på cellerna) | Vad som händer | Skada |
+|---|---|---|---|
+| fallande träd (storm) | växande skuggor, knak var halvsekund; **minst 120 bildrutor** | cellerna blir vindfällen `X` | `AJ!` om Sixten står där |
+| ras | grus som rinner ned, muller; **minst 120 bildrutor** | cellerna blir ras `R` | `AJ!` om Sixten står där |
+| översvämning | krusningar (eller ingen: vattnet stiger i regnet) | cellerna blir strömmande vatten `Q` | i `Q`: 20 bildrutor = `AJ!` (S8) |
+
+I värld 3 regnar det hela tiden (strimmor över skärmen). Forsen i 3-4 är `Q` från början. Varje värld har sin egen
+markfärg (värld 2 khaki efter stormen, värld 3 blöt mörkgrön) och sin egen musikslinga.
+
 ## 7. Världar, banor och fenomen
 
 Högst två nya fenomen per värld. Varje nytt fenomen introduceras ensamt i en bana innan det kombineras.
@@ -345,8 +363,8 @@ Högst två nya fenomen per värld. Varje nytt fenomen introduceras ensamt i en 
 | Värld | Nya fenomen | Banor (4) | Sidovy |
 |---|---|---|---|
 | **1 Skogen** | vind, liten tromb (styrka ≤ 3) | 1-1 Skogsstarten (karta, kontroller, den första lilla tromben), 1-2 Sjön (vatten och vägval), 1-3 Berget (höjder, kompass. Grottan = första sidovyn), 1-4 Trombens spår (den första trombbanan: läs vinden, välj väg, det fallna trädet blir bro) | 1-3, 1-4 |
-| **2 Kraften** | fallande träd (stormfälld skog), ras | 2-1 Stormen (skog är farlig, välj öppen mark), 2-2 Rasbranten, 2-3 Stenarna (tromben flyttar ett block: grottan), 2-4 Skogen efter stormen (trä, byggplatser, genvägar) | 2-2, 2-3 |
-| **3 Vattnet** | kraftigt regn/översvämning (celler blir vatten), strömmar | 3-1 Regnet, 3-2 Bäcken svämmar över, 3-3 Myren (kompasskurs), 3-4 Forsen | 3-4 |
+| **2 Kraften** | fallande träd (stormfälld skog), ras | 2-1 Stormen (kontroll 1 startar stormen: granarna faller över skogsstigen, säkra vägen går över öppen mark), 2-2 Rasbranten (raset begraver stigen under slänten), 2-3 Stenarna (tromben flyttar blocket: grottan öppnas, med sidovy), 2-4 Skogen efter stormen (vindfällen, trä, byggplatsens bro) | 2-3 |
+| **3 Vattnet** | kraftigt regn/översvämning (celler blir strömmande vatten), strömmar | 3-1 Regnet (ängen svämmar över), 3-2 Bäcken svämmar över (låga bron först, sedan stränderna; höga bron är torr), 3-3 Myren (kompasskurs), 3-4 Forsen (bara bron går över) | – |
 | **4 Himlen** | åska (ensamma träd, höjder, svacka), dimma | 4-1 Åskan, 4-2 Dimman (kompass och steg), 4-3 Fjället (kalfjäll + åska), 4-4 Molnens väg (hur ett bymoln ger en tromb) | 4-3 |
 | **5 Expeditionen** | inga. Allt kombineras | 5-1 Kartan och vinden, 5-2 Natten (mörker + kompass, ej nytt fenomen: bara mörkare palett), 5-3 Vattnet stiger, **5-4 Den stora tromben** (finalen, styrka 5) | 5-4 |
 

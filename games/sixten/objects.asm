@@ -2,6 +2,31 @@
 ; building sites (A with wood builds), fallen trees (A gives wood, once per tree); the goal and the tally.
 .code
 
+; flowing water (DESIGN §1.3 S8): STREAM_FRAMES in it, AJ!
+stream_hazard:
+    LD r0, [mode]
+    CMP r0, M_PLAY
+    JNE @out
+    LD r0, [cell_i]
+    LDB r0, [r0 + cells]
+    AND r0, 31
+    CMP r0, CT_STREAM
+    JNE @out
+    LD r0, [stream_t]
+    ADD r0, 1
+    ST [stream_t], r0
+    CMP r0, STREAM_FRAMES
+    JB @done
+    LDI r0, 0
+    ST [stream_t], r0
+    CALL aj
+    RET
+@out:
+    LDI r0, 0
+    ST [stream_t], r0
+@done:
+    RET
+
 ; level start: nothing taken, the obligatory controls' mask
 objs_reset:
     LDI r0, 0
@@ -139,6 +164,9 @@ a_find:
     LD r2, [face_cell]
     CMP r1, r2
     JNE @nl
+    CALL link_open
+    CMP r1, 0
+    JEQ @nl
     LDI r0, 1
     RET
 @nl:

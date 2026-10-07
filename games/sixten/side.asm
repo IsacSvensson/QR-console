@@ -34,7 +34,12 @@ try_side:
     JEQ @none
     LD r1, [r6 + SL_CELL]
     CMP r1, r0
-    JEQ @enter
+    JNE @nextl
+    CALL link_open
+    CMP r1, 0
+    JNE @enter
+    LD r0, [face_cell]
+@nextl:
     ADD r6, 8
     SUB r7, 1
     JMP @k
@@ -42,6 +47,23 @@ try_side:
     MOV r0, r6
     CALL side_enter
 @none:
+    RET
+
+; r6 = side link -> r1 = 1 if it is open (it needs no cell type, or its cell has it); keeps r0, r6, r7
+link_open:
+    LDB r1, [r6 + SL_NEEDS]
+    CMP r1, 0
+    JEQ @yes
+    SUB r1, 1
+    LD r2, [r6 + SL_CELL]
+    LDB r2, [r2 + cells]
+    AND r2, 31
+    CMP r1, r2
+    JEQ @yes
+    LDI r1, 0
+    RET
+@yes:
+    LDI r1, 1
     RET
 
 ; r0 = side link: load the side-view overlay and the side view; Sixten at its start, facing right

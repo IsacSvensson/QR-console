@@ -1,0 +1,38 @@
+# 3-2 Bäcken svämmar över (DESIGN.md §7): the brook rises in two steps: first the low bridge and its banks, then the
+# banks upstream. The high bridge in the north stays dry.
+name: 3-2 BÄCKEN SVÄMMAR ÖVER
+world: 3
+cells:
+TTTTTTTTTTTTTTTT
+TS....TWT......T
+T..+==+b+==+...T
+T..|..TWT..|...T
+T..|...W...|...T
+T..|...W...|...T
+T..|...W...|...T
+T..|...W...|...T
+T..|...W...|...T
+T..+===b===+..MT
+T......W.......T
+TTTTTTTTTTTTTTTT
+controls:
+1 O 3 2
+2 O 11 5
+3 F 3 9
+entry: BÄVER 6 10
+entry: BÄCK 10 1
+event: 0 FLOOD 400 0      # the low bridge and its banks
+cell 7 9 Q
+cell 6 9 Q
+cell 8 9 Q
+cell 6 8 Q
+cell 8 8 Q
+event: 0 FLOOD 800 0      # the banks upstream
+cell 6 4 Q
+cell 6 5 Q
+cell 6 6 Q
+cell 6 7 Q
+cell 8 4 Q
+cell 8 5 Q
+cell 8 6 Q
+cell 8 7 Q

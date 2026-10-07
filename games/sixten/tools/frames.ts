@@ -16,6 +16,7 @@ const marks = new Set(want.filter((w) => !w.startsWith('mode:')).map(Number));
 const modes = new Map(want.filter((w) => w.startsWith('mode:')).map((w) => [Number(w.slice(5)), 0]));
 mkdirSync(out, { recursive: true });
 const u = (n: string) => vm.read16(sym.get(n)!);
+const counts = new Map<string, number>();
 for (let f = 0; f < rf.frames; f++) {
   vm.step(inputs[f]!);
   const m = u('mode');
@@ -24,6 +25,15 @@ for (let f = 0; f < rf.frames; f++) {
     if (modes.get(m) === 10) {
       marks.add(f + 1);
       modes.set(m, -1);
+    }
+  }
+  // "level:N": the 120th play frame in level N; "warn:N": the 60th frame with an event's warning in level N
+  for (const w of want) {
+    const [k, v] = w.split(':');
+    if ((k === 'level' || k === 'warn') && u('level') === Number(v) && m === 0 && (k === 'level' || u('ev_warn'))) {
+      const key = `${k}${v}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      if (counts.get(key) === (k === 'level' ? 120 : 60)) marks.add(f + 1);
     }
   }
   if (marks.has(f + 1)) {

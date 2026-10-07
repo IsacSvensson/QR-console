@@ -532,6 +532,32 @@ sym_build:
     SYS RECT
     RET
 
+sym_stream:
+    ADD r0, 1
+    ADD r1, 1
+    MOV r2, r0
+    ADD r2, 2
+    MOV r3, r1
+    LDI r4, C_WHITE
+    SYS LINE
+    ADD r1, 2
+    ADD r3, 2
+    ADD r0, 1
+    ADD r2, 1
+    SYS LINE
+    RET
+sym_rubble:
+    LDI r2, C_BROWN
+    ADD r0, 1
+    ADD r1, 1
+    SYS PSET
+    ADD r0, 2
+    SYS PSET
+    SUB r0, 1
+    ADD r1, 2
+    SYS PSET
+    RET
+
 ; the course in red: start, the controls not under leaves, goal; legs, a triangle, circles with numbers, the
 ; finish double circle
 map_part3:
@@ -690,7 +716,7 @@ map_part4:
 .data
 map_parts:  .word map_part0, map_part1, map_part2, map_part3, map_part4
 sym_routines: .word 0, sym_path_ew, sym_path_ns, sym_path_x, sym_marsh, sym_contours, sym_ditch, sym_hollow
-            .word sym_house, sym_boulder, sym_fallen, sym_bridge, sym_cave, sym_lone_tree, sym_build
+            .word sym_house, sym_boulder, sym_fallen, sym_bridge, sym_cave, sym_lone_tree, sym_build, sym_stream, sym_rubble
 legend_x:   .word 2, 39, 82, 2, 39, 82
 legend_y:   .word 104, 104, 104, 116, 116, 116
 legend_fill: .byte 15, 14, 8, 15, 15, 15

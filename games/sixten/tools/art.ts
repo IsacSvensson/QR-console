@@ -196,6 +196,9 @@ const LOG_CROWN: Art = ['.5.5B...', '55B5B553', '5B55B474', 'B555B444', '5B5BB74
 const LOG_ROOTS: Art = ['...4344.', '..434443', '33444444', '47444343', '44444344', '44434444', '33444443', '..4344..'];
 const PLANK: Art = ['33333333', '47774777', '47774777', '44444444', '47774777', '47774777', '33333333', '88888888'];
 const STAKE: Art = ['........', '...4....', '...4E...', '...4.E..', '...4..E.', '...4...E', '...4....', '..333...'];
+const STREAM: Art = ['88888888', '8FF88888', '88888FF8', '88888888', '8888FF88', '8FF88888', '88888888', '88FF8888'];
+const STREAM2: Art = ['88888888', '888FF888', '8888888F', 'F8888888', '88FF8888', '88888FF8', '88888888', '8888FF88'];
+const RUBBLE: Art = ['7A3.7A..', 'A37A3A7.', '37A37A3A', '.A3A73A7', '7A3A37A3', 'A37A3A37', '3A7A3A73', 'A3A37A3A'];
 const LEAVES: Art = ['..9.E...', '.99E94..', '9E949E9.', 'E9499E94', '.94E99E.', '..9E49..', '...9....', '........'];
 
 /** top-down tiles in order; index = position + 1 (tile 0 = empty: the open-ground CLS colour) */
@@ -229,6 +232,9 @@ export const TOP_TILES: [string, Art][] = [
   ['plank', PLANK],
   ['stake', STAKE],
   ['leaves', LEAVES],
+  ['stream', STREAM],
+  ['stream2', STREAM2],
+  ['rubble', RUBBLE],
 ];
 export const TILE = new Map(TOP_TILES.map(([n], i) => [n, i + 1]));
 export const tileIndex = (n: string) => {
@@ -245,7 +251,7 @@ export const tilePixels = (t: number): number[] =>
 // One byte per cell: bits 0-4 type, bit 5 variant (the pattern's upper and lower halves swap), bit 6 covered by leaves, bit 7 a
 // control stands here. speed in 1/16 px per frame (0 = blocking). fill = map colour, sym = map symbol:
 // 0 none, 1 path E-W, 2 path N-S, 3 crossing, 4 marsh, 5 contours, 6 ditch, 7 hollow, 8 building, 9 boulder,
-// 10 fallen tree / windfall, 11 bridge, 12 cave, 13 lone tree, 14 building site
+// 10 fallen tree / windfall, 11 bridge, 12 cave, 13 lone tree, 14 building site, 15 flowing water, 16 landslide
 export interface CellType { ch: string; name: string; pattern: string; fill: number; sym: number; speed: number; varies?: boolean }
 const F = 'floor';
 export const CELLS: CellType[] = [
@@ -270,6 +276,8 @@ export const CELLS: CellType[] = [
   { ch: 'M', name: 'GOAL', pattern: '_ _ tuft _ / _ _ _ _ / _ _ _ _ / tuft _ _ _', fill: 14, sym: 0, speed: 16 },
   { ch: 'i', name: 'LONE_TREE', pattern: '_ _ _ _ / _ lone0 lone1 _ / _ lone2 lone3 _ / _ _ _ _', fill: 14, sym: 13, speed: 16 },
   { ch: 'X', name: 'WINDFALL', pattern: '_ _ _ _ / log_crown log log log_roots / log_roots log log log_crown / _ tuft _ _', fill: 15, sym: 10, speed: 0 },
+  { ch: 'Q', name: 'STREAM', pattern: 'stream stream2 stream stream2 / stream2 stream stream2 stream / stream stream2 stream stream2 / stream2 stream stream2 stream', fill: 8, sym: 15, speed: 6 },
+  { ch: 'R', name: 'RUBBLE', pattern: 'rubble rubble rubble rubble / rubble rubble rubble rubble / rubble rubble rubble rubble / rubble rubble rubble rubble', fill: 15, sym: 16, speed: 0 },
 ];
 export const CELL_BY_CH = new Map(CELLS.map((c, i) => [c.ch, i]));
 export const patternBytes = (p: string) => {

@@ -808,7 +808,8 @@ particles:
     CMP r1, 128
     JLT @keep
 @respawn:
-    LD r0, [tick]
+    LD r0, [tick]                   ; (kept positive: MOD is signed)
+    AND r0, 0x3FFF
     MOV r2, r6
     MUL r2, 37
     ADD r0, r2

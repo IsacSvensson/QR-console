@@ -4,7 +4,7 @@ FONT_GLYPHS = 48
 G_0 = 30
 G_SLASH = 47
 G_DASH = 45
-CELL_TYPES = 21
+CELL_TYPES = 23
 CT_OPEN = 0
 CT_FOREST = 1
 CT_DENSE = 2
@@ -26,6 +26,8 @@ CT_START = 17
 CT_GOAL = 18
 CT_LONE_TREE = 19
 CT_WINDFALL = 20
+CT_STREAM = 21
+CT_RUBBLE = 22
 T_TUFT = 1
 T_TUFT_R = 2
 T_TUFT_L = 3
@@ -70,6 +72,9 @@ T_LOG_ROOTS = 41
 T_PLANK = 42
 T_STAKE = 43
 T_LEAVES = 44
+T_STREAM = 45
+T_STREAM2 = 46
+T_RUBBLE = 47
 ST_SOLID = 1
 ST_CLIMB = 2
 
@@ -609,6 +614,36 @@ E9499E94
 ..9E49..
 ...9....
 ........
+; stream
+.sprite
+88888888
+8FF88888
+88888FF8
+88888888
+8888FF88
+8FF88888
+88888888
+88FF8888
+; stream2
+.sprite
+88888888
+888FF888
+8888888F
+F8888888
+88FF8888
+88888FF8
+88888888
+8888FF88
+; rubble
+.sprite
+7A3.7A..
+A37A3A7.
+37A37A3A
+.A3A73A7
+7A3A37A3
+A37A3A37
+3A7A3A73
+A3A37A3A
 
 ; cell patterns: 16 tile indices per cell type (4 rows of 4); the variant bit swaps rows 0-1 with 2-3
 patterns:
@@ -633,11 +668,13 @@ patterns:
     .byte 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0   ; M GOAL
     .byte 0, 0, 0, 0, 0, 9, 10, 0, 0, 11, 12, 0, 0, 0, 0, 0   ; i LONE_TREE
     .byte 0, 0, 0, 0, 40, 39, 39, 41, 41, 39, 39, 40, 0, 1, 0, 0   ; X WINDFALL
+    .byte 45, 46, 45, 46, 46, 45, 46, 45, 45, 46, 45, 46, 46, 45, 46, 45   ; Q STREAM
+    .byte 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47   ; R RUBBLE
 
 ; per cell type: walking speed (1/16 px per frame, 0 = blocking), map fill colour, map symbol
-cell_speed: .byte 16, 14, 8, 20, 20, 20, 10, 0, 0, 12, 14, 16, 16, 12, 16, 16, 0, 16, 16, 16, 0
-map_fill:   .byte 14, 15, 11, 15, 15, 15, 15, 8, 15, 14, 14, 14, 14, 14, 8, 14, 15, 14, 14, 14, 15
-map_sym:    .byte 0, 0, 0, 1, 2, 3, 4, 0, 5, 6, 7, 8, 9, 10, 11, 14, 12, 0, 0, 13, 10
+cell_speed: .byte 16, 14, 8, 20, 20, 20, 10, 0, 0, 12, 14, 16, 16, 12, 16, 16, 0, 16, 16, 16, 0, 6, 0
+map_fill:   .byte 14, 15, 11, 15, 15, 15, 15, 8, 15, 14, 14, 14, 14, 14, 8, 14, 15, 14, 14, 14, 15, 8, 15
+map_sym:    .byte 0, 0, 0, 1, 2, 3, 4, 0, 5, 6, 7, 8, 9, 10, 11, 14, 12, 0, 0, 13, 10, 15, 16
 
 ; side-view tiles and their flags (0 background, 1 solid, 2 climbable); tile 0 = sky
 side_attr: .byte 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 2, 2, 0, 1, 1, 1, 1, 1, 1, 1

@@ -39,6 +39,7 @@ level_start:
     LDI r0, HEARTS
     ST [hearts], r0
     CALL objs_reset
+    CALL events_reset
     LD r6, [lv_ptr]
     LDB r1, [r6 + LR_SR]            ; the start cell
     LD r0, [lv_w]
@@ -203,6 +204,7 @@ slide_frame:
     ST [mode], r0
 @draw:
     CALL whirl_update               ; the weather does not wait for the slide
+    CALL events_update
     CALL whirl_sound
     CALL draw_world
     RET
@@ -359,12 +361,20 @@ draw_flags:
 
 ; the whole play screen
 draw_world:
-    LDI r0, C_GREEN
+    LD r0, [lv_ptr]                 ; each world's ground has its own colour
+    LDB r0, [r0 + LR_WORLD]
+    LDB r0, [r0 + world_ground]
     SYS CLS
     CALL draw_view
+    CALL draw_events
     CALL draw_flags
     CALL draw_objs
     CALL draw_sixten
     CALL draw_whirl
+    CALL draw_rain
     CALL draw_hud
     RET
+
+.data
+world_ground: .byte 11, 11, 7, 5, 10, 11   ; (index = world): green, khaki after the storm, wet green, grey fell, green
+.code

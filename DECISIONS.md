@@ -949,3 +949,30 @@ Decision:
 Measurement: replays m29-safe (9 910 frames: title -> 1-1 .. 1-4 on safe routes -> the World 2 map, no heart lost, no
 wood, no power-up, no course) and m29-all (12 864 frames: every control, every World 1 entry, both power-ups, wood and
 the bridge); all 15 M29 checks pass, and the 86 earlier Sixten checks.
+
+## D-046 - Sixten's Worlds 2 and 3: events, flowing water, rain (M30)
+Date: 2026-10-07 - Milestone: M30
+Decision:
+- **Events** (`event:` in `.map`, DESIGN 6.6): a generic timed change: trigger (a control, or the level's start),
+  kind (FALL, SLIDE, FLOOD), time, warning frames, cells. The generator refuses a fall or a slide that warns less than
+  120 frames. The engine runs up to 8 a level with clocks of their own (paused by the map and pages, like the
+  whirlwind); during the warning the cells show it (shadows, trickling gravel, ripples) with a creak every 30 frames;
+  then the cells change; Sixten on a cell a tree or a slide falls on: AJ!. Never Sixten's position, never RND.
+- **Two new cell types**: `Q` flowing water (walkable at 0.375 px/frame, 20 frames in it = AJ!, S8; floods and the
+  rapids) and `R` landslide (blocking). The map draws them (white flow strokes on blue; brown dots).
+- **A side link can need a cell type** (an 8th field): 2-3's cave opens only once the whirlwind has turned the hill
+  cell into a cave.
+- **Each world looks and sounds its own**: the ground's colour (World 2 khaki after the storm, World 3 wet dark green)
+  and a 32-note tune per world; rain over every World 3 level.
+- **Levels**: 2-1 Stormen (control 1 starts the storm; the forest path is buried under windfalls; the safe way is
+  the open west edge), 2-2 Rasbranten (the slide buries the path under the slope; round through the south), 2-3
+  Stenarna (control 1 in a hollow starts a whirlwind that moves the boulder and opens the cave), 2-4 Skogen efter
+  stormen (windfalls, wood, the site's bridge), 3-1 Regnet (the meadow floods), 3-2 Bäcken svämmar över (two floods;
+  the high bridge stays dry), 3-3 Myren (control 2 on a boulder in the marsh), 3-4 Forsen (rapids; one bridge).
+  16 x 12 cells each. 16 more nature-book pictures.
+- **A bug found and fixed**: `tick` read as a signed value went negative after ~9 minutes of play, and `MOD` then gave
+  negative y for rain, wind particles and the side view's streaks (they vanished). `tick` is masked positive first.
+- **Replays from the title**: there is no code entry before M32, so m30-safe and m30-all play World 1 first.
+Measurement: ROM 23 489 B (code 15 456, data 7 944, sound 89), xdata 7 263 B, cartridge 17 137 B. m30-safe 19 983
+frames (title -> World 4 map; no heart lost in Worlds 2-3, never in flowing water), m30-all 28 441 frames (every
+control, all 24 entries of Worlds 1-3). 146 Sixten checks pass.

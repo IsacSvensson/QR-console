@@ -53,22 +53,22 @@ nb_pics:
     .word nb_pic_5
     .word nb_pic_6
     .word nb_pic_7
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
-    .word nb_pic_unknown
+    .word nb_pic_8
+    .word nb_pic_9
+    .word nb_pic_10
+    .word nb_pic_11
+    .word nb_pic_12
+    .word nb_pic_13
+    .word nb_pic_14
+    .word nb_pic_15
+    .word nb_pic_16
+    .word nb_pic_17
+    .word nb_pic_18
+    .word nb_pic_19
+    .word nb_pic_20
+    .word nb_pic_21
+    .word nb_pic_22
+    .word nb_pic_23
     .word nb_pic_unknown
     .word nb_pic_unknown
     .word nb_pic_unknown
@@ -257,6 +257,166 @@ nb_pic_7:   ; ROTVÄLTA
 .444443.
 ..4344..
 33333333
+nb_pic_8:   ; STORM
+.sprite
+.333333.
+33AAAA33
+.333333.
+F.F.F.F.
+.F.F.F.F
+F.F.F.F.
+.F.F.F.F
+........
+nb_pic_9:   ; KORP
+.sprite
+........
+...00...
+..0000.7
+.000000.
+00000000
+.000000.
+..0..0..
+..7..7..
+nb_pic_10:   ; HACKSPETT
+.sprite
+..66....
+.0006...
+.0F0F...
+.00004..
+.0F00...
+.0000...
+.0..0...
+........
+nb_pic_11:   ; EKORRE
+.sprite
+..9.....
+.999..9.
+.9F99999
+.99999.9
+..999..9
+..9999.9
+..9..999
+.99.....
+nb_pic_12:   ; TALL
+.sprite
+..555...
+.55555..
+5555555.
+.55555..
+...4....
+...4....
+...4....
+..444...
+nb_pic_13:   ; LINGON
+.sprite
+.5..5...
+5B55B5..
+.5555...
+..6.6...
+.666.66.
+.666.66.
+..6..6..
+........
+nb_pic_14:   ; GRANIT
+.sprite
+........
+.A3AF3A.
+3AF3A3A3
+A3A6A3AF
+3A3AF3A3
+.A3A3A3.
+..3333..
+BBBBBBBB
+nb_pic_15:   ; RULLSTENSÅS
+.sprite
+........
+........
+...777..
+..77A77.
+.7A77777
+7777A777
+77A77777
+BBBBBBBB
+nb_pic_16:   ; REGN
+.sprite
+.333333.
+3AAAAAA3
+.333333.
+.8..8..8
+8..8..8.
+.8..8..8
+8..8..8.
+........
+nb_pic_17:   ; GRODA
+.sprite
+........
+.5....5.
+5F5..5F5
+5555555.
+.55BB55.
+5555555.
+5.5..5.5
+........
+nb_pic_18:   ; BÄVER
+.sprite
+........
+..4444..
+.4F44F4.
+.444444.
+.44FF44.
+.444444.
+..4444..
+.3333333
+nb_pic_19:   ; VITMOSSA
+.sprite
+.B.B.B..
+BEBEBEB.
+.BEBEB..
+BEBEBEB.
+.BEBEB..
+..B.B...
+.8888...
+88888888
+nb_pic_20:   ; MYR
+.sprite
+BBBBBBBB
+B88BBB8B
+BB88BBBB
+BBBB88BB
+B8BBBB88
+BBB88BBB
+88BBBBBB
+BBBB88BB
+nb_pic_21:   ; BÄCK
+.sprite
+BBBBBBBB
+BB8888BB
+B88D888B
+.88888D.
+..8D888.
+.88888..
+B888D88B
+BBBBBBBB
+nb_pic_22:   ; KÄLLA
+.sprite
+BBBBBBBB
+BB3333BB
+B388883B
+3888D883
+38D88883
+B388883B
+BB3333BB
+BBBBBBBB
+nb_pic_23:   ; LERA
+.sprite
+........
+........
+.77777..
+7777777.
+77AA777.
+7777777.
+.77777..
+44444444
 
 .xdata
 ; the pages: the page count, then LINES_PER_PAGE lines a page, each 255-terminated (an empty line is 255)

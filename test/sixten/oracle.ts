@@ -46,20 +46,22 @@ const VARIES = new Set(['.', 'T']);
 // ---- the .map sources ------------------------------------------------------------------------------------
 export interface RefWhirl { trigger: number; wps: { c: number; r: number; s: number; v: number; wait: number }[]; changes: { wp: number; c: number; r: number; ch?: string; reveal?: boolean }[] }
 export interface RefObj { kind: 'item' | 'entry' | 'build'; name: string; c: number; r: number; tc?: number; tr?: number; ch?: string }
-export interface RefLevel { id: string; name: string; rows: string[]; w: number; h: number; controls: { kind: string; c: number; r: number }[]; leaves: Set<string>; whirls: RefWhirl[]; objects: RefObj[]; sides: string[][] }
+export interface RefEvent { trigger: number; kind: string; at: number; warn: number; cells: { c: number; r: number; ch: string }[] }
+export interface RefLevel { id: string; name: string; world: number; rows: string[]; w: number; h: number; controls: { kind: string; c: number; r: number }[]; leaves: Set<string>; whirls: RefWhirl[]; objects: RefObj[]; sides: string[][]; events: RefEvent[] }
 export function levelIds(): string[] {
   const ids = readdirSync(join(GAME_DIR, 'levels')).filter((f) => f.endsWith('.map')).map((f) => f.slice(0, -4));
   return [...ids.filter((i) => !i.startsWith('T')).sort(), ...ids.filter((i) => i.startsWith('T')).sort()];
 }
 export function readLevel(id: string): RefLevel {
-  const L: RefLevel = { id, name: '', rows: [], w: 0, h: 0, controls: [], leaves: new Set(), whirls: [], objects: [], sides: [] };
+  const L: RefLevel = { id, name: '', world: 0, rows: [], w: 0, h: 0, controls: [], leaves: new Set(), whirls: [], objects: [], sides: [], events: [] };
   let section = '';
   for (const raw of readFileSync(join(GAME_DIR, 'levels', `${id}.map`), 'utf8').split(/\r?\n/)) {
     const line = (section === 'cells' ? raw : raw.split('#')[0]!).trimEnd();
     if (!line) continue;
-    const m = /^(name|world|cells|controls|leaves|whirl|item|entry|build|side):\s*(.*)$/.exec(line);
+    const m = /^(name|world|cells|controls|leaves|whirl|item|entry|build|side|event):\s*(.*)$/.exec(line);
     if (m) {
       if (m[1] === 'name') L.name = m[2]!;
+      if (m[1] === 'world') L.world = Number(m[2]);
       if (m[1] === 'leaves') {
         const n = m[2]!.split(/\s+/).map(Number);
         for (let i = 0; i < n.length; i += 2) L.leaves.add(`${n[i]},${n[i + 1]}`);
@@ -69,7 +71,13 @@ export function readLevel(id: string): RefLevel {
       if (m[1] === 'item' || m[1] === 'entry') L.objects.push({ kind: m[1], name: t[0]!, c: Number(t[1]), r: Number(t[2]) });
       if (m[1] === 'build') L.objects.push({ kind: 'build', name: '', c: Number(t[0]), r: Number(t[1]), tc: Number(t[2]), tr: Number(t[3]), ch: t[4] });
       if (m[1] === 'side') L.sides.push(t);
+      if (m[1] === 'event') L.events.push({ trigger: Number(t[0]), kind: t[1]!, at: Number(t[2]), warn: Number(t[3]), cells: [] });
       section = m[1]!;
+      continue;
+    }
+    if (section === 'event') {
+      const [, c, r, ch] = line.trim().split(/\s+/);
+      L.events[L.events.length - 1]!.cells.push({ c: Number(c), r: Number(r), ch: ch! });
       continue;
     }
     if (section === 'whirl') {

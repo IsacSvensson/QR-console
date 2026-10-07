@@ -727,8 +727,10 @@ book_frame:
     RET
 
 .data
-world_count:  .byte 4, 0, 0, 0, 0
+world_count:  .byte 4, 4, 4, 0, 0
 world_levels: .byte LEVEL_1_1, LEVEL_1_2, LEVEL_1_3, LEVEL_1_4
-              .fill 16
+              .byte LEVEL_2_1, LEVEL_2_2, LEVEL_2_3, LEVEL_2_4
+              .byte LEVEL_3_1, LEVEL_3_2, LEVEL_3_3, LEVEL_3_4
+              .fill 8
 world_names:  .word t_wname1, t_wname2, t_wname3, t_wname4, t_wname5
 .code

@@ -93,6 +93,7 @@ debug_hooks:
 .include "screens.asm"
 .include "code.asm"
 .include "music.asm"
+.include "events.asm"
 .include "sideovl.asm"
 .code
 
