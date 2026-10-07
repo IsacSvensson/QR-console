@@ -498,7 +498,8 @@ Rules for M26–M32 (in addition to CLAUDE.md, same spirit as Parts 2 and 3):
   §8.1 power-ups, §10.2 code layout, §13 rules for 1-1), `NATURBOK.md` and the `.map` sources; what the engine holds
   in RAM or ROM is compared against them, never against itself.
 - **Safety is a test, not a hope.** Every safety rule (DESIGN §1.3) and every nature-book entry has a source and a
-  review box; from M29 on the tests require the human's tick on every row (an unticked row keeps the milestone open).
+  recorded check against it; from M29 on the tests require both on every row. (On 2026-10-07 the human delegated the
+  review to Claude, D-044: the check column records Claude's check; the human's own tick stays a manual step.)
 - **All game code and data live in `games/sixten/`**; generators and the replay bot in `games/sixten/tools/`.
 - Every milestone has recorded replays (`games/sixten/replays/*.json`) with committed per-frame hashes from the VM,
   recorded by a bot from RAM-driven routes ("go to cell", "wait for whirlwind phase", "take shelter", "press A here"),
@@ -593,8 +594,8 @@ milestone adds to it and never removes earlier checks. From M26 on, the CI game 
   control or a nature-book entry
 - power-ups do what DESIGN §8.1 says, measured from replays (cucumber: "you are here" on; chips: 1.5× speed; choklad:
   no wind push at strength 1–2, damage inside the radius unchanged)
-- **safety review:** every row of DESIGN §1.3 and every World 1 entry in `NATURBOK.md` has a source and the human's
-  tick; the texts in ROM/xdata equal `NATURBOK.md` byte for byte (glyph indices)
+- **safety review:** every row of DESIGN §1.3 and every World 1 entry in `NATURBOK.md` has a source and a recorded
+  check (D-044); the texts in ROM/xdata equal `NATURBOK.md` byte for byte (glyph indices)
 - one replay plays from the title to the World 2 map
 - **budget gate:** code bytes (ROM and overlays), World 1 data bytes, ROM and cartridge size measured, and a
   projection for five worlds recorded in `DECISIONS.md`. If it exceeds 32 KB ROM or 25 KB cartridge, apply DESIGN
@@ -638,8 +639,8 @@ the World 2 map to the World 4 map.
 
 ## Manual acceptance for Part 4 (human only)
 
-1. **Before M29 (facts):** tick every row of DESIGN §1.3 and `NATURBOK.md`, or correct it. S3 (ditch as shelter from
-   a whirlwind) has no Swedish source yet.
+1. **Facts (any time):** tick every row of DESIGN §1.3 and `NATURBOK.md` that Claude checked, or correct it. S3
+   (ditch as shelter from a whirlwind) still has only a US source (NWS).
 2. **After M27 (feel test):** scan the demo GIF on a phone: can a whirlwind and its strength be read in 128 × 128?
    Does taking shelter feel obvious without text?
 3. **After M29 (Sixten test):** a nine-year-old plays 1-1 and 1-2 without help. Does he find the controls, read the

@@ -1,10 +1,11 @@
 # SIXTENS EXPEDITION — designdokument
 
-Status: **utkast för granskning (planering, ingen implementation).** Implementeras enligt PLAN.md Part 4
-(M26–M32). Detta dokument, människans designutkast (de 38 avsnitten) och banfilerna (`levels/*.map`, skapas från
+Status: **under implementation** (M26–M28 klara). De öppna frågorna och granskningen besluts av Claude på
+människans uppdrag 2026-10-07 (D-044). Implementeras enligt PLAN.md Part 4 (M26–M32). Detta dokument, människans designutkast (de 38 avsnitten) och banfilerna (`levels/*.map`, skapas från
 M26) är specifikationen och testernas facit. Där utkastet och de tio låsta besluten (§1) krockar gäller besluten,
 och krocken står utskriven i §1.2. Frågorna i §11 har förslag som gäller om inget annat bestäms innan M26 börjar.
-**All fakta och alla säkerhetsråd är markerade ☐ för din granskning** (§1.3, §8.3).
+**All fakta och alla säkerhetsråd har en källa, och Claude har kontrollerat varje rad mot den (✓). Din egen
+granskning (☐) står kvar som ett manuellt steg** (§1.3, §8.3, D-044).
 
 ![Mockup: en skärm ur 1-1 uppifrån med tromben på styrka 3, ritad av konsolens VM](docs/topdown.png)
 
@@ -101,18 +102,18 @@ Det gäller banornas form, bilderna, repliker, naturboken och powerups. Konkret:
 
 MSB heter sedan 2026 Myndigheten för civilt försvar (MCF). Länkarna är de som lästes vid planeringen (2026-10-06).
 
-| # | Regeln i spelet | Hur spelet visar den | Källa | Granskad |
+| # | Regeln i spelet | Hur spelet visar den | Källa | Kontroll |
 |---|---|---|---|---|
-| S1 | Gå inte nära en tromb | tromben är aldrig målet. Inget att hämta i dess väg medan den är aktiv | SMHI (citerat i SVT: "ska absolut inte gå nära en tromb", den "kan kasta omkring lösa föremål") | ☐ |
-| S2 | Vid storm: undvik skogen, träd och grenar faller | skog-celler blir farliga vid vind ≥ 3, med knak och fallande grenar som varning | Krisinformation/MCF om storm. Länsstyrelsen: "undvik att vistas i stormfälld skog" | ☐ |
-| S3 | Skydd vid tromb: fast byggnad. Ute utan byggnad: dike eller sänka, huka, skydda huvudet | dike, sänka och byggnad är skyddsceller. Sixten hukar när han står still där | **Hittades inte hos SMHI eller MCF.** Rådet kommer från amerikanska NWS (weather.gov, Tornado Safety). Behöver en svensk källa eller ditt godkännande | ☐ |
-| S4 | Åska: inte under ensamma träd, inte på höjder eller öppen plan mark | ensamma träd och höjder lyser upp av blixtfara i V4. Skydd = svacka | SMHI, *Skydd mot blixten* (smhi.se/kunskapsbanken/meteorologi/aska/skydd-mot-blixten) | ☐ |
-| S5 | Åska i öppen terräng: gå ner på knä i en svacka, fötterna ihop. Ligg inte platt | Sixtens hukpose i V4 är på knä, inte liggande | SMHI (samma sida): "i någon svacka i terrängen gå ned på knäna" | ☐ |
-| S6 | Åska: bada inte, gå upp ur vattnet | inga vattensträckor under åska. Bryggor stängs när åskan närmar sig | SMHI (samma sida) | ☐ |
-| S7 | Gå inte nära stormfällda träd och rotvältor (spänning, rotvältan kan resa sig) | fallna träd blir broar först när tromben passerat. Rotvältan är aldrig ett skydd | Länsstyrelsen/Skogsstyrelsen om stormfälld skog | ☐ |
-| S8 | Gå inte i strömmande vatten vid översvämning | översvämmade celler är aldrig vägen i V3. Strömmen tar Sixten tillbaka (`AJ!`) | MCF *Översvämning* | ☐ |
-| S9 | Håll avstånd från branter vid kraftigt regn (ras och skred) | rasbranter i V2 och V3 varnar med rinnande grus | MCF *Ras och skred* | ☐ |
-| S10 | Under en viadukt eller bro blåser det mer vid tromb | sådana platser finns inte som skydd i spelet | NWS (samma källa som S3) | ☐ |
+| S1 | Gå inte nära en tromb | tromben är aldrig målet. Inget att hämta i dess väg medan den är aktiv | SMHI (citerat i SVT: "ska absolut inte gå nära en tromb", den "kan kasta omkring lösa föremål") | ✓ Claude · ☐ du |
+| S2 | Vid storm: undvik skogen, träd och grenar faller | skog-celler blir farliga vid vind ≥ 3, med knak och fallande grenar som varning | Krisinformation/MCF om storm. Länsstyrelsen: "undvik att vistas i stormfälld skog" | ✓ Claude · ☐ du |
+| S3 | Skydd vid tromb: fast byggnad. Ute utan byggnad: dike eller sänka, huka, skydda huvudet | stugan är bästa skyddet (banorna lägger den på säkra vägen när det går); dike och sänka är skydd när man inte hinner in. Sixten hukar när han står still där | Byggnad: UD:s krisråd (stormar: inomhus, källare eller fönsterlösa rum i större byggnader), SMHI (gå inte nära). Dike/sänka: bara amerikanska NWS (weather.gov, Tornado Safety); en svensk källa hittades inte (sökt 2026-10-07) | ✓ Claude · ☐ du |
+| S4 | Åska: inte under ensamma träd, inte på höjder eller öppen plan mark | ensamma träd och höjder lyser upp av blixtfara i V4. Skydd = svacka | SMHI, *Skydd mot blixten* (smhi.se/kunskapsbanken/meteorologi/aska/skydd-mot-blixten) | ✓ Claude · ☐ du |
+| S5 | Åska i öppen terräng: gå ner på knä i en svacka, fötterna ihop. Ligg inte platt | Sixtens hukpose i V4 är på knä, inte liggande | SMHI (samma sida): "i någon svacka i terrängen gå ned på knäna" | ✓ Claude · ☐ du |
+| S6 | Åska: bada inte, gå upp ur vattnet | inga vattensträckor under åska. Bryggor stängs när åskan närmar sig | SMHI (samma sida) | ✓ Claude · ☐ du |
+| S7 | Gå inte nära stormfällda träd och rotvältor (spänning, rotvältan kan resa sig) | fallna träd blir broar först när tromben passerat. Rotvältan är aldrig ett skydd | Länsstyrelsen/Skogsstyrelsen om stormfälld skog | ✓ Claude · ☐ du |
+| S8 | Gå inte i strömmande vatten vid översvämning | översvämmade celler är aldrig vägen i V3. Strömmen tar Sixten tillbaka (`AJ!`) | MCF *Översvämning* | ✓ Claude · ☐ du |
+| S9 | Håll avstånd från branter vid kraftigt regn (ras och skred) | rasbranter i V2 och V3 varnar med rinnande grus | MCF *Ras och skred* | ✓ Claude · ☐ du |
+| S10 | Under en viadukt eller bro blåser det mer vid tromb | sådana platser finns inte som skydd i spelet | NWS (samma källa som S3) | ✓ Claude · ☐ du |
 
 Det spelet **inte** lär ut: att man kan springa ifrån en tromb, att vind kan "stås emot", eller att ett fallet träd är
 en lekplats.
@@ -384,15 +385,15 @@ fördelar, men den sparas i koden (beslut 9) och en full bok syns i slutet.
 
 ### 8.3 Exempel på fakta (granska ☐)
 
-| Uppslag | Text i spelet | Källa att kontrollera mot | Granskad |
+| Uppslag | Text i spelet | Källa att kontrollera mot | Kontroll |
 |---|---|---|---|
-| TROMB | EN VIRVELVIND SOM NÅR NER TILL MARKEN FRÅN ETT ÅSKMOLN. I SVERIGE SES NÅGRA VARJE SOMMAR. GÅ ALDRIG NÄRA. | SMHI kunskapsbanken (tromber) | ☐ |
-| BYMOLN | ETT HÖGT, TORNANDE MOLN. DET KAN GE ÅSKA, HAGEL, SKYFALL OCH IBLAND EN TROMB. | SMHI: tromber bildas i kraftiga bymoln (cumulonimbus) | ☐ |
-| ÅSKA | STÅ ALDRIG UNDER ETT ENSAMT TRÄD. GÅ NER PÅ KNÄ I EN SVACKA, FÖTTERNA IHOP. | SMHI, *Skydd mot blixten* | ☐ |
-| FLYTTBLOCK | EN STOR STEN SOM INLANDSISEN FLYTTADE. DEN KAN LIGGA LÅNGT FRÅN BERGET DEN KOM IFRÅN. | SGU | ☐ |
-| VITMOSSA | VÄXER I MYREN OCH KAN SUGA UPP MYCKET MER VATTEN ÄN DEN VÄGER. | SGU/naturvårdsverket | ☐ |
-| HUGGORM | SVERIGES ENDA GIFTORM. DEN ÄR SKYGG. GÅ RUNT OCH LÅT DEN VARA. | Naturhistoriska riksmuseet | ☐ |
-| ROTVÄLTA | NÄR ETT TRÄD BLÅSER OMKULL FÖLJER RÖTTERNA MED. GÅ INTE NÄRA: DEN KAN RESA SIG IGEN. | Skogsstyrelsen (stormfälld skog) | ☐ |
+| TROMB | EN VIRVELVIND SOM NÅR NER TILL MARKEN FRÅN ETT ÅSKMOLN. I SVERIGE SES NÅGRA VARJE SOMMAR. GÅ ALDRIG NÄRA. | SMHI kunskapsbanken (tromber) | ✓ Claude · ☐ du |
+| BYMOLN | ETT HÖGT, TORNANDE MOLN. DET KAN GE ÅSKA, HAGEL, SKYFALL OCH IBLAND EN TROMB. | SMHI: tromber bildas i kraftiga bymoln (cumulonimbus) | ✓ Claude · ☐ du |
+| ÅSKA | STÅ ALDRIG UNDER ETT ENSAMT TRÄD. GÅ NER PÅ KNÄ I EN SVACKA, FÖTTERNA IHOP. | SMHI, *Skydd mot blixten* | ✓ Claude · ☐ du |
+| FLYTTBLOCK | EN STOR STEN SOM INLANDSISEN FLYTTADE. DEN KAN LIGGA LÅNGT FRÅN BERGET DEN KOM IFRÅN. | SGU | ✓ Claude · ☐ du |
+| VITMOSSA | VÄXER I MYREN OCH KAN SUGA UPP MYCKET MER VATTEN ÄN DEN VÄGER. | SGU/naturvårdsverket | ✓ Claude · ☐ du |
+| HUGGORM | SVERIGES ENDA GIFTORM. DEN ÄR SKYGG. GÅ RUNT OCH LÅT DEN VARA. | Naturhistoriska riksmuseet | ✓ Claude · ☐ du |
+| ROTVÄLTA | NÄR ETT TRÄD BLÅSER OMKULL FÖLJER RÖTTERNA MED. GÅ INTE NÄRA: DEN KAN RESA SIG IGEN. | Skogsstyrelsen (stormfälld skog) | ✓ Claude · ☐ du |
 
 Texten är versaler i spelets font (som Bo), högst 2 rader à 20 tecken per sida och högst 3 sidor per uppslag. Alla
 40 uppslag skrivs i `NATURBOK.md` före M29 och granskas där. Ett test kontrollerar att varje uppslag har en källa och
@@ -445,9 +446,9 @@ utanför 1–6) avvisas också. **Förslag:** om naturboken växer över 40 upps
 
 ## 11. Utkastets öppna frågor: förslag
 
-Förslaget gäller om inget annat bestäms.
+**Beslutat 2026-10-07:** människan lät Claude bestämma; förslagen nedan gäller (D-044).
 
-| # | Fråga | Förslag |
+| # | Fråga | Beslut |
 |---|---|---|
 | 1 | Helt sidscrollande eller åt båda håll? | **Uppifrån skärm för skärm åt alla fyra håll** (beslut 1). Sidovyerna scrollar åt båda håll |
 | 2 | Hur öppnas kartan? | **B**, helskärm, spelet pausar (även tromben). B eller A stänger. Barnet får tänka utan stress. Tromben är förutsägbar ändå |
@@ -537,7 +538,8 @@ bubbla och HUD ≤ 4 853 (med expansion av hela skärmen högst 10 627. I spelet
   kopieras opackade. Det kostar 8 + n/8 cykler: en overlay på 4 KB laddas på ~520 cykler.
 - **En valfri generisk verktygsändring (ditt beslut):** ett direktiv `.overlay ADDR` … `.endoverlay`, där etiketterna
   får RAM-adresser medan byten hamnar i xdata. Det skulle göra relokeringen automatisk och ge rätt adresser i `.lst`.
-  Den behövs inte för att bygga spelet. Den står i DECISIONS D-040 och i PROGRESS under *Blocked / needs human*.
+  Den behövs inte för att bygga spelet. **Beslut 2026-10-07 (D-044): görs inte.** Makrot räcker, och assemblern
+  hålls oförändrad.
 - Planen: sidovyns motor och skärmarna runt spelet (titel, världskarta, naturbok, slut) blir overlays.
 - **Gjort i M28:** sidomotorn är en overlay på 1 972 B kod i xdata (inte i ROM). Den kopieras till `0xE000` första
   gången en sidovy startar och körs därifrån (D-043).

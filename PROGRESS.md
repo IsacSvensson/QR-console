@@ -2,12 +2,12 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M29 (Sixten: World 1, budget gate) — M26-M28 done; M29 needs the human's fact review first
+**Current milestone:** M29 (Sixten: World 1, budget gate) — M26-M28 done
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
 Part 4 (Sixtens expedition) on branch `claude/sixtens-expedition`: planned (DESIGN, mockup, PLAN Part 4, D-040); M26 done
 (the top-down engine, D-041), M27 done (the whirlwind and the wind, D-042), M28 done (the side view as a code
-overlay, D-043). The human still reviews the safety facts (DESIGN §1.3, §8.3) before M29.
+overlay, D-043). Open decisions taken by Claude on the human's word (D-044).
 **Last updated:** 2026-10-06
 
 ## Milestones
@@ -140,11 +140,9 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
   app itself makes no requests. Fixing it needs a change in `apps/web` (frozen in Part 2) or a decision on what
   the criterion means. Measurement and options: DECISIONS.md D-021.
 
-- **Part 4 (Sixten) needs the human before M29:** (1) tick or correct the safety rules and facts in
-  `games/sixten/DESIGN.md` §1.3 and §8.3. Rule S3 (a ditch or low spot as shelter from a whirlwind) has only a US
-  source (NWS), no Swedish one. (2) Answer or accept the defaults for the draft's open questions (§11). (3) Optional,
-  generic tool change: an `.overlay ADDR` directive in the assembler (labels at the run address, bytes in xdata).
-  Not needed: overlays already work with a relocation macro (D-040). Your decision.
+- **Part 4 (Sixten), for the human when convenient** (the open decisions were delegated to Claude, D-044): tick or
+  correct the fact rows Claude checked (DESIGN §1.3, §8.3, `NATURBOK.md`). S3 (a ditch or hollow as shelter from a
+  whirlwind) still has only a US source (NWS).
 - **CI split (D-039) is not verified on GitHub:** `pages.yml` runs only on `main`; the first push there will show it.
 
 ## Ideas for later

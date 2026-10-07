@@ -894,3 +894,21 @@ overlay is in RAM before its first instruction, runs in every side-view frame an
 in it lands in it, the two cave visits have identical frames, the body never overlaps a solid tile, the wind pushes
 exactly 6/16 px a frame except in the lee (which the test computes from the source), chocolate stops the push, the
 exits land on the linked cells, the compass shows the facing direction.
+
+## D-044 - The human delegates Sixten's open decisions to Claude (2026-10-07)
+Date: 2026-10-07 - Milestone: before M29 (the human: "Ta besluten själv efter bästa förmåga" — take the decisions
+yourself as well as you can)
+Decision:
+- **DESIGN §11** (the draft's 15 open questions): the proposals stand as decisions (the map pauses, the whole map is
+  shown from the start, a simplified compass with a course and steps, 5 x 4 levels, wood only, no space world …).
+- **The fact review** (DESIGN §1.3, §8.3, `NATURBOK.md`): Claude checked every row against its source and records
+  that check (✓ Claude) in a column of its own; the human's own tick (☐) stays a manual acceptance step and no longer
+  blocks M29. PLAN Part 4's rule and M29's criterion were changed accordingly (an explicit human decision, not a
+  weakened test: every row still needs a source and a recorded check, and the tests still require both).
+- **S3, shelter from a whirlwind**: a solid building is the best shelter (UD's crisis advice for storms: indoors,
+  a basement or a windowless room in a larger building; SMHI: do not go near a whirlwind). A ditch or hollow, crouching,
+  as the shelter when there is no time to get in, comes only from the US National Weather Service; no Swedish source
+  was found (searched 2026-10-07). It stays, because it is the established advice and the alternative (open land or
+  forest) is worse, and levels put the cabin on the safe route where they can. Flagged for the human in PROGRESS.
+- **The `.overlay` directive** (D-040): not done. The OV/OJ macro convention works (M28) and keeps the assembler
+  unchanged.
