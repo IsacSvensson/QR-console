@@ -565,7 +565,8 @@ cycles. DECISIONS D-041 records the drawing choices with the numbers. `npm run c
   patrols and lines of sight on the radar, the detection meter and room restart, the camera in 1.4, D2 at the
   reception terminal (VISITOR BADGE), the badge door, and the access code for section 2.
 - Bot-recorded replays (`games/blackbox3d/replays/`): the slice played through to the section 2 code, a detection
-  and its restart, and refusing the terminal.
+  and its restart, and a full turn in every room of the slice. (Sections 0–1 ask no yes/no question, so the first
+  plan's "refusing the terminal" has nothing to refuse: D-042.)
 
 **Accept:** `npm run bb3d:gen && npm run test:bb3d`
 - the generated files are up to date; the shared modules are byte-identical to BLACKBOX's; ROM ≤ 32 KB

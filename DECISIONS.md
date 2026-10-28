@@ -810,3 +810,37 @@ Measurement (`games/blackbox3d/mockup/MOCKUP.md`, headless VM):
 - ROM 31 079 B; RAM 23.7 KB; cartridge 23.5 KB (135-frame QR loop).
 - Two bugs found while measuring: the renderer had been assembled into the data section (draw.asm ended in `.data`;
   harmless but untraceable), and the unrolled block's base still assumed 96 rows.
+
+## D-042 - BLACKBOX 3D slice: what playing it needed, how it is checked (M28)
+Date: 2026-10-28 - Milestone: M28
+Decision:
+- **The bot is BLACKBOX's own.** It has the danger map from the lines of sight, paths, dialogues and the route
+  language. A subclass (`games/blackbox3d/tools/bot.ts`) replaces only the movement: face a direction (turn) and walk
+  (UP). Facing exactly east, south, west or north, a step moves one pixel along the axis, as in 2D, so the 2D plans
+  work unchanged. The slice route is BLACKBOX's TO_CORRIDOR. Leaving a room in 3D means walking from the cell inside
+  the doorway, because the border cell is where the room changes.
+- **A frame that changes the room's tiles casts no rays** (D-041 had this for loads only). D2 unlocks the badge door
+  by a script, and that frame rebuilt the render map and the radar (8 000 cycles) on top of the rays: 26 700 cycles.
+  The rebuild is now a frame's work on its own, and both builds are unrolled by four (8 000 -> about 3 000 cycles).
+- **Cost estimate recalibrated** against measured frames: a low block costs 420 (was 260), a ray's fixed part 150
+  (was 140). With the lookahead of one group, the worst frame in all 37 rooms is 24 532 cycles.
+- **Oracle rules for low blocks, made explicit** (DESIGN.md §6). Measured disagreements that are not engine errors:
+  - a ray through a desk's exact corner may record a block of almost no length, or none
+  - a block entered at a corner may be entered through either side; the corner test must look at the other axis'
+    previous crossing as well as its next one
+  - a variant cast from a moved camera has its wall coordinate moved with it, so the texture-column tolerance
+    includes that move
+  Each rule came from a case the test showed and the debugger confirmed. The engine is unchanged by them.
+- **The first plan's replay "refusing the terminal" is dropped.** Sections 0-1 ask no yes/no question (D2 only
+  gives the badge), so there is nothing to refuse. The tour replay (a full turn in every room of the slice) took its
+  place, and the criterion text in PLAN.md says so.
+Measurement (`npm run test:bb3d`, `bench/bb3d.md`):
+- **Oracle:** 5 305 frames of replays, all checked; 139 752 rays, 2 178 presented screens, 5 168 radars, 5 123 meter
+  steps.
+- **Cycles:** max 23 174 per frame in the replays.
+- **Mutations caught:** a low block's top row 1 off, the sprite cut without pixel rows, and the meter +1.
+- **Access codes:** the slice shows **the same code as BLACKBOX's own run** at the door of 2.1, and each game
+  resumes from the other's code.
+- **All 37 rooms:** 13-30 images/s; 2.1 is slowest at 13.
+- **Size:** ROM 31 247 B (1.5 KB free), RAM 24.4 KB, cartridge 23.6 KB, a 137-frame QR loop (20.6 s).
+- **Demo:** `demo/blackbox3d.gif` round-trips.

@@ -112,80 +112,100 @@ apply_locks:
     CALL build_rmap
     JMP build_radar
 
-; render codes from the room's tiles (DESIGN.md §3.1): rclass, except doorways and vents on the border, which are
-; portals; rows -1 and 15 are solid
+; render codes from the room's tiles (DESIGN.md §3.1): rclass, then doorways and vents on the border become portals
+; (rows -1 and 15 are solid: init_rmap). The frame that changes the room's tiles casts no rays (§3.8).
 build_rmap:
+    LDI r0, 1
+    ST [loaded], r0
     LDI r2, 0
-@cell:
+@cell:                      ; four cells per turn
     LDB r0, [r2 + room_buf]
-    LDB r1, [r0 + rclass]
-    CMP r0, T_DOOR
-    JEQ @edge
-    CMP r0, T_VENT
-    JNE @put
-@edge:
-    MOV r3, r2              ; on the border?
-    AND r3, 15
-    CMP r3, 0
-    JEQ @portal
-    CMP r3, 15
-    JEQ @portal
-    CMP r2, 16
-    JB @portal
-    CMP r2, RLE_TILES - 16
-    JB @put
-@portal:
-    LDI r1, R_PORTAL
-@put:
-    STB [r2 + rmap], r1
-    ADD r2, 1
+    LDB r0, [r0 + rclass]
+    STB [r2 + rmap], r0
+    LDB r0, [r2 + room_buf + 1]
+    LDB r0, [r0 + rclass]
+    STB [r2 + rmap + 1], r0
+    LDB r0, [r2 + room_buf + 2]
+    LDB r0, [r0 + rclass]
+    STB [r2 + rmap + 2], r0
+    LDB r0, [r2 + room_buf + 3]
+    LDB r0, [r0 + rclass]
+    STB [r2 + rmap + 3], r0
+    ADD r2, 4
     CMP r2, RLE_TILES
     JLT @cell
-    LDI r1, 1
-@pad:
-    STB [r2 + rmap], r1
-    ADD r2, 1
-    CMP r2, 256
-    JLT @pad
-    LDI r2, 0
-@pre:
-    STB [r2 + rmap_pre], r1
-    ADD r2, 1
-    CMP r2, 16
-    JLT @pre
+    LDI r6, 0               ; the border: side by side (side_start, side_stride, side_count)
+@side:
+    LDB r2, [r6 + side_start]
+    LDB r3, [r6 + side_stride]
+    LDB r4, [r6 + side_count]
+@edge:
+    LDB r0, [r2 + room_buf]
+    CMP r0, T_DOOR
+    JEQ @portal
+    CMP r0, T_VENT
+    JNE @next
+@portal:
+    LDI r0, R_PORTAL
+    STB [r2 + rmap], r0
+@next:
+    ADD r2, r3
+    SUB r4, 1
+    JNZ @edge
+    ADD r6, 1
+    CMP r6, 4
+    JLT @side
     RET
 
-; the radar's walls: 2 x 2 pixels per cell in the colour of its tile (radar_col), into radar_buf (4 x 4 tiles)
+; the rows of the render map beyond the room (-1 and 15) are solid, once
+init_rmap:
+    LDI r0, rmap_pre
+    LDI r1, 1
+    LDI r2, 16
+    SYS FILL
+    LDI r0, rmap + RLE_TILES
+    SYS FILL
+    RET
+
+; the radar's walls: 2 x 2 pixels per cell in the colour of its tile (radar_col), into radar_buf (4 x 4 tiles,
+; row-major); four cells (one tile's width) per turn
 build_radar:
     LDI r0, radar_buf       ; background (rows 30-31 of the tiles stay this colour)
     LDI r1, C_HUD * 17
     LDI r2, 512
     SYS FILL
     LDI r2, 0               ; cell
-@cell:
+    LDI r5, 0               ; byte of its top row in radar_buf
+@quad:
     LDB r0, [r2 + room_buf]
     LDB r0, [r0 + radar_col]
-    MOV r3, r2              ; byte of the cell's top row: tile (cx >> 2, cy >> 2), row (cy & 3) * 2, byte cx & 3
-    AND r3, 15              ; cx
-    MOV r4, r2
-    SHR r4, 4               ; cy
-    MOV r5, r4
-    SHR r5, 2
-    SHL r5, 2
-    MOV r6, r3
-    SHR r6, 2
-    ADD r5, r6              ; tile index
-    SHL r5, 5
-    AND r4, 3
-    SHL r4, 3
-    ADD r5, r4
-    AND r3, 3
-    ADD r5, r3
     STB [r5 + radar_buf], r0
     STB [r5 + radar_buf + 4], r0
-    ADD r2, 1
+    LDB r0, [r2 + room_buf + 1]
+    LDB r0, [r0 + radar_col]
+    STB [r5 + radar_buf + 1], r0
+    STB [r5 + radar_buf + 5], r0
+    LDB r0, [r2 + room_buf + 2]
+    LDB r0, [r0 + radar_col]
+    STB [r5 + radar_buf + 2], r0
+    STB [r5 + radar_buf + 6], r0
+    LDB r0, [r2 + room_buf + 3]
+    LDB r0, [r0 + radar_col]
+    STB [r5 + radar_buf + 3], r0
+    STB [r5 + radar_buf + 7], r0
+    ADD r2, 4
+    ADD r5, 32              ; the next tile to the right
+    MOV r0, r2
+    AND r0, 15
+    JNZ @quad
+    SUB r5, 128 - 8         ; a new cell row: back to the left tile, two pixel rows down
+    MOV r0, r2
+    AND r0, 63
+    JNZ @row
+    ADD r5, 128 - 32        ; every fourth cell row: the next row of tiles
+@row:
     CMP r2, RLE_TILES
-    JLT @cell
+    JLT @quad
     RET
 
 ; r0 = cell x, r1 = cell y -> r0 = tile code (outside the room: floor, so doorways lead out)

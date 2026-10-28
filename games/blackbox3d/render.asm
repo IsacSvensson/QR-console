@@ -35,6 +35,8 @@
 .var zlow, NRAYS * 2            ; distance of the nearest low block (0xFFFF = none)
 .var ylow, NRAYS                ; first row of its top (sprites behind it are cut there)
 .var nlowr, NRAYS               ; low blocks drawn on this ray
+.var blk_fb, NRAYS * 8          ; its blocks (the tests read them): front and back distance per block
+.var blk_cs, NRAYS * 2          ; render texture | side << 7 per block
 ; the low blocks of the current ray, nearest first: front and back distance, side, render code
 .var lw_n
 .var lw_front, 4
@@ -334,6 +336,32 @@ cast:
     LD r6, [rc]
     LD r0, [lw_n]
     STB [r6 + nlowr], r0
+    LDI r1, 0                       ; keep the blocks for the tests
+@keep:
+    CMP r1, r0
+    JGE @lows
+    MOV r2, r1
+    SHL r2, 1
+    MOV r3, r6
+    SHL r3, 3
+    MOV r4, r2
+    SHL r4, 1
+    ADD r3, r4                      ; ray * 8 + block * 4
+    LD r4, [r2 + lw_front]
+    ST [r3 + blk_fb], r4
+    LD r4, [r2 + lw_back]
+    ST [r3 + blk_fb + 2], r4
+    LD r4, [r2 + lw_side]
+    SHL r4, 7
+    LD r5, [r2 + lw_code]
+    AND r5, 127
+    OR r4, r5
+    MOV r3, r6
+    SHL r3, 1
+    ADD r3, r1
+    STB [r3 + blk_cs], r4
+    ADD r1, 1
+    JMP @keep
 @lows:
     LD r0, [lw_n]
     CMP r0, 0

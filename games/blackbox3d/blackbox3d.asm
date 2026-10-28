@@ -3,8 +3,8 @@
 .title "BLACKBOX 3D"
 
 RAY_BUDGET = 18000                  ; estimated cycles of rays per frame (DESIGN.md §3.8)
-COST_RAY   = 140                    ; estimate: a ray's fixed part
-COST_LOW   = 260                    ; estimate: a low block
+COST_RAY   = 150                    ; estimate: a ray's fixed part
+COST_LOW   = 420                    ; estimate: a low block
 
 .include "defs.asm"
 .include "rooms.gen.asm"
@@ -36,6 +36,7 @@ init:
     LDI r2, spr_x & 0xFFFF
     SYS UNPACK
     CALL build_run_idx
+    CALL init_rmap
     LDI r0, M_TITLE
     ST [mode], r0
     LDI r0, MUS_NONE

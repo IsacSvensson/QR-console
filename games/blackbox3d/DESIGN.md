@@ -1,6 +1,7 @@
 # BLACKBOX 3D: designdokument
 
-Status: **M27, design och uppmätt mockup.** Implementeras enligt PLAN.md Part 5 (M27–M32).
+Status: **M28, spelbar skiva (avsnitt 0–1).** Implementeras enligt PLAN.md Part 5 (M27–M32). Här betyder *bildruta*
+en av VM:ens 60 per sekund och *bild* en färdig 3D-vy.
 
 BLACKBOX 3D är **samma spel som BLACKBOX** (`games/blackbox/`), men i förstaperson. Det har samma berättelse, 37 rum,
 dialoger, loggar, ORACLE-motor, slut, access codes och musik. BLACKBOX:s dokument gäller oförändrade och är
@@ -36,7 +37,7 @@ Det här dokumentet beskriver bara det som 3D ändrar. Renderingen bygger på FP
 |---|---|---|
 | Vy | rummet ovanifrån, 128×120 | förstaperson 128×88 (§3.2) |
 | Rörelse | styrkorset går i 4 riktningar | vrid och gå (§3.6) |
-| Upptäckt | står du i en synlinje är du upptäckt | en mätare fylls på 16 bilder (§3.7) |
+| Upptäckt | står du i en synlinje är du upptäckt | en mätare fylls på 16 bildrutor (§3.7) |
 | Synlinjer | gula prickar i rummet | prickar på radarn i statusraden (§3.5) |
 | HUD | 8 px överst | statusrad 40 px nederst: radar, avsnitt, ORACLE, EMP, mätare |
 | Rumsbyte | när sprite-rutan lämnar skärmen | när mittpunkten når en kantcell (dörr/ventil) |
@@ -118,10 +119,18 @@ När väggkolumnen är ritad ritas blocken **från det bortersta till det närma
 
 Statusraden ligger på rad 88–127, och dialogrutan täcker den (BOX_Y = 88).
 
-- **Radarn** ligger på (3, 93), 32×30 px, med 2×2 px per cell i en färg per tile (`radar_col`).
+- **Radarn** ligger på (3, 93), 32×30 px, med 2×2 px per cell i en färg per tile (`radar_col`):
+
+  | LAYOUT | `.` `+` öppen `D` | `#` | `S` | `C`, låst `D` | `=` | `V` | `T` | `E` | `L` | `K` |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | färg | 1 | 7 | 4 | 6 | 5 | 13 | 11 | 9 | 10 | 14 |
+
+  - **Rita i ordning:** radarbilden; sedan för varje aktör i tabellens ordning dess synlinje (en pixel per cell, i
+    BLACKBOX:s strålfärg: vakt 14, drönare 13, tung vakt 9, kamera och boss 6) och dess prick (vakt, tung vakt,
+    boss och agent 6, drönare, hunter och prototyp 9, NPC 11, föremål 14, cyan 13 om den är stoppad). Sist
+    kommer spelaren som en vit pixel vid `(pfx >> 7, pfy >> 7)` och en gul pixel `(cos >> 7, sin >> 7)` därifrån,
+    alltså upp till 2 px framåt längs blicken.
   - **Väggarna** ritas i en RAM-buffert på 4×4 tiles vid varje rumsändring och visas med ett `MAP`.
-  - **Varje bild** ritas aktörernas prickar (2×2), deras synlinjer (en pixel per cell i BLACKBOX:s strålfärg) och
-    spelaren (vit) med en gul pixel i blickriktningen.
 - **Text:** avsnittets namn och, från 6.1, ORACLE:s träffsäkerhet.
 - **EMP:** laddningarna som cyan rutor.
 - **SEEN-mätaren** är en röd stapel (§3.7).
@@ -135,8 +144,8 @@ från vyns mitt.
   `px = pfx >> 5 − 4`. Ett steg i x tas bara om `box_blocked` (BLACKBOX:s egen kollisionsruta) godtar den pixel det
   leder till, och samma sak gäller y. Flyttar spelet själv `px`/`py` (rumsbyte, warp, omstart) sätts `pfx, pfy`
   till den pixelns mitt (`sync_pos`).
-- **Hastighet.** Spelaren går 32/256 cell per bild, alltså en BLACKBOX-pixel som i 2D, och vrider sig 8/1024 varv
-  per bild.
+- **Hastighet.** Spelaren går 32/256 cell per bildruta, alltså en BLACKBOX-pixel som i 2D, och vrider sig 8/1024
+  varv per bildruta.
 - **Riktning.** `pdir` är den närmaste av fyra riktningar, och `mdx`/`mdy` är rörelsens tecken (−1, 0, 1).
   ORACLE-agenten siktar med dem som i BLACKBOX.
 - **Rumsbyte.** När mittpunkten når en kantcell, som bara kan vara en öppning eller en ventil, lämnar spelaren rummet
@@ -144,14 +153,15 @@ från vyns mitt.
   eller start vänder spelaren sig mot rummets mitt.
 - **A:** använd cellen en cell framför mittpunkten längs blicken. Det fungerar som BLACKBOX:s `use_ahead`.
 - **B:**
-  - **kort tryck** (högst 20 bilder utan riktning): EMP-puls
+  - **kort tryck** (högst 20 bildrutor utan riktning): EMP-puls
   - **hållen + vänster/höger:** gå i sidled
   - **hållen kvar från ett svar i en dialog:** ignoreras
 
 ### 3.7 Upptäckt
 
-- **Mätaren.** En synlinje som når spelarens cell fångar inte direkt. Den fyller **SEEN-mätaren** med 4 per bild
-  upp till 64, alltså 16 bilder eller ungefär en kvarts sekund. Mätaren töms med 1 per bild när ingen ser spelaren.
+- **Mätaren.** En synlinje som når spelarens cell fångar inte direkt. Den fyller **SEEN-mätaren** med 4 per
+  bildruta upp till 64, alltså 16 bildrutor eller ungefär en kvarts sekund. Mätaren töms med 1 per bildruta när
+  ingen ser spelaren.
   Full mätare ger samma sak som en upptäckt i BLACKBOX: röd ram, `DETECTED. RESTARTING ROOM.` och omstart.
 - **Varför.** I förstaperson ser man inte vaktens linje på golvet, och reaktionstiden är det rättvisa priset.
 - **Oförändrat:** att röra en fiende fångar direkt som förut, och andrummet efter rumsbyte gäller som förut (ingen
@@ -160,18 +170,19 @@ från vyns mitt.
 
 ### 3.8 Bildtakt
 
-- **Budget per bild.** En bild har 64 strålar. Strålarna kastas i grupper om fyra (en tile-kolumn), så länge den
-  uppskattade kostnaden plus den förra gruppens kostnad ryms i `RAY_BUDGET` (18 000).
-- **Uppskattning per stråle:**
-  - 140 fast
+- **Budget per bildruta.** En bild har 64 strålar. Strålarna kastas i grupper om fyra (en tile-kolumn), så länge
+  den uppskattade kostnaden i bildrutan plus den förra gruppens kostnad ryms i `RAY_BUDGET` (18 000).
+- **Uppskattning per stråle** (kalibrerad mot uppmätta bildrutor, M28):
+  - 150 fast
   - 7 per DDA-steg (cellavståndet till träffen)
   - 13 per texel-körning (upp till 16)
   - 1 per rad (upp till 88)
-  - 260 per lågt block
+  - 420 per lågt block
 - **Presentation.** Bilden visas efter den sista strålen. Under tiden visar skärmen förra bilden, och statusraden
-  ritas varje bild.
-- **Rumsladdning.** En bild där ett rum laddas kastar inga strålar, eftersom laddningen är en bilds arbete för sig.
-- **Uppmätt:** varje bild ligger under 25 000 cykler, med 2–4 bilder per bild beroende på vy (§5).
+  ritas varje bildruta.
+- **Rumsladdning.** En bildruta där rummets tiles ändras (laddning, omstart, en dörr som låses upp) kastar inga
+  strålar. Att bygga om kartan och radarn är en bildrutas arbete för sig.
+- **Uppmätt:** varje bildruta ligger under 25 000 cykler, med 2–5 bildrutor per bild beroende på vy (§5).
 
 ---
 
@@ -209,26 +220,32 @@ från vyns mitt.
 
 ---
 
-## 5. Budget (uppmätt vid M27)
+## 5. Budget (uppmätt vid M28, `bench/bb3d.md`)
 
 | | Värde |
 |---|---|
-| ROM | 31,1 KB av 32 KB (kod 15,0 KB, data 16,0 KB). Sinus som kvartsvåg och run-listornas index i RAM sparade 2,6 KB |
-| xdata | run-listor (5 810 B) och bilder (8 448 B) packade, texturer 22,5 KB opackade |
-| RAM | 23,7 KB av 32 KB (vy 5,6 KB, run-listor 5,8 KB, bilder 8,4 KB) |
-| Cartridge | 23,5 KB, en QR-loop på 135 rutor (20 s) |
-| Cykler per bild | 55 000–84 000 i mockupens vyer, alltså 2–4 bilder per bild eller 15–30 bilder/s. Högst 23 200 cykler i en bild (`mockup/MOCKUP.md`) |
+| ROM | 31,2 KB av 32 KB (kod 15,2 KB, data 16,0 KB), 1,5 KB ledigt. Sinus som kvartsvåg och run-listornas index i RAM sparade 2,6 KB |
+| xdata | 25,9 KB: run-listor (5 810 B) och bilder (8 448 B) packade, texturer 22,5 KB opackade |
+| RAM | 24,4 KB av 32 KB (vy 5,6 KB, run-listor 5,8 KB, bilder 8,4 KB) |
+| Cartridge | 23,6 KB, en QR-loop på 137 rutor (20,6 s) |
+| Bildtakt | alla 37 rum, ett varv på stället: 13–30 bilder/s, de flesta 22–30. Långsammast är 2.1 (kontoret, många skrivbord), 13 bilder/s |
+| Cykler | högsta bildrutan i alla 37 rum 24 532 (4.5), i skivans replays 23 174 |
 
-**Risk:** ROM. Hela BLACKBOX:s logik och text för alla 37 rum finns redan med, men det ryms bara drygt 1,6 KB mer
-kod. Fler bilder och texturer går till xdata. Mer kod (bossarnas 3D-bitar, M30–M31) kan behöva text i xdata, och
-det beslutet tas när siffran är känd.
+**Risk:** ROM. Hela BLACKBOX:s logik och text för alla 37 rum finns redan med, men det ryms bara 1,5 KB mer kod.
+Fler bilder och texturer går till xdata. Mer kod (bossarnas 3D-bitar, M30–M31) kan behöva text i xdata, och det
+beslutet tas när siffran är känd.
 
 ## 6. Testernas facit (M28)
 
 - **Rum:** `rmap` ska stämma med LAYOUT.md enligt §3.1. Oraklet läser LAYOUT.md själv, som BLACKBOX:s
   `test/blackbox/oracle.ts`.
 - **Strålar:** varje stråle ska stämma med flyttalsoraklet (`test/fps/oracle.ts`, SPIKE.md §3.7), utökat med låga
-  celler enligt §3.4.
+  celler enligt §3.4. Felbudgeten tillåter, som i spiken, en granncell längs samma vägg vid en texturkant. Den
+  tillåter också tre saker för låga block:
+  - ett block som strålen bara snuddar (kortare än två gånger budgeten) kan finnas i den ena och saknas i den andra
+  - ett block som strålen går in i vid ett hörn kan ha vilken sida som helst
+  - när den ena listan är full (två block) kan den andra ha fler
+  Texturkolumnen jämförs med den störda kamerans förskjutning längs väggen inräknad.
 - **Pixlar:** väggkolumner och låga block ska stämma pixel för pixel med texturerna och reglerna i §3.2–3.4.
 - **Skärm:** varje presenterad skärm ska vara vyn plus aktörerna enligt §4.2.
 - **Radar:** den ska visa exakt BLACKBOX:s siktceller för varje vakande aktör och aktörernas celler.
@@ -237,8 +254,8 @@ det beslutet tas när siffran är känd.
 ## 7. Öppna frågor (standardsvar gäller om inget annat bestäms)
 
 1. **Väggarnas höjd:** 2 celler (§3.2). Alternativet 1,5 ger bredare rum men mindre vakter.
-2. **Bildtakten:** 15–30 bilder/s. 4 px breda strålar skulle ge ungefär dubbelt så snabbt men grövre bild (FPS-spiken
+2. **Bildtakten:** 13–30 bilder/s. 4 px breda strålar skulle ge ungefär dubbelt så snabbt men grövre bild (FPS-spiken
    §5). Standard: 2 px. Ditt test avgör.
-3. **SEEN-mätarens fart:** 16 bilder från tom till fångad.
-4. **Gånghastighet:** en BLACKBOX-pixel per bild (7,5 celler/s), så att pussel med timing (P5) fungerar som i 2D.
+3. **SEEN-mätarens fart:** 16 bildrutor från tom till fångad.
+4. **Gånghastighet:** en BLACKBOX-pixel per bildruta (7,5 celler/s), så att pussel med timing (P5) fungerar som i 2D.
 5. **Kartan på knapp** (helskärm, paus): nej, radarn räcker. Kan läggas till senare.
