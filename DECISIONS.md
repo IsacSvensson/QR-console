@@ -774,3 +774,39 @@ The ray direction is now rounded instead of floored.
 Proposal for the human (SPIKE.md §6): a full Part 4 game is feasible on the current VM (M27 engine, M28 enemies,
 M29 game, M30 content, M31 delivery). A generic scaled-blit syscall (ISA 3) would only matter for 1-pixel rays or
 many large sprites; that is the human's call, not needed now.
+
+## D-041 - BLACKBOX 3D: drawing, scale, pacing and budget (M27)
+Date: 2026-10-28 - Milestone: M27 (human decisions: the same game in 3D, a radar and a detection meter, design and
+a playable slice first)
+Decision:
+- **One room = one 16x16 render map.** Rows -1 and 15 are solid; doorways and vents on the border are portals. So no
+  ray ever leaves the map, and the player leaves the room when their centre reaches a border cell (not when the
+  sprite leaves the screen as in 2D).
+- **Low cells in a second pass,** not billboards. A low block is a front face (texture rows 10-15) plus a top
+  surface, contiguous cells merged, at most two per ray. Measured in the mockup: 15-29 % of an image's cycles.
+  Billboards were rejected without building them: one sprite per desk cell (2.1 has 32) would need per-pixel
+  clipping against walls and each other.
+- **Walls two cells high.** At one cell, BLACKBOX's 14x13-cell rooms read as vast low halls with guards a few
+  pixels high (seen in the first mockup). At two cells a guard behind the desks in 1.1 is 16 px.
+- **Sprites:** 16x16 pictures at 5 sizes (8-48) in RAM, drawn with SPR per tile, which also mirrors. Wall occlusion
+  works per tile column. A low-block cut keeps whole tiles above the block and draws the straddling tile pixel by
+  pixel; without that, a guard behind a desk vanished entirely.
+- **Detection meter** (16 frames to caught) instead of instant detection, because the player cannot see lines on
+  the floor. Contact stays instant. Every other rule is BLACKBOX's.
+- **Frame pacing by estimate.** The VM has no cycle counter, so rays are cast in groups of four while the estimated
+  cost (DESIGN.md §3.8) plus the last group's stays under 18 000. Room loads cast no rays. With a fixed 32 rays per
+  frame, 2.1 needed 27 000 cycles.
+- **ROM:** the first build was 33.3 KB. A quarter-wave sine (2 KB) and the run-list index built in RAM (0.8 KB)
+  brought it to 31.1 KB. Textures (22.5 KB) stay unpacked in xdata and are read a column at a time with COPY.
+Measurement (`games/blackbox3d/mockup/MOCKUP.md`, headless VM):
+
+| View | Cycles per image | Frames per image |
+|---|---:|---:|
+| 1.1 | 55 000-59 000 | 3 (20 images/s) |
+| 2.1 | 75 000-84 000 | 4 (15 images/s) |
+| corridor 1.4 | about 35 000 | 2 (30 images/s) |
+
+- Max 23 200 cycles in a frame.
+- ROM 31 079 B; RAM 23.7 KB; cartridge 23.5 KB (135-frame QR loop).
+- Two bugs found while measuring: the renderer had been assembled into the data section (draw.asm ended in `.data`;
+  harmless but untraceable), and the unrolled block's base still assumed 96 rows.

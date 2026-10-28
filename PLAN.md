@@ -515,3 +515,88 @@ Rules for M26 (in addition to CLAUDE.md):
 1. Scan `demo/fps.gif` on a phone. Walk, turn, open the door, shoot. Does 30 images/s feel playable on the touch
    controls? Is the 2-pixel ray width sharp enough? The answers decide whether Part 4 grows into a game
    (SPIKE.md §6).
+
+---
+
+# Part 5 — BLACKBOX 3D (planned 2026-10-28 at the human's request)
+
+The FPS spike (M26) showed that the VM can draw a textured first-person view. The human asked for **BLACKBOX in
+3D**. That means the same game: the same 37 rooms, story, dialogues, logs, ORACLE engine, endings and access codes,
+in first person. A radar in the status bar shows the guards and their lines of sight, and a detection meter fills
+while somebody sees the player. The human chose to see the design and a playable slice (sections 0–1) first, and to
+decide after testing it whether the rest is built.
+
+The design is the **specification** for these milestones: `games/blackbox3d/DESIGN.md` (what 3D changes), on top of
+BLACKBOX's own documents, which stay the oracle for everything else: `games/blackbox/DESIGN.md`, `LAYOUT.md`,
+`DIALOGUE.md`, `LOGS.md`.
+
+Rules for M27–M32 (in addition to CLAUDE.md):
+
+- **The runtime does not change, and neither does BLACKBOX.**
+  `git diff fdd96f9 -- packages/vm packages/cartridge packages/transport packages/qr apps games/blackbox` stays
+  **empty**. If the budget needs an ISA change, measure it and flag it for the human (D-040 allowed ISA 3 only for the
+  spike).
+- **Shared code stays shared.**
+  - The game-logic modules BLACKBOX 3D takes unchanged (`script`, `scripts`, `text`, `oracle`, `code`, `sounds` and
+    the generated `rooms.gen` and `text.gen`) are **byte-identical** to BLACKBOX's, and a test checks this.
+  - Adapted modules say so on their first line.
+- **The documents are the test oracle.** LAYOUT.md (read independently), the floating-point raycaster of
+  `test/fps/oracle.ts` and the pixel rules of DESIGN.md §3–4. They are never compared against the engine.
+- **Budgets, asserted on every replay frame:** no fault, 0 overruns, at most 25 000 cycles per frame. ROM ≤ 32 KB
+  (*measure*; projected for all 37 rooms at M28).
+
+The test command is `npm run test:bb3d` (a Vitest project for `test/bb3d/**`). Each milestone adds to it.
+
+## M27 — Design and a measured mockup
+
+- `games/blackbox3d/DESIGN.md`: what stays, what 3D changes, the engine (render map, view, rays, low cells, status
+  bar and radar, movement and coordinates, detection meter, frame pacing), art, budget, oracle rules, and open
+  questions with defaults.
+- The engine builds and runs the whole of BLACKBOX's logic in 3D. A mockup (`games/blackbox3d/tools/mockup.ts`)
+  renders fixed views of rooms 1.1 and 2.1 with low cells, a guard and the radar. It measures cycles per image,
+  frames per image and the share of the low-cell pass: `games/blackbox3d/mockup/MOCKUP.md`.
+
+**Accept:** `npx tsx games/blackbox3d/tools/mockup.ts` writes the pictures and the table. No frame exceeds 25 000
+cycles. DECISIONS D-041 records the drawing choices with the numbers. `npm run check` is green.
+
+## M28 — Playable slice: sections 0 and 1
+
+- Rooms 0.1 and 1.1–1.4 playable in 3D from the title: D1 at Eli's computer, the front door to 1.1, the guards'
+  patrols and lines of sight on the radar, the detection meter and room restart, the camera in 1.4, D2 at the
+  reception terminal (VISITOR BADGE), the badge door, and the access code for section 2.
+- Bot-recorded replays (`games/blackbox3d/replays/`): the slice played through to the section 2 code, a detection
+  and its restart, and refusing the terminal.
+
+**Accept:** `npm run bb3d:gen && npm run test:bb3d`
+- the generated files are up to date; the shared modules are byte-identical to BLACKBOX's; ROM ≤ 32 KB
+- the render map of every room agrees with LAYOUT.md (DESIGN.md §3.1)
+- every replay matches its committed per-frame hashes, with no fault, no overrun and every frame ≤ 25 000 cycles
+- every ray of every frame agrees with the floating-point oracle within the error budget, including the low blocks.
+  Every wall column and every low block in the buffer agrees with the textures pixel for pixel. Every presented
+  screen is the view plus the actors (DESIGN.md §4.2).
+- the radar shows exactly BLACKBOX's line-of-sight cells and the actors' cells. The detection meter follows
+  DESIGN.md §3.7, and a detection restarts the room at its entrance.
+- an access code from the BLACKBOX replays resumes BLACKBOX 3D at that section, and the slice's own code resumes
+  BLACKBOX
+- `bench/bb3d.md`: cycles per image and frames per image per room, ROM, RAM, cartridge, QR loop, and a projection
+  for all 37 rooms (**budget gate**)
+- `npm run demo` writes and verifies `demo/blackbox3d.gif`; `npm run check` is green
+
+## M29–M32 (after the human's slice test)
+
+| Milestone | Content |
+|---|---|
+| M29 | Sections 2–3: EMP, drones, vents, NPC pictures, P1–P2 |
+| M30 | Sections 4–5: boss 1 in 3D, hunter, prototype, P3–P5 |
+| M31 | Sections 6–7: the agent, boss 2, P6–P8, all four endings |
+| M32 | Delivery: every replay of BLACKBOX's endings in 3D, the e2e scan, GUIDE, REPORT |
+
+They are specified in detail when the human has tried the slice. The answers may change DESIGN.md §7.
+
+## Manual acceptance for Part 5 (human only)
+
+1. **After M28:** scan `demo/blackbox3d.gif` and play sections 0–1.
+   - Can you sneak past the guards with the radar?
+   - Is the frame rate (15–30 images/s) good enough?
+   - Are the controls (B tap = EMP, B + left/right = strafe) good?
+   - Wall height and meter speed (DESIGN.md §7).

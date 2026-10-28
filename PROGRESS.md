@@ -2,10 +2,11 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** none — M26 (Part 4, FPS spike) done; the human decides whether it becomes a game (SPIKE.md §6)
+**Current milestone:** M28 — BLACKBOX 3D playable slice (PLAN.md Part 5)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
 Part 4 (FPS spike, M26) done: 30 images/s raycaster with 2-pixel rays, no runtime change (D-039, D-040).
+Part 5 (BLACKBOX 3D): M27 done (design + measured mockup, D-041); M28 slice in progress.
 **Last updated:** 2026-10-28
 
 ## Milestones
@@ -48,7 +49,20 @@ Part 4 — FPS SPIKE (design: `games/fps/SPIKE.md`)
 
 - [x] M26 Feasibility spike: raycaster, textures, a door, one enemy (gate passed: 30 images/s, no ISA 3)
 
+Part 5 — BLACKBOX 3D (design: `games/blackbox3d/DESIGN.md`)
+
+- [x] M27 Design and a measured mockup
+- [ ] M28 Playable slice: sections 0 and 1 (then the human's test)
+
 ## Current work
+
+Part 5 (PLAN.md Part 5): BLACKBOX in first person, the same game. M27 is done. `games/blackbox3d/` runs all of
+BLACKBOX's logic with BLACKBOX's own script, text, ORACLE, code and sound modules byte for byte. What is new: a
+render map per room, low cells (desks, terminals) in a second ray pass, walls two cells high, billboards with guard
+poses, a status bar with a radar and a detection meter, and ray pacing by estimated cost. Mockup: 15–30 images/s,
+at most 23 200 cycles per frame; ROM 31.1 KB (D-041). Next: M28, the slice with the oracle tests, replays, bench and
+demo. **Baseline for Part 5 = fdd96f9**: `git diff fdd96f9 -- packages/vm packages/cartridge packages/transport
+packages/qr apps games/blackbox` stays empty.
 
 Part 4 (PLAN.md Part 4): the human asked whether genesis-doom could be ported. It cannot be ported as it is (C, id's
 WAD, memory; D-039), so M26 built a clean-room grid raycaster in `games/fps/`. Walls are drawn into a RAM tile
@@ -108,6 +122,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Bo ROM estimate | 23.5–29 KB of 32 KB (code 11–13 KB); measured at the M22 budget gate | DESIGN §16 |
 | FPS spike: cycles per image (1 / 2 / 4 px rays) | 99 120 / 29 564 / 16 155 max; shipped 2 px at 2 frames per image = 30 images/s, ≤ 15 090 cycles per frame | bench/fps.md |
 | FPS spike ROM / cartridge | 12.8 KB (code 4.2 KB) / 9.5 KB, ISA 2; RAM 24.0 KB; 56-frame GIF loop (8.4 s) | bench/fps.md, test:fps |
+| BLACKBOX 3D mockup (M27) | 55k–84k cycles per image (2–4 frames, 15–30 images/s), max 23.2k per frame; ROM 31.1 KB; cartridge 23.5 KB | games/blackbox3d/mockup/MOCKUP.md |
 | Bo ROM after M25 (final) | 31.6 KB (code 25.4 KB, data 6.0 KB), ISA 2; cartridge 22.9 KB; 132-frame GIF loop (19.8 s) | test:bo, npm run demo |
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
