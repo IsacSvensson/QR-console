@@ -1,4 +1,4 @@
-// npm run demo — builds both games, writes their animated QR GIFs to demo/, decodes the GIFs back with
+// npm run demo — builds the games, writes their animated QR GIFs to demo/, decodes the GIFs back with
 // the CLI and verifies that the recovered cartridges are byte-identical (SHA-256) to the built ones.
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { sha256, toHex } from '@qrc/cartridge';
 import { REPO_ROOT } from './games';
 
-const GAMES = ['breakout', 'pong', 'blackbox', 'bo'];
+const GAMES = ['breakout', 'pong', 'blackbox', 'bo', 'fps'];
 const demo = join(REPO_ROOT, 'demo');
 mkdirSync(demo, { recursive: true });
 const qrc = (...args: string[]) =>

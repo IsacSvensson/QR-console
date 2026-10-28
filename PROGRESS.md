@@ -2,10 +2,11 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** none — Parts 1–3 complete; awaiting the human's manual acceptance (PLAN.md)
+**Current milestone:** none — M26 (Part 4, FPS spike) done; the human decides whether it becomes a game (SPIKE.md §6)
 **Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
 Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
-**Last updated:** 2026-10-06
+Part 4 (FPS spike, M26) done: 30 images/s raycaster with 2-pixel rays, no runtime change (D-039, D-040).
+**Last updated:** 2026-10-28
 
 ## Milestones
 
@@ -43,7 +44,19 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M24 Worlds 4 and 5, the theft and the ending
 - [x] M25 Picture codes, music, delivery
 
+Part 4 — FPS SPIKE (design: `games/fps/SPIKE.md`)
+
+- [x] M26 Feasibility spike: raycaster, textures, a door, one enemy (gate passed: 30 images/s, no ISA 3)
+
 ## Current work
+
+Part 4 (PLAN.md Part 4): the human asked whether genesis-doom could be ported. It cannot be ported as it is (C, id's
+WAD, memory; D-039), so M26 built a clean-room grid raycaster in `games/fps/`. Walls are drawn into a RAM tile
+buffer shown with one MAP; there are rays 1/2/4 px wide, a sliding door, one enemy, a gun and a status bar. Four
+bot replays; `npm run test:fps` checks every ray against a floating-point oracle and every wall column and screen
+pixel for pixel. Gate passed (D-040). **Runtime baseline for Part 4 = 02d7058**: `git diff 02d7058 -- packages/vm
+packages/cartridge packages/transport packages/qr apps` is empty. Next: the human's phone check (PLAN *Manual
+acceptance for Part 4*) and the decision on a full game.
 
 Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
 buffer, camera, parallax, HUD frame, Bo's rolling physics on flat ground, hills, blocks and one-way platforms; test
@@ -93,6 +106,8 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Second game cartridge size | Pong 789 B (ROM 1259 B); `git diff bd2e1b8 -- packages apps` empty at M8 | test:games |
 | Bo mockup: full-screen draw cost | 1 356 cycles/frame (17 MAP columns + sprites + bubble + HUD); font 47 glyphs = 376 B | D-025–D-027 |
 | Bo ROM estimate | 23.5–29 KB of 32 KB (code 11–13 KB); measured at the M22 budget gate | DESIGN §16 |
+| FPS spike: cycles per image (1 / 2 / 4 px rays) | 99 120 / 29 564 / 16 155 max; shipped 2 px at 2 frames per image = 30 images/s, ≤ 15 090 cycles per frame | bench/fps.md |
+| FPS spike ROM / cartridge | 12.8 KB (code 4.2 KB) / 9.5 KB, ISA 2; RAM 24.0 KB; 56-frame GIF loop (8.4 s) | bench/fps.md, test:fps |
 | Bo ROM after M25 (final) | 31.6 KB (code 25.4 KB, data 6.0 KB), ISA 2; cartridge 22.9 KB; 132-frame GIF loop (19.8 s) | test:bo, npm run demo |
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |

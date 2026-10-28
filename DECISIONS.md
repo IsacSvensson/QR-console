@@ -724,3 +724,53 @@ Decision:
   `test:e2e` script change, the runtime does not.
 Measurement: ROM 31 608 B of 32 768 (code 25 404, data 6 043, sound 161), cartridge 22 945 B; `demo/bo.gif` 132
 frames (K=88), 19.8 s loop, 1.8 MB.
+
+## D-039 - Doom on QR Console: an original grid raycaster, not a port of genesis-doom (M26)
+Date: 2026-10-28 - Milestone: M26 (human question: could akiyan/genesis-doom be ported? Human decision: a
+feasibility spike first; a generic ISA 3 is allowed if the spike shows it is needed)
+Decision:
+- **Not a port.** genesis-doom is the GBADoom engine in C (GPL v2) with a Mega Drive platform layer. QR Console
+  games are bytecode written in its assembler (SPEC L6), and there is no C compiler for the VM. The game data is
+  id Software's IWAD; the shareware licence allows only unmodified redistribution, and "Doom" is a trademark.
+  Doom's BSP renderer (walls at any angle, floor heights) and its data size (MBs; 64 KB of RAM on the Mega Drive)
+  do not fit 32 KB of ROM, 32 KB of RAM and 128x128 pixels in 16 colours.
+- **Clean-room instead.** A Wolfenstein-style grid raycaster written from scratch, with original art and map. It
+  is called FPS SPIKE, not Doom. Nothing is translated from Doom, GBADoom or genesis-doom.
+- **Drawing approach.** `MAP` reads its tiles from any address and costs 8 cycles however much it draws. So the
+  view is rendered into a 6 KB RAM buffer of 8x8 tiles stored in column order, which makes a pixel column a run
+  of bytes 4 apart, and put on screen with one `MAP`. Considered and rejected: `PSET`/`RECTFILL` per pixel or
+  run (147 000+ cycles for a textured view); compiled scalers per wall height (28 KB of code). Chosen instead:
+  per-height run lists (texel, rows) in xdata, with a jump into the tail of one unrolled block of 96 stores,
+  about 12 cycles per run plus 1 per row.
+- **Rays 2 pixels wide (64 rays)** are the default, and 1 and 4 px are build options for the benchmark. An image
+  is cast over `RAY_CHUNK` rays per frame (32: two frames per image); the screen keeps the last image in between.
+- **Coarse enemy occlusion.** Pre-scaled sprites in 6 sizes are drawn as 8-pixel tile columns, each shown only
+  where the enemy is nearer than the wall at that column's middle ray. This is exact enough for a spike; a game
+  would want per-ray clipping (SPIKE.md §6).
+- **The oracle quantises the camera like the engine.** SPIKE.md §3.1 specifies the camera as 8.8 trig and 1.7
+  ray positions, and the oracle implements that rule itself but casts in floating point. With an unquantised
+  camera the engine's direction error (up to 0.005 rad, measured) made 10-30 % of rays too uncertain to compare.
+  With the rule, every ray is compared. The test casts 9 rays per engine ray (the camera moved by the DDA error
+  budget) and requires a match.
+
+## D-040 - FPS spike measured: 30 images/s with 2-pixel rays, no ISA 3 needed (M26)
+Date: 2026-10-28 - Milestone: M26
+Decision: the gate passes (at least 20 images/s with 2-pixel rays and no runtime change), so the runtime is not
+changed. ISA 3 is not designed. The baseline `git diff 02d7058 -- packages/vm packages/cartridge packages/transport
+packages/qr apps` is empty.
+Measurement (`bench/fps.md`, the four replays' inputs, headless VM):
+- **Cycles per whole image:** 1 px (128 rays) 99 120 max; **2 px (64 rays) 29 564 max, 27 113 mean**; 4 px (32 rays)
+  16 155 max. That is 15, **30** and 60 images/s if a frame may use 25 000 cycles. With the whole 50 000 budget it
+  is 30, 60 and 60.
+- **Where the cycles go (2 px):** wall columns 56 %, rays (DDA, hit, texture column) 40 %, the rest under 4 %.
+- **Shipped build:** 30.0 images/s, at most 15 090 cycles per frame, 0 overruns. ROM 12.8 KB (code 4.2 KB), RAM
+  24.0 KB, cartridge 9.5 KB, a 56-frame QR loop (8.4 s).
+- **Oracle on 2 789 frames:** every ray matches the floating-point cast within the error budget. Every wall column
+  and every presented screen matches pixel for pixel. Mutation check: a wrong texture shift, a missing door offset
+  and an unrounded ray direction each fail the test.
+Bugs the oracle found and fixed: deltas capped at 32 cells broke the first side distance of rays running almost
+along an axis (it scales with the same cap), so it now uses a 32767 cap and its own path for components ≤ 1/256.
+The ray direction is now rounded instead of floored.
+Proposal for the human (SPIKE.md §6): a full Part 4 game is feasible on the current VM (M27 engine, M28 enemies,
+M29 game, M30 content, M31 delivery). A generic scaled-blit syscall (ISA 3) would only matter for 1-pixel rays or
+many large sprites; that is the human's call, not needed now.

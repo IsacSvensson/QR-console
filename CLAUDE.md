@@ -93,7 +93,7 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run build -w apps/web` | production build → `apps/web/dist` (incl. generated `sw.js`) |
 | `npm run test:e2e` | Playwright (Chromium): player vs VM reference frames, fake-camera scans of Breakout, BLACKBOX and Bo, Library persistence |
 | `npm run test:e2e:offline` | production build, SW precache, offline reload, fake-camera scan of Pong, zero network requests |
-| `npm run demo` | build Breakout, Pong, BLACKBOX and Bo → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
+| `npm run demo` | build Breakout, Pong, BLACKBOX, Bo and the FPS spike → `demo/*.gif`, decode back with the CLI, verify SHA-256 |
 | `npm run preview` / `npm run preview:https` | serve the production build on :4173 (https: self-signed cert in `.tmp/cert`) |
 | `npm run bench:scan` | 50 KB cartridge through the browser scanner with a fake camera → `bench/scan.md` |
 | `npm run test:blackbox` | BLACKBOX (PLAN Part 2): generated data up to date, ROM vs LAYOUT, every room in RAM vs LAYOUT, replays with per-frame hashes and oracle checks |
@@ -102,3 +102,6 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run test:bo` | Bo's Skateäventyr (PLAN Part 3): generated data up to date, ROM level table vs `.lvl` sources, every level in RAM vs an independent reader, replays with per-frame hashes and reference checks, DESIGN §3.3 measured |
 | `npm run bo:gen` | regenerate `games/bo/tiles.gen.asm`, `levels.gen.asm` and `levels/*.png` from `tools/tiles.ts` and `levels/*.lvl` |
 | `npm run bo:record [name…]` | re-record Bo's bot replays (`games/bo/tools/routes.ts`), then `npm run refs:games` |
+| `npm run test:fps` | FPS spike (PLAN Part 4): generated data up to date, replays with per-frame hashes, every ray against a floating-point oracle, wall columns and screens pixel for pixel |
+| `npm run fps:gen` / `npm run fps:record [name…]` | regenerate `games/fps/*.gen.asm` / re-record its bot replays (`games/fps/tools/routes.ts`), then `npm run refs:games` |
+| `npm run bench:fps` | FPS spike: cycles per image for 1/2/4-pixel rays, where they go, sizes → `bench/fps.md` |

@@ -464,3 +464,54 @@ STOP presses; replays from the World 2 map to the World 4 map.
    `FIRST10.md` §9. The answers go into `PROGRESS.md`; what they show is tuned before Worlds 2–5 are built.
 3. **After M25 (Bo test):** Bo plays. The tests cannot judge the one thing that matters: whether it is fun for a
    six-year-old, and whether he can read the bubbles and use the touch controls. Notes go into `PROGRESS.md`.
+
+---
+
+# Part 4 — FPS SPIKE (planned 2026-10-28 at the human's request)
+
+The human asked whether [genesis-doom](https://github.com/akiyan/genesis-doom), Doom on the Mega Drive, could be
+ported. It cannot be ported as it is: it is C, it needs id Software's WAD, and it needs far more memory
+(DECISIONS D-039). An original first-person shooter in QR Console assembler might be possible, though. The human
+chose **a feasibility spike first**. If the spike shows it is needed, **a generic ISA 3 is allowed**, under the same
+rules as ISA 2: generic syscalls only, and every older game byte-identical.
+
+The design and the test oracle's rules are in `games/fps/SPIKE.md`.
+
+Rules for M26 (in addition to CLAUDE.md):
+
+- **The runtime does not change**, unless the gate below fails. Until then,
+  `git diff 02d7058 -- packages/vm packages/cartridge packages/transport packages/qr apps` stays **empty**.
+  Wiring the game into the scripts is expected (`package.json`, `vitest.config.ts`, the demo list).
+- **No Doom code or data.** Clean-room code; original art and map.
+- **SPIKE.md and the art are the test oracle.** A floating-point raycaster in `test/fps/oracle.ts` and the sampling
+  rules of SPIKE.md §3.4–3.6 decide what RAM and the screen must hold. They are never compared against the engine.
+- **Budgets, asserted on every replay frame:** no fault, 0 overruns, at most 25 000 cycles per frame.
+
+## M26 — FPS spike: raycaster, textures, a door, one enemy
+
+- A grid raycaster drawing textured walls into a RAM buffer, shown with one `MAP`. Rays 1, 2 or 4 pixels wide
+  (a build option). One sliding door and one enemy (pre-scaled sprites, occlusion by the wall distances), a gun,
+  and a status bar with images per second.
+- Bot-recorded replays: a spin, the door and a fight, the hall, getting hurt.
+
+**Accept:** `npm run fps:gen && npm run test:fps`, plus `npm run bench:fps`.
+- the generated files are up to date; the cartridge matches the committed one; ROM ≤ 32 KB; the trig and reciprocal
+  tables agree with the maths
+- every replay matches its committed per-frame hashes, with no fault, no overrun and every frame ≤ 25 000 cycles
+- **every ray of every frame** agrees with the oracle's cast within the error budget of SPIKE.md §3.7 (cell, side,
+  distance, texture column). Every wall column in the buffer and every presented screen (enemy, gun) agrees with
+  the oracle **pixel for pixel**.
+- the replays show the door sliding open and shut, three hits killing the enemy, the enemy hurting the player, and
+  30 images per second while turning
+- `bench/fps.md` reports cycles per image for 1/2/4-pixel rays, where the cycles go, and ROM, RAM, cartridge and
+  QR size
+- **Gate:** ≥ 20 images/s with 2-pixel rays and no runtime change. If it fails, design a generic ISA 3 syscall
+  (e.g. a scaled texture-column blit), implement it like M22b, and measure both. Either way the result goes in
+  DECISIONS, with a proposal for a full game for the human to decide on.
+- `npm run demo` writes and verifies `demo/fps.gif`; `npm run check` is green
+
+## Manual acceptance for Part 4 (human only)
+
+1. Scan `demo/fps.gif` on a phone. Walk, turn, open the door, shoot. Does 30 images/s feel playable on the touch
+   controls? Is the 2-pixel ray width sharp enough? The answers decide whether Part 4 grows into a game
+   (SPIKE.md §6).
