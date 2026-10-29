@@ -82,7 +82,7 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm ci` | install everything (then `npx playwright install --with-deps chromium` once for e2e) |
 | `npm run check` | typecheck (pure packages without DOM/Node types, then everything) + ESLint + unit tests |
 | `npm test -w packages/<name>` | one package's tests (cartridge, transport, vm, asm, qr, tools) |
-| `npm run qrc -- <cmd>` | CLI: `build <game dir>` (+ `.sym`, `.lst`), `run <file.qrc> --frames N --dump-frame out.png [--inputs f --ram a,b --trace N --trace-frame F]`, `replay <file.qrc> <inputs.json> --frames N` |
+| `npm run qrc -- <cmd>` | CLI: `build <game dir>` (+ `.sym`, `.lst`), `run <file.qrc> --frames N --dump-frame out.png [--inputs f --ram a,b --trace N --trace-frame F --cycles]`, `replay <file.qrc> <inputs.json> --frames N` |
 | `npm run refs:games` | rebuild every `games/<g>/<g>.qrc`, `frame1.png`, `reference.json`, `hashes.txt` (from the VM, never a browser) |
 | `npm run bench:fountain` | layer-1 fountain benchmark → `bench/fountain.md` |
 | `npm run test:slice` | layer-2 vertical slice: hello.asm → QR images / GIF → decode → VM → reference frame |
@@ -102,3 +102,6 @@ This is a **prototype that proves a concept**, not a console platform.
 | `npm run test:bo` | Bo's Skateäventyr (PLAN Part 3): generated data up to date, ROM level table vs `.lvl` sources, every level in RAM vs an independent reader, replays with per-frame hashes and reference checks, DESIGN §3.3 measured |
 | `npm run bo:gen` | regenerate `games/bo/tiles.gen.asm`, `levels.gen.asm` and `levels/*.png` from `tools/tiles.ts` and `levels/*.lvl` |
 | `npm run bo:record [name…]` | re-record Bo's bot replays (`games/bo/tools/routes.ts`), then `npm run refs:games` |
+| `npm run test:nadir` | NADIR (PLAN Part 4): generated data up to date, static ROM check, RAM/stack, the fly-through with per-frame hashes, every column against a floating-point raycaster and DESIGN's light rule, coverage; plus the M26 cycle gate (`nadir-gate`, currently failing, D-040) |
+| `npm run nadir:gen` / `npm run nadir:record` | regenerate NADIR's tables, textures (incl. compiled columns), floor records, map; re-record its bot replays (then `npm run refs:games`) |
+| `npx tsx games/nadir/tools/profile.ts [pose…] [--replay name] [--flags N]` | cycles per file and routine (tracer); `tools/shot.ts` pose screenshots, `tools/sheet.ts` the contact sheet |

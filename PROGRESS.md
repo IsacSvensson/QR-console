@@ -46,7 +46,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 
 Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 
-- [ ] M26 Renderer prototype (risk gate)
+- [ ] M26 Renderer prototype (risk gate) — built and verified; **cycle gate fails (19.2k / 15.6k vs 14k / 11k), human decision, D-040**
 - [ ] M27 Player, collision, doors, masked walls (feel build)
 - [ ] M28 Sprites and props
 - [ ] M29 Weapon, combat, the first enemy
@@ -56,8 +56,11 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 
 ## Current work
 
-Part 4 (PLAN.md Part 4): planned 2026-10-29 (D-039). M26 in progress: the hybrid raycaster of DESIGN §3 with a
-floating-point oracle; every layer measured (cycles, screenshot). **Part 4 runtime baseline = 932e534 (M22b):**
+Part 4 (PLAN.md Part 4): planned 2026-10-29 (D-039). M26 built (D-040): the hybrid raycaster with VM hacks (code
+compiled per texture column and run from RAM, one DIV per ray, half-step tables with XOR folding, floor records in
+xdata fetched with COPY, line-ellipse light pools); every column of the 2 723-frame fly-through matches the
+floating-point oracle and the light rule; contact sheet games/nadir/m26-sheet.png. All M26 criteria pass except the
+cycle gate (max 19 153 / mean 15 624 against 14 000 / 11 000; under the hard 25 000): flagged below. **Part 4 runtime baseline = 932e534 (M22b):**
 `git diff 932e534 -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
 
 Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
@@ -111,6 +114,7 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 | Bo ROM after M25 (final) | 31.6 KB (code 25.4 KB, data 6.0 KB), ISA 2; cartridge 22.9 KB; 132-frame GIF loop (19.8 s) | test:bo, npm run demo |
 | Bo ROM after M21 | 21.7 KB (code 16.1 KB, data 5.4 KB); cartridge 12.0 KB | test:bo |
 | Bo ROM after M20 | 16.1 KB (code 12.1 KB, data 3.9 KB); cartridge 9.1 KB, 53-frame GIF loop (8.0 s) | test:bo, npm run demo |
+| NADIR M26 (prototype) | ROM 11.7 KB, xdata 37 KB (textures, compiled columns 13.8 KB, floor records 16 KB), cartridge 16.9 KB; fly-through max 19 153 / mean 15 624 cycles | test:nadir, D-040 |
 | Bo ROM after M19 | 8.2 KB (code 5.8 KB, data 2.4 KB); cartridge 4.7 KB; play frames ~1.4k cycles, loading ≤ 15.1k | test:bo |
 
 ## Known issues
@@ -119,6 +123,11 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
   `test/**` and ran the slow robust test with a 5 s timeout. Fixed in d53dc27; later commits verified green.
 
 ## Blocked / needs human
+
+- **NADIR M26 cycle gate (D-040):** the full prototype costs max 19 153 / mean 15 624 cycles per frame against the
+  gate's 14 000 / 11 000 (hard project limit 25 000 is met). Options: re-derive the gate after M28-M29 measure
+  sprites and logic, adaptive pacing (30 images/s in heavy frames), or cutting the floor layer. Meanwhile M27
+  continues on the default build.
 
 - **`npm run test:e2e:offline` (M10) is flaky: 3 of 8 runs pass.** Every failure is one browser-initiated
   `GET /sw.js` (the service-worker update check on reload) reaching the server ~2 s after going offline; the

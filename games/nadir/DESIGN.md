@@ -1,6 +1,6 @@
 # NADIR — designdokument
 
-Status: **godkänd plan (2026-10-29), implementeras enligt PLAN.md Part 4 (M26–M32).** Detta dokument,
+Status: **godkänd plan (2026-10-29), implementeras enligt PLAN.md Part 4 (M26–M32). M26 byggd (D-040).** Detta dokument,
 `LEVEL.md` (från M31) och banfilerna (`levels/*.map`) är specifikationen och testernas facit. Tabellerna med
 konstanter (§3.3) och ljusregeln (§3.5) läses direkt av testerna i `test/nadir/`. Ändras ett värde här ska
 motorn följa efter, aldrig tvärtom.
@@ -101,10 +101,17 @@ bakgrund som inte kan ockludera. Väggar ditheras inte (med 2-px-kolumner blir d
   är *höger* i bilden ökande vinkel: höger-vektorn är (−sin θ, cos θ).
 - **Provkolumn c** (0–63) täcker pixel x = 2c och 2c + 1. Strålen går genom kolumnens mitt x = 2c + 1:
   `camX = (2c + 1 − 64) / 64`, vinkelskillnad `off(c) = atan(camX · tan(FOV/2))`, tabellerad i vinkelenheter
-  (avrundad). Strålens vinkel = (spelarens vinkel + off(c)) mod 4096.
-- **Avstånd:** t = euklidiskt avstånd längs strålen till träffen; vinkelrätt avstånd `perp = t · cos(off(c))`
-  (ingen fisheye). Vägghöjd `h = ⌊F256 / perp⌋` px (perp i u8.8), överkant `top = HORIZON − ⌊h/2⌋`,
-  underkant `top + h`. Golvet och taket ligger på samma avstånd från ögat (ögonhöjd = halva väggen).
+  (avrundad). Strålens vinkel = spelarens vinkel + off(c) **+ ½ enhet**: strålens tabeller samplas på halva steg,
+  så att en vinkel viks till sin kvadrant med en XOR (index 1023 − i är exakt komplementvinkeln).
+- **Avstånd och höjd:** t = euklidiskt avstånd längs strålen till träffen; vinkelrätt avstånd
+  `perp = t · cos(off(c) + ½)` (ingen fisheye). Vägghöjd `h = F256 / perp` px, räknad med **en** division:
+  `h = ⌊colf[c] / t⌋` där `colf[c] = F256 / cos(off(c) + ½)` är förberäknad per kolumn. Djup lagras som `h`
+  (invers djup): ljusregeln och sprites använder `h`, så `perp` behövs aldrig i ritningen. Överkant
+  `top = HORIZON + bob − ⌊h/2⌋`, underkant `top + h`. Golvet och taket ligger på samma avstånd från ögat
+  (ögonhöjd = halva väggen).
+- **Interpolering:** jämna kolumner och kolumn 63 kastas. En udda kolumn interpoleras när båda grannarna träffar
+  samma yta (h = medelvärdet, u perspektivriktigt), annars kastas den. Steg 4 med uppdelning mättes långsammare
+  (ytorna byter för ofta).
 - **Ytor:** `sida` 0 = västra ytan (strålen går mot +x), 1 = östra (−x), 2 = norra (+y), 3 = södra (−y).
   Yt-id = cellindex · 4 + sida.
 - **Texturkoordinat u** (0–31, från vänster till höger sett framifrån): västra ytan `⌊frac(y_träff) · 32⌋`,
@@ -128,9 +135,9 @@ bakgrund som inte kan ockludera. Väggar ditheras inte (med 2-px-kolumner blir d
 | `TEX` | 32 | texlar per cell i u och v |
 | `F256` | 25229 | ⌊64 / tan(FOV/2) · 256 + ½⌋: vägghöjd i px = F256 / perp |
 | `PERP_MIN` | 13 | minsta vinkelräta avstånd (u8.8, 0,05 cell) |
-| `MAX_STEPS` | 48 | högsta antal DDA-steg per stråle; därefter ritas kolumnen som dimma |
-| `FOG_NEAR_Q` | 6 | dimman börjar efter 6 kvartsceller (1,5 cell) |
-| `FOG_STEP_Q` | 6 | därefter en ljusnivå mörkare per 6 kvartsceller |
+| `MAX_SIGHT` | 13 | längsta fria siktlinje i celler från en gåbar cells mittpunkt (banregel, §7); begränsar DDA-stegen utan räknare i inre loopen |
+| `FOG_NEAR_Q` | 10 | dimman börjar efter 10 kvartsceller (2,5 celler) |
+| `FOG_STEP_Q` | 7 | därefter en ljusnivå mörkare per 7 kvartsceller (svart efter 13 celler) |
 | `FL_RANGE_Q` | 24 | ficklampan når 24 kvartsceller (6 celler) |
 | `LOD1_H` | 48 | väggar lägre än 48 px använder LOD 1 (16 × 16 texlar) |
 | `LOD2_H` | 20 | väggar lägre än 20 px använder LOD 2 (8 × 8 texlar) |
@@ -144,12 +151,11 @@ bakgrund som inte kan ockludera. Väggar ditheras inte (med 2-px-kolumner blir d
 |---|---|---|
 | Position | u8.8 | jämförs med `JB/JAE` |
 | Vinkel | u12 | |
-| sin/cos | tabell s1.14, kvartsvåg 1 025 ord | 2 KB ROM |
-| 1/\|cos θ\| (DDA-delta) | u8.8, klämd vid 64 celler, kvartsvåg 1 025 ord | 2 KB ROM |
-| t, sideDist, perp | u8.8 | `frac · delta` och `t · cos(off)` med byte-uppdelad multiplikation |
-| cos(off(c)) | u0.8 per kolumn | ≤ 0,4 % fel i perp |
-| Vägghöjd h | heltal px | `DIV` (F256 < 32 767) |
-| Texturkoordinat | bråkdelen ur låga 16 bitar av t (u8.8) · sin (s.8), plus positionens bråkdel | `MUL` ger exakt bråkdelen |
+| sin, 1/\|cos\| | halvstegstabeller (1 024 ord vardera): s1.14 och u8.8 klämd vid 64 celler | 2 + 2 KB ROM |
+| t, sideDist | u8.8 | `frac · delta` med byte-uppdelad multiplikation |
+| `colf[c]` | F256 / cos(off(c) + ½) | h = colf / t, en `DIV` |
+| Vägghöjd h | heltal px, ≤ 512 (t ≥ ¼ cell) | används också som invers djup |
+| Texturkoordinat | bråkdelen ur låga 16 bitar av t (u8.6) · \|sin\| (u0.10), plus kamerans bråkdel | `MUL` ger exakt bråkdelen |
 | Ljusnivå | 0–7 | |
 
 ### 3.5 Ljusregeln
@@ -157,7 +163,7 @@ bakgrund som inte kan ockludera. Väggar ditheras inte (med 2-px-kolumner blir d
 För varje provkolumn med en träff:
 
 ```
-q     = perp >> 6                                    (kvartsceller)
+q     = ⌊F256 / (64 · min(h, 255))⌋                  (avståndet i kvartsceller, ur väggens höjd h)
 fog   = 0 om q < FOG_NEAR_Q, annars min(7, 1 + (q − FOG_NEAR_Q) div FOG_STEP_Q)
 ljus  = max(statisk, flimmer om gruppen är tänd, annars 0)       (cellen framför, ljuskartan)
 kägla = KÄGLA[c] om ficklampan är på och q < FL_RANGE_Q, annars 0
@@ -180,8 +186,24 @@ nivå  = klämd(fog + amb(zon) − ljus − kägla − blixt, 0, 7)
 | 2 | `10110011111100001111101101110001` | trasig lampa |
 | 3 | `11111111111111110000000000000000` | långsam puls (larm) |
 
-- **Kägla** (ficklampan) per provkolumn: 2 för c = 28–35, 1 för c = 24–27 och 36–39, annars 0.
-- **amb** är zonens mörker (0–7) och **zonen** bestämmer också skuggtabellsatsen och golv/tak-tiles (§3.7).
+- **Kägla** (ficklampan) per provkolumn:
+
+| Kägla | Provkolumner |
+|---|---|
+| 2 | 28–35 |
+| 1 | 24–27, 36–39 |
+
+  övriga kolumner 0.
+- **Zoner:** `amb` är zonens mörker. Zonen bestämmer också skuggtabellsatsen (dimfärgen), golv- och takets
+  basfärg (§3.7) och ljuspölarnas färg.
+
+| Zon | Namn | `amb` | Dimfärg | Golvramp (nära → långt bort) | Takramp | Ljusfärg | Ljuskant |
+|---|---|---|---|---|---|---|---|
+| 0 | schaktet | 2 | 4 | 7 4 3 1 0 | 3 1 0 | 14 | 9 |
+| 1 | labbet | 1 | 2 | 10 7 3 2 0 | 7 3 2 0 | 15 | 13 |
+| 2 | kärnan | 2 | 1 | 6 4 1 0 | 1 0 | 11 | 5 |
+| 3 | mörkret | 3 | 0 | 3 1 0 | 1 0 | 7 | 3 |
+
 - **blixt** är mynningsblixten (M29), annars 0.
 - **Skuggtabeller:** en tabell per zon och ljusnivå, 32 byte: index 0–15 är vanliga färger, 16–31 är
   *emissiva* versioner av samma färger. En texel med färg k och nivå L ritas med färgen `tabell[zon][L][k]`.
@@ -202,18 +224,27 @@ nivå  = klämd(fog + amb(zon) − ljus − kägla − blixt, 0, 7)
   (koordinater i 1/32), ritade i ytspann där någon kolumn är minst `FEAT_H` px hög.
 - **Animation:** ett material kan ha u-scroll (texeln flyttas en kolumn var 2^s:te bildruta) eller två
   bildrutor.
-- Texturerna ligger i xdata och kopieras till RAM i `init`.
+- Texturerna ligger i xdata och kopieras till RAM i `init`. **LOD 0-kolumnerna är kompilerad kod:** generatorn
+  skriver varje unik kolumn som rak maskinkod (grundfärg och spann med v-gränser och färg som immediates, ingen
+  slinga), den ligger i xdata, kopieras till RAM och **anropas där** (VM:en hämtar instruktioner var som helst i
+  minnet). Ett spann kostar då 11 instruktioner + `RECTFILL` i stället för ~18 + `RECTFILL`. LOD 1 och 2 är data.
 
 ### 3.7 Golv och tak
 
 - **Bakgrund:** ett `MAP` med 16 × 17 tiles från zonens tileset, ritat på y = bob − 8: rad 0–8 tak, rad 9–16
   golv. Varje tilerad är en ditherad (Bayer 4 × 4) gradient mellan två steg i zonens tak- respektive golvramp,
   mörkast vid horisonten (långt bort) och ljusast vid bildens kant (nära). Alla tiles är helt täckande.
-- **Perspektivfogar:** golvets rutnätslinjer (x = k och y = k) inom 6 celler, klippta vid 0,5 cell framför
-  kameran, ritade med `LINE` i två färgsegment (nära ljusare, långt bort mörkare). De ritas före väggarna, så
-  väggarna döljer det som ligger bakom.
-- **Ljuspölar och takglöd:** varje lampa inom 8 celler framför kameran ger en ellips på golvet och en mindre på
-  taket, ritade som staplar av `RECTFILL` (ytterring och kärna i zonens ljusfärger).
+- **Perspektivfogar:** golvets rutnätslinjer (x = k och y = k) inom 6 celler, ritade med `LINE` före väggarna
+  (väggarna döljer det som ligger bakom). Allt som bara beror på kamerans vinkel ligger i en **tabell i xdata**,
+  ett 16-byteskort per 1/1024 varv (`floor.gen.asm`, 16 KB), som hämtas med en `COPY` (10 cykler): de *radiella*
+  fogarna (familjen mest längs blicken) går mellan raderna `FL_YB` och `FL_YF` med x = XV − steg · d, de
+  *korsande* över hela bredden med y = horisont + PP / d (d = linje − kamera). Per linje återstår additioner.
+  Korsande fogar ritas bara inom 3 celler (längre bort blir de ränder vid horisonten). Färg: zonens golvramp,
+  tredje steget.
+- **Lampor:** varje lampa inom 8 celler och minst 0,6 cell framför kameran ritas som en armatur i taket (ett ljust
+  streck i en ram, ~h/2 bred) och en **ljuspöl** på golvet: en ellips (halvbredd 0,55 h) av horisontella `LINE` på
+  varannan rad, ytterdel i zonens ljuskant och mitt i ljusfärgen; raderna växlar med bildrutan så att pölen
+  skimrar. En släckt flimmerlampa ritas mörk.
 
 ### 3.8 Pipeline och ocklusion
 
@@ -315,8 +346,9 @@ Hissen (start) → Schaktgången (berg och stål, natriumljus, första skräcken
 (organiska väggar, Spottare, reningsbrytaren) → tillbaka till hissen medan larmet går → seger: hissfärd och
 statistik. Två hemligheter, tre checkpoints, ~15 fiender. Detaljer i `LEVEL.md`.
 
-**Banregler (kontrolleras av generatorn):** solid kant runt hela kartan; ingen fri siktlinje längre än 14 celler
-från någon gåbar cell.
+**Banregler (kontrolleras av generatorn):** solid kant runt hela kartan; ingen fri siktlinje längre än
+`MAX_SIGHT` celler från någon gåbar cells mittpunkt (256 riktningar). Det begränsar strålarnas kostnad utan
+stegräknare i DDA-loopen.
 
 ---
 
@@ -344,7 +376,12 @@ effekterna bokför kanal och längd så att musiken återupptas.
 | Ljud | 100–300 |
 | **Totalt** | **15 200–26 500 (hårt tak 25 000)** |
 
-ROM: kod 12–17 KB + tabeller 4–5 KB + bana och ljud ~3 KB = 19–27 KB av 32. xdata → RAM: 13–23 KB. RAM:
+**Uppmätt i M26** (flygturen, 2 723 bildrutor, D-040): hela 3D-vyn max **19 153**, medel **15 624** cykler per
+bildruta (grinden 14 000 / 11 000 nås inte; projektets tak 25 000 hålls). Utan golvlagret 16 270 / 13 688, utan
+interpolering 20 597 / 17 458. ROM 11,7 KB, xdata 37 KB (texturer 2,9 KB, kompilerade kolumner 13,8 KB,
+golvkort 16 KB, bakgrund 2,2 KB, karta 3 KB), kassett 16,9 KB, RAM till 0xD413.
+
+ROM (beräknat för hela spelet): kod 12–17 KB + tabeller 4–5 KB + bana och ljud ~3 KB = 19–27 KB av 32. xdata → RAM: 13–23 KB. RAM:
 tillstånd 6–8 KB + tillgångar, stackreserv 512 B (inga variabler över 0xFE00). Kassett ~18–30 KB (mål ≤ 32 KB).
 
 ---
@@ -365,6 +402,8 @@ test:nadir` kör testerna. Utvecklingsverktyg: `tools/shot.ts` (bild från en ka
 ---
 
 ## 11. Prototypen (M26)
+
+![Kontaktark: de tio kamerapositionerna i prototypbanan, ritade av VM:en](m26-sheet.png)
 
 Banan `levels/proto.map`: en lång korridor, ett rum med pelare, natriumlampor och en flimrande lampa, en mörk zon
 med emissiva paneler, en materialvägg. Kameran styrs med UPP/NED (gå), VÄNSTER/HÖGER (vrid) och B (strafe, bara i

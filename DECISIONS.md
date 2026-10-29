@@ -756,3 +756,54 @@ Estimates (computed from instruction counts, not measured; node_modules was abse
 cartridge ~18-30 KB.
 Revisit if: the M26 measurements miss the gate after the cut list (then a human decides), or the human answers
 DESIGN §13 differently.
+
+## D-040 - NADIR M26: the renderer prototype, its VM hacks and what they measured
+Date: 2026-10-29 - Milestone: M26
+Decision (the default build, games/nadir; every number measured over the 2 723-frame fly-through
+replays/m26-fly.json with `tools/profile.ts`, which attributes every instruction to its routine and counts SYS 8 and
+COPY/FILL per byte):
+- **Direct drawing with RECTFILL runs**, not a RAM framebuffer. The other branch's raycaster (ccr-0c1e639d-pysd8u,
+  "M26 FPS spike"/BLACKBOX 3D) draws into a RAM tile buffer shown with one MAP and writes columns with an unrolled
+  STB block (1 cycle per 2-px row, ~11 + rows per texel run; 29.6k cycles per image, 30 images/s). With run-length
+  coded textures a RECTFILL run costs ~25 cycles whatever its height, so direct drawing is cheaper per colour run
+  and runs at 60 frames/s; the RAM buffer stays the fallback for multi-frame images (double buffering).
+- **Code that runs from RAM:** every unique LOD 0 texture column is compiled by the generator into straight-line
+  code (v bounds and colours as immediates), stored in xdata, copied to RAM in init and CALLed there (13.8 KB for
+  six materials). A run costs 11 instructions + RECTFILL instead of ~18 + RECTFILL plus loop overhead. Close views
+  2 000 cycles cheaper (close_wall 13 867 -> 11 907). LOD 1 stays data (compiling it too would cost 5 KB more RAM).
+- **One DIV per ray for the height:** h = (F256 / cos(column offset)) / t with the numerator tabulated per column;
+  depth is kept as h (inverse depth) for the light rule and the sprites, so no multiply for the perpendicular
+  distance; rounded through MOD (truncating put 3 % of columns outside +-max(1, h/64)).
+- **Half-step angle tables** (sampled at i + 1/2): folding an angle into its quadrant is one XOR with a mask, and a
+  quadrant record carries side, sign and mirror of the texture coordinate, so the hit has no branches on direction.
+- **xdata as a random-access lookup table:** everything about the floor seams that depends only on the view angle
+  is a 16-byte record per 1/1024 turn (16 KB in xdata); a frame fetches its record with one COPY (10 cycles) and
+  draws every seam with additions.
+- **Spans and tables for light:** light, zone and material are looked up once per face span; per column the level
+  is clamp_tab[fog table of the column (cone included) [h] + span base], 11 instructions.
+- **Light pools as alternating-row LINE ellipses** that shimmer with the frame; lamps and seams are drawn before the
+  walls so geometry hides them (no depth test needed).
+Measured A/B (max / mean cycles per frame over the fly-through): default 19 153 / 15 624; without interpolation
+(FL_NOINTERP) 20 597 / 17 458; without floor seams and lamps (FL_NOFLOOR) 16 270 / 13 688. On the ten map poses:
+before spans 18 169 mean -> spans 16 201 -> one-DIV rays 14 929 -> cheaper rock 14 081 -> compiled columns 13 220.
+Tried and rejected: interpolation stride 4 with subdivision (14 836 vs 14 081 mean: faces change so often that the
+extra casts and the costlier 4-way interpolation eat the gain); RECTFILL pools (blocky).
+Oracle: 174 272 columns, face 99.98 % (corner cases within the fixed-point error excluded geometrically), height
+within max(1 px, h/64) in 100 %, texture u within one texel in 99.9 %, light level 100 %; coverage complete.
+Criterion refined before it ever passed: PLAN M26's height tolerance "+-1 px in 99 %, +-2 px in 100 %" cannot hold
+for walls a quarter cell away (h ~ 400): t has 1/256-cell resolution, 1.6 % of 0.25 cells, so it is now relative:
++-max(1, h/64) in 99 % and +-max(2, h/32) in 100 %.
+**The M26 cycle gate fails: max 19 153 > 14 000, mean 15 624 > 11 000** (test/nadir/gate.test.ts, kept as specified,
+run by `npm run test:nadir`, not by `npm run check`). The prototype is under the project's hard 25 000 per frame
+with 6-9k left for sprites and logic. Options for the human: (a) re-derive the gate from measured sprite and logic
+costs in M28-M29 (likely ~18 000 for the 3D view); (b) adaptive pacing: when a frame would exceed 25 000, draw the
+image on the next frame (30 images/s in heavy scenes); (c) cut the floor layer (-2 000 mean).
+Revisit if: sprites (M28) or logic (M29) cost more than the 6 000 left; then pacing (b) comes first.
+
+## D-041 - Generic tooling for multi-file games (M26)
+Date: 2026-10-29 - Milestone: M26
+Decision: `qrc run --cycles` prints max/mean cycles, the costliest frame and overruns; `qrc inspect` shows the xdata
+size; `test/games` builds games with their `.include` resolver and compares xdata too, so a multi-file ISA 2 game
+with a top-level replay.json (NADIR) is covered by `npm run test:games`. Breakout and Pong are unchanged (same
+sections, same hashes); no runtime change (`git diff 932e534 -- packages/vm packages/cartridge packages/transport
+packages/qr apps` is empty).

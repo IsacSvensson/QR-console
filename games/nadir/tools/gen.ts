@@ -1,0 +1,29 @@
+// npm run nadir:gen — writes every generated file of games/nadir from DESIGN.md, art/ and levels/.
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { bgAsm } from './bg';
+import { floorAsm } from './floorgen';
+import { mapAsm, mapPng, readMap } from './maps';
+import { tablesAsm } from './tables';
+import { previewPng, readMaterials, texturesAsm } from './textures';
+import { GAME_DIR, isMain } from './util';
+
+export function generated(): Record<string, string | Buffer> {
+  const mats = readMaterials();
+  const map = readMap('proto');
+  return {
+    'tables.gen.asm': tablesAsm(),
+    'textures.gen.asm': texturesAsm(mats),
+    'bg.gen.asm': bgAsm(),
+    'floor.gen.asm': floorAsm(),
+    'map.gen.asm': mapAsm(map),
+    'art/textures.png': previewPng(mats),
+    'levels/proto.png': mapPng(map),
+  };
+}
+
+if (isMain(import.meta.url))
+  for (const [file, data] of Object.entries(generated())) {
+    writeFileSync(join(GAME_DIR, file), data);
+    console.log(`wrote games/nadir/${file}`);
+  }
