@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildCartridge } from '@qrc/asm';
 import { parseCartridge, toHex } from '@qrc/cartridge';
-import { GAMES_DIR, gameSource } from '@qrc/tools';
+import { GAMES_DIR, gameSource, includeFrom } from '@qrc/tools';
 import { VM, replay, type ReplayFile } from '@qrc/vm';
 import type { GameChecks } from './types';
 
@@ -16,10 +16,11 @@ describe.each(games)('games/%s', (name) => {
 
   it('assembles; cartridge size reported; matches the committed .qrc sections', async () => {
     const { file, source } = gameSource(dir);
-    const { bytes } = await buildCartridge(source, { file });
+    const { bytes } = await buildCartridge(source, { file, resolveInclude: includeFrom(dir) });
     const cart = await parseCartridge(bytes);
     const committed = await parseCartridge(new Uint8Array(readFileSync(join(dir, `${name}.qrc`))));
     for (const k of ['code', 'rodata', 'sound'] as const) expect(toHex(cart.sections[k])).toBe(toHex(committed.sections[k]));
+    expect(toHex(cart.sections.xdata ?? new Uint8Array(0))).toBe(toHex(committed.sections.xdata ?? new Uint8Array(0)));
     const rom = cart.sections.code.length + cart.sections.rodata.length + cart.sections.sound.length;
     console.log(`[size] ${name}: cartridge ${bytes.length} B (ROM ${rom} B, compression ${cart.header.compression ? 'deflate-raw' : 'none'}); target <= ${SIZE_TARGET} B: ${bytes.length <= SIZE_TARGET ? 'met' : 'NOT met'}`);
   });
@@ -43,7 +44,7 @@ describe.each(games)('games/%s', (name) => {
     expect(existsSync(checksFile), `${name} needs a checks.ts`).toBe(true);
     const checks = (await import(checksFile)).default as GameChecks;
     const { file, source } = gameSource(dir);
-    const { bytes, asm } = await buildCartridge(source, { file });
+    const { bytes, asm } = await buildCartridge(source, { file, resolveInclude: includeFrom(dir) });
     const rf = JSON.parse(readFileSync(join(dir, 'replay.json'), 'utf8')) as ReplayFile & { frames: number };
     const vm = VM.fromCartridge(await parseCartridge(bytes), { seed: rf.seed ?? 1 });
     const ram = (sym: string) => {

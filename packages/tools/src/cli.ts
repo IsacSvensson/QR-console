@@ -20,9 +20,10 @@ const USAGE = `qrc — QR Console tools
   qrc inspect <file.gif|file.qrc>
   qrc replay <file.qrc> <inputs.json> [--frames N] [--seed N]   (prints the state hash of every frame)
   qrc run <file.qrc> [--frames N] [--dump-frame out.png] [--scale S] [--seed N] [--write-ref ref.json]
-          [--inputs inputs.json] [--sym file.sym] [--ram name,name,…] [--trace N] [--trace-frame F]
+          [--inputs inputs.json] [--sym file.sym] [--ram name,name,…] [--trace N] [--trace-frame F] [--cycles]
           --ram prints named RAM words every frame; --trace prints the first N instructions of frame F
-          (default: the last frame) with registers and flags
+          (default: the last frame) with registers and flags; --cycles prints the cycles per frame (max, mean,
+          the costliest frame, overruns)
 `;
 
 async function main(argv: string[]) {
@@ -57,6 +58,7 @@ async function main(argv: string[]) {
           ram: { type: 'string' },
           trace: { type: 'string' },
           'trace-frame': { type: 'string' },
+          cycles: { type: 'boolean' },
         },
       });
       const file = positionals[0] ?? fail('run: missing <file.qrc>');
@@ -72,6 +74,9 @@ async function main(argv: string[]) {
       for (const n of ramNames) if (!syms.has(n)) fail(`--ram: unknown symbol '${n}' (no ${symPath}? run qrc build first)`);
       const traceN = values.trace ? Number(values.trace) : 0;
       const traceFrame = values['trace-frame'] ? Number(values['trace-frame']) : frames;
+      let maxCycles = 0;
+      let maxFrame = 0;
+      let sumCycles = 0;
       for (let f = 0; f < frames; f++) {
         if (traceN && f + 1 === traceFrame) {
           let n = 0;
@@ -85,9 +90,15 @@ async function main(argv: string[]) {
           };
         } else vm.tracer = null;
         vm.step(inputs[f]!);
+        sumCycles += vm.cyclesLastFrame;
+        if (vm.cyclesLastFrame > maxCycles) {
+          maxCycles = vm.cyclesLastFrame;
+          maxFrame = f + 1;
+        }
         if (ramNames.length) console.log(`${f + 1}: ${ramNames.map((n) => `${n}=${vm.read16(syms.get(n)!)}`).join(' ')}`);
       }
       vm.tracer = null;
+      if (values.cycles) console.log(`cycles per frame (update only; init has its own budget): max ${maxCycles} at frame ${maxFrame}, mean ${(sumCycles / frames).toFixed(0)}, overruns ${vm.overruns}`);
       console.log(`${basename(file)}: ran ${frames} frame(s); frame hash ${vm.frameHash()}; state ${vm.stateHash()}${vm.fault ? `; FAULT: ${vm.fault}` : ''}`);
       if (values['write-ref']) {
         const ref = { frames, seed: Number(values.seed), frameHash: vm.frameHash(), stateHash: vm.stateHash() };
@@ -168,7 +179,7 @@ async function main(argv: string[]) {
         console.log(`id             ${toHex(cart.id)}`);
         console.log(`size           ${bytes.length} bytes (header ${h.headerSize}, body ${h.storedSize} stored / ${h.uncompressedSize} uncompressed, ${h.compression ? 'deflate-raw' : 'no compression'})`);
         console.log(`format / ISA   v${h.formatVersion} / ISA ${h.isaVersion}`);
-        console.log(`sections       code ${cart.sections.code.length}, rodata ${cart.sections.rodata.length}, sound ${cart.sections.sound.length} bytes`);
+        console.log(`sections       code ${cart.sections.code.length}, rodata ${cart.sections.rodata.length}, sound ${cart.sections.sound.length}${cart.sections.xdata ? `, xdata ${cart.sections.xdata.length}` : ''} bytes`);
         console.log(`as QR (default v${DEFAULT_QR.version}-${DEFAULT_QR.ecc}, ${DEFAULT_FRAME_MS} ms): blocks K=${K} of ${B} B, ${defaultFrameCount(K)} frames per loop`);
         return;
       }
