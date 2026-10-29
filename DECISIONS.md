@@ -724,3 +724,35 @@ Decision:
   `test:e2e` script change, the runtime does not.
 Measurement: ROM 31 608 B of 32 768 (code 25 404, data 6 043, sound 161), cartridge 22 945 B; `demo/bo.gif` 132
 frames (K=88), 19.8 s loop, 1.8 MB.
+
+## D-039 - Part 4 planned: NADIR, a first-person shooter on the unchanged VM (approved plan)
+Date: 2026-10-29 - Milestone: Part 4 planning (before M26)
+Decision: a small, polished vertical slice FPS (`games/nadir/DESIGN.md`): one level of about ten minutes, one
+weapon (a pump bolt shotgun), two enemy types (Kryp, Spottare), industrial horror with bioluminescence. The renderer
+is a hybrid around a DDA raycaster: 64 sample columns 2 px wide (angle tables u12, fisheye-corrected), RLE wall
+textures with three LODs, 1-px silhouettes, face-vector details drawn with one `LINE` per detail and face span, a
+dithered `MAP` floor/ceiling per zone with floor seams and light pools, light via tables (fog, a light map with
+flicker groups, zone darkness, a flashlight cone, emissive texels, colour grading by swapping shade tables),
+sprites as rectangle lists with LOD clipped per column against the z-buffer (M28), weapon, overlay and HUD with
+`MAP`/`SPR`. Graphics assets live in xdata (ISA 2 as it is) and are copied into RAM in `init`; the runtime does not
+change (baseline 932e534). Controls "touch first" (S2): B held walks forward so a touch player can walk with the
+right thumb and steer with the left; a double tap sidesteps; doors open on contact.
+Alternatives: (A) a classic raycaster with 128 rays and one colour per column (~18 000 cycles without textures,
+~26 000 with: too expensive for what it gives); (B) few rays with gradients (~5 000, blocky); (D1) a wall-segment
+renderer with a coverage list (exact edges, but clipping and sorting in assembly are a large risk; its face spans
+are borrowed for the vector details); (D2) a dungeon crawler with pre-drawn depth slots (beautiful but grid-locked,
+not an FPS); (D3) wireframe vectors (cheap, thin); a new ISA with a textured-span syscall (not needed: every layer
+fits ISA 2); B as strafe modifier (S1: on touch one thumb holds only one D-pad direction, `apps/web/src/player.ts`
+captures the pointer per button, so walking and turning at once would be impossible); an 8-way touch D-pad (an app
+change, left as an idea).
+Why: the VM's cost model (verified in `packages/vm/src/vm.ts`): every instruction costs 1 cycle including `MUL` and
+`DIV`, and every `SYS` costs 8 cycles however many pixels it draws, so draw calls are the currency and pixels are
+free; perspective math is cheap but 16-bit (`MUL` keeps the low 16 bits; the low 16 bits of a u8.8 × s.8 product
+are exactly its fraction, which gives the texture coordinate). Darkness hides the low resolution and shortens
+sightlines (cheaper DDA); emissive accents read best against a dark palette.
+Estimates (computed from instruction counts, not measured; node_modules was absent during planning): 3D view
+11 100-16 800 cycles per frame (gate 14 000), a gameplay frame 15 200-26 500, so the gate and the safety valves
+(sprite rectangle budget, particle cap, sightline rule, LOD) are necessary; ROM 19-27 KB, xdata 13-23 KB,
+cartridge ~18-30 KB.
+Revisit if: the M26 measurements miss the gate after the cut list (then a human decides), or the human answers
+DESIGN §13 differently.

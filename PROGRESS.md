@@ -2,10 +2,11 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** none — Parts 1–3 complete; awaiting the human's manual acceptance (PLAN.md)
-**Status:** Part 1 and Part 2 complete — with one flaky Part 1 acceptance test, see *Blocked / needs human*.
-Part 3 (Bo's Skateäventyr) complete: M19–M25 done; ROM 31.6 KB of 32 KB on ISA 2. Next: the Bo test (PLAN *Manual acceptance* 3).
-**Last updated:** 2026-10-06
+**Current milestone:** M26 — NADIR renderer prototype (PLAN.md Part 4)
+**Status:** Parts 1–3 complete (one flaky Part 1 acceptance test, see *Blocked / needs human*); they await the
+human's manual acceptance. Part 4 (NADIR, a first-person shooter) planned and approved 2026-10-29: design in
+`games/nadir/DESIGN.md`, milestones M26–M32 in PLAN.md.
+**Last updated:** 2026-10-29
 
 ## Milestones
 
@@ -43,7 +44,21 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 - [x] M24 Worlds 4 and 5, the theft and the ending
 - [x] M25 Picture codes, music, delivery
 
+Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
+
+- [ ] M26 Renderer prototype (risk gate)
+- [ ] M27 Player, collision, doors, masked walls (feel build)
+- [ ] M28 Sprites and props
+- [ ] M29 Weapon, combat, the first enemy
+- [ ] M30 Atmosphere, effects, the second enemy (budget gate)
+- [ ] M31 The vertical slice and the game around it
+- [ ] M32 Sound, polish, delivery
+
 ## Current work
+
+Part 4 (PLAN.md Part 4): planned 2026-10-29 (D-039). M26 in progress: the hybrid raycaster of DESIGN §3 with a
+floating-point oracle; every layer measured (cycles, screenshot). **Part 4 runtime baseline = 932e534 (M22b):**
+`git diff 932e534 -- packages/vm packages/cartridge packages/transport packages/qr apps` must stay empty.
 
 Part 3 (PLAN.md Part 3): M19 done — level format + generator + previews (`games/bo/levels/`), column-major level
 buffer, camera, parallax, HUD frame, Bo's rolling physics on flat ground, hills, blocks and one-way platforms; test

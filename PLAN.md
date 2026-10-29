@@ -464,3 +464,162 @@ STOP presses; replays from the World 2 map to the World 4 map.
    `FIRST10.md` §9. The answers go into `PROGRESS.md`; what they show is tuned before Worlds 2–5 are built.
 3. **After M25 (Bo test):** Bo plays. The tests cannot judge the one thing that matters: whether it is fun for a
    six-year-old, and whether he can read the bubbles and use the touch controls. Notes go into `PROGRESS.md`.
+
+---
+
+# Part 4 — NADIR (planned 2026-10-29 at the human's request)
+
+A first-person shooter that shows how visually impressive a game can be on the unchanged machine: a small,
+polished vertical slice (one level of about ten minutes, one weapon, two enemy types) with its own identity —
+industrial horror with bioluminescence, 1 200 m down an old mine. It proves what Parts 1–3 did not need: real-time
+pseudo-3D with perspective, textured walls, lighting, depth-correct scaled sprites and screen effects within the
+cycle budget. The design is the **specification** for these milestones:
+
+- `games/nadir/DESIGN.md` — locked design decisions, the renderer (§3: conventions, constants, numeric formats,
+  the light rule, texture and floor formats), visual concept, controls, enemies, budget, risks, open questions.
+- `games/nadir/levels/*.map` — the maps (grid, zones, lamps, camera poses; entities from M27).
+- `games/nadir/LEVEL.md` — the level: areas, objectives, encounters (written in M31, then the oracle for flow tests).
+
+Rules for M26–M32 (in addition to CLAUDE.md, same spirit as Parts 2–3):
+
+- **The runtime does not change.** `git diff 932e534 -- packages/vm packages/cartridge packages/transport
+  packages/qr apps` stays **empty** (932e534 = M22b, the last runtime change). NADIR uses ISA 2 as it is (xdata for
+  graphics assets, copied into RAM at start). Wiring NADIR into the existing scripts (demo list, e2e fixtures, a
+  Vitest project) is expected; any other change to `packages/asm`, `packages/tools` or `test/games` must be
+  generic, needs a `DECISIONS.md` entry, and every other game must still assemble to identical sections.
+- **The design documents and a floating-point reference are the test oracle.** `test/nadir/ref.ts` reads the
+  `.map` sources and DESIGN §3 on its own and computes what the engine must hold in RAM (per-column hits, light
+  levels, collisions, hits); the engine is never compared against itself.
+- **All game code and data live in `games/nadir/`**; generators, the replay bot and dev tools in
+  `games/nadir/tools/`.
+- Every milestone has recorded replays (`games/nadir/replays/*.json`) with committed per-frame hashes from the VM
+  (`npm run refs:games`), recorded by the bot from RAM-driven routes, and assertions in `test/nadir/**`.
+- **Budgets, asserted in every replay:** no fault, 0 cycle-budget overruns, max cycles per frame ≤ 25 000; ROM
+  ≤ 32 KB; RAM variables below 0xFE00 and stack depth < 512 B. Visual results are reviewed as VM-rendered images
+  (reference frames and a contact sheet), not only as code.
+
+The test command for all Part 4 milestones is `npm run test:nadir` (a Vitest project for `test/nadir/**`); each
+milestone adds to it and never removes earlier checks.
+
+## M26 — Renderer prototype (risk gate)
+
+- The DDA raycaster of DESIGN §3: 64 sample columns with angle tables and fisheye correction; RLE wall textures
+  with three LODs and distance shading; 1-px silhouettes; face-vector details; the dithered `MAP` floor/ceiling
+  per zone, floor seams, light pools and ceiling glow; the light rule (fog, light map with flicker groups, zone
+  darkness, flashlight cone, emissive texels). Assets in xdata, copied into RAM in `init`.
+- A prototype map (`levels/proto.map`: corridor, pillar room, sodium and flickering lamps, a dark zone with
+  emissive panels, a material wall) and a camera controller with `dbg_pose` (named poses from the map) and
+  `dbg_flags` (layers on/off for A/B measurements).
+- Every layer is measured on its own (max/mean cycles, a screenshot) and recorded in `DECISIONS.md`; the best
+  combination within the gate is the default build. Generic tooling: `qrc run --cycles`, xdata in `qrc inspect`,
+  `.include` and xdata support in `test/games`.
+
+**Accept:** `npm run test:nadir`
+- generated data is up to date (the generators reproduce the committed `.gen.asm` files)
+- the fly-through replay (≥ 1 200 frames: corridor, slow and fast 360° turns, pillar room, lamps and flicker, the
+  dark zone, 0.25 cells from a wall, grazing angles, every material): per-frame hashes match, no fault, 0 overruns
+- **3D view: max ≤ 14 000 and mean ≤ 11 000 cycles per frame**
+- geometry against the floating-point reference in every frame and column: same face in ≥ 99.5 % (columns within
+  0.02 cells of a corner counted separately), wall height within ±1 px in ≥ 99 % and ±2 px in 100 % (perp ≥ 0.25
+  cells), texture u within ±1 texel in ≥ 99 %
+- light: every column's level equals DESIGN §3.5 computed from its perp, the light map of the cell in front (built
+  by the oracle from the map's lamps), the flicker patterns, the zone and the cone; the shade tables are monotone
+  and black at level 7; emissive texels keep their colour within the fog range
+- coverage: two VMs with different sentinel colours give identical framebuffers (every pixel written) in every
+  10th frame; reference frames and the contact sheet's poses match their committed hashes
+- static ROM check (every code word a valid opcode, every immediate jump and call target inside the code and
+  4-aligned, every jump-table entry a code address); RAM variables below 0xFE00; deepest stack < 512 B; sizes
+  (ROM, xdata, cartridge, renderer code per file) reported
+- `npm run demo` writes and verifies `demo/nadir.gif`; `npm run test:games` includes NADIR (multi-file) and is
+  unchanged for Breakout and Pong; `npm run check` green
+- if the cycle gate fails after DESIGN §12's cut list, the criterion stays failing, the measurement goes into
+  `DECISIONS.md` and the gate is flagged for a human (the criterion is never weakened)
+
+## M27 — Player, collision, doors and masked walls (the feel build)
+
+- The control scheme of DESIGN §5 (S2, with S1 as an option if it fits), turning acceleration, wall-sliding
+  collision, head bob; sliding doors (thin walls in the cell centre, auto-open, locked doors with key flags), door
+  frames; masked walls (grate, window, railing, low wall); the whole level's geometry, zones and lamps.
+
+**Accept:** `npm run test:nadir`
+- every cell, door, zone and lamp in RAM equals the `.map` source read by the oracle
+- collision oracle in every frame of every replay: the player circle never overlaps a solid cell or a closed
+  door, never leaves the map, never moves further than its radius in one frame
+- turning and walking curves measured from replays equal DESIGN's table (±1 unit); door timings in frames equal
+  DESIGN; a locked door opens only with its key flag
+- columns with a masked hit match the oracle; the wall behind is visible through transparent texels (two-VM
+  comparison with the masked wall removed)
+- 3D view plus game logic ≤ 16 000 cycles per frame; `npm run demo` writes and verifies `demo/nadir.gif`
+
+## M28 — Sprites and props
+
+- `tools/sprites.ts`: ASCII pixel art → overlapping rectangle lists with LOD 0–2 and previews; sprite projection,
+  sorting, per-column visibility intervals against the z-buffer, shading by the light rule; props (lamps, barrels,
+  pipes, crates, terminals) and pickups.
+
+**Accept:** `npm run test:nadir`
+- every sprite frame's rectangle list, rendered in TypeScript at 1×–4×, equals nearest-neighbour upscaling of its
+  source pixel for pixel; LOD limits (LOD 0 ≤ 48, LOD 1 ≤ 20, LOD 2 ≤ 8 rectangles)
+- projection against the oracle (centre x and height ±1 px, LOD by DESIGN's thresholds); occlusion oracle (two
+  VMs, sprites on and off): identical where the wall is nearer; a nearer sprite is drawn after a farther one
+- a stress replay with 8 visible props: sprite drawing ≤ 5 000 cycles per frame (profile), total ≤ 25 000
+
+## M29 — Weapon, combat and the first enemy
+
+- The bolt shotgun (`MAP` art: idle sway, fire, recoil, pump, reload, muzzle flash with light), hitscan with aim
+  assist, impact sparks, ammo; the Kryp with its animations and AI states; player health, damage, death and
+  restart; pickups.
+
+**Accept:** `npm run test:nadir`
+- every shot event agrees with the oracle's hitscan computed from RAM (positions, angle, map, aim assist), and
+  pellet damage follows DESIGN
+- every AI transition in every replay is allowed by DESIGN's table; animations play their frames in order with the
+  documented lengths; enemies obey the collision oracle; line-of-sight events equal the oracle's line of sight
+- health changes only at hit events by the documented amounts; death → restart equals a fresh start or the
+  checkpoint (RAM comparison); weapon frames, timings and ammo follow DESIGN; the muzzle flash lifts the light
+  level for exactly the documented frames
+
+## M30 — Atmosphere, effects and the second enemy (budget gate)
+
+- Dynamic lights (muzzle, projectiles, explosions), vignette, damage flash and direction, screen shake, particles,
+  explosive barrels; the Spottare and its acid projectiles.
+
+**Accept:** `npm run test:nadir`
+- every column's light level equals DESIGN's rule including the dynamic lights in RAM; projectiles and splash damage
+  follow DESIGN's radii; effect timings follow DESIGN
+- a stress replay (4 enemies, 2 projectiles, an explosion, 24 particles) stays ≤ 25 000 cycles per frame
+- **budget gate:** ROM, xdata, RAM and cartridge size are measured and projected for the finished slice in
+  `DECISIONS.md`; a projection over a limit (ROM 32 KB, RAM below 0xFE00, cartridge 40 KB) applies DESIGN's cut list
+  and is flagged for a human
+
+## M31 — The vertical slice and the game around it
+
+- The final level and `LEVEL.md`, the title screen with an attract-mode fly-through, death and checkpoint restart,
+  the victory sequence (the lift ride and statistics), the final HUD, objectives, keycards and secrets.
+
+**Accept:** `npm run test:nadir`
+- one bot replay plays from the title through the whole level to the victory screen; the objective events in RAM
+  occur in `LEVEL.md`'s order; the statistics on screen equal the RAM counters
+- a death replay restarts at the checkpoint with the state of its snapshot; every secret and pickup of `LEVEL.md`
+  is reached and every enemy is killed in some replay
+- the attract mode loops (framebuffer hashes at f and f + P are equal); mean ≤ 18 000 cycles per frame in the
+  full-game replay
+
+## M32 — Sound, polish and delivery
+
+- Every sound effect, the ambience, the threat cue, the motifs (start, victory, death) and the sequencer; a final
+  art pass from contact sheets; NADIR delivered like the other games.
+
+**Accept:**
+- `npm run test:nadir`: every effect and track is heard in the replays; effects interrupt the music on their
+  channel and the music resumes; the threat cue's interval follows the distance rule
+- `npm run demo` writes and verifies `demo/nadir.gif`; `npm run test:e2e` scans it with the fake camera to 100 %,
+  presses PLAY and the first frame matches the VM reference
+- `games/nadir/GUIDE.md`; `REPORT.md` gains a NADIR section (tested / measured / not verified); `npm run check` green
+
+## Manual acceptance for Part 4 (human only)
+
+1. **After M26 (look):** view the contact sheet and scan `demo/nadir.gif` on a phone. Is the image as good as the
+   plan promises? The agent continues with the defaults unless told otherwise.
+2. **After M27 (feel):** walk the level on a phone. Do turning, walking and the S2 controls feel right?
+3. **After M32 (play):** play the slice to the end and judge what tests cannot: the atmosphere, and whether it is fun.
