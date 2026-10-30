@@ -73,6 +73,29 @@ world:
     ADD r0, P_RAD + PICK_HALF - 1
     CMP r0, 2 * (P_RAD + PICK_HALF) - 1
     JAE @np
+    CMP r5, 1                       ; only when needed (DESIGN §6.1): a medkit below HP_MAX, ammunition below AMMO_MAX
+    JNE @am
+    LD r0, [hp]
+    CMP r0, HP_MAX
+    JGE @np
+    ADD r0, MED_HP
+    CMP r0, HP_MAX
+    JLE @h1
+    LDI r0, HP_MAX
+@h1:
+    ST [hp], r0
+    JMP @take
+@am:
+    LD r0, [w_res]
+    CMP r0, AMMO_MAX
+    JGE @np
+    ADD r0, AMMO_PICK
+    CMP r0, AMMO_MAX
+    JLE @a1
+    LDI r0, AMMO_MAX
+@a1:
+    ST [w_res], r0
+@take:
     LDI r0, 0
     STB [r6 + P_ALIVE], r0
     LDI r1, picked_med

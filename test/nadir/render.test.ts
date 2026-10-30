@@ -48,6 +48,8 @@ interface Image {
   cy: number;
   ca: number;
   tick: number;
+  /** DESIGN §6.1: the muzzle flash's light steps in this image (rflash) */
+  flash: number;
   open: (cell: number) => number;
 }
 
@@ -59,14 +61,14 @@ function eachImage(n: Nadir, name: string, onImage: (f: number, vm: VM, im: Imag
   let cast: Map<number, number> | null = null;
   const opens = (vm: VM) => new Map(map.doors.map((d, i) => [d.y * W + d.x, vm.read16(n.S('doors') + 16 * i + 2)]));
   return runReplay(n, name, (f, vm) => {
-    const paced = vm.read16(n.S('pace')) === 1;
-    if (paced) {
-      cast = opens(vm);
+    // pace 2 then 1: a heavy image's rays were cast two frames before it is drawn (DESIGN §3.11)
+    if (vm.read16(n.S('pace')) !== 0) {
+      cast ??= opens(vm);
       return;
     }
     const o = cast ?? opens(vm);
     cast = null;
-    onImage(f, vm, { cx: vm.read16(n.S('rcam_x')) / 256, cy: vm.read16(n.S('rcam_y')) / 256, ca: vm.read16(n.S('rcam_a')), tick: vm.read16(n.S('rtick')), open: (cell) => o.get(cell) ?? 0 });
+    onImage(f, vm, { cx: vm.read16(n.S('rcam_x')) / 256, cy: vm.read16(n.S('rcam_y')) / 256, ca: vm.read16(n.S('rcam_a')), tick: vm.read16(n.S('rtick')), flash: vm.read16(n.S('rflash')), open: (cell) => o.get(cell) ?? 0 });
   });
 }
 
@@ -116,7 +118,7 @@ describe('M26-M27 renderer', () => {
           const front = rd(vm, 'col_front', c);
           const lvl = rd(vm, 'col_lvl', c, 1);
           // the light level follows DESIGN §3.5 from the column's own height and cell in front
-          const want = refLevel(map, light, front, h, c, im.tick);
+          const want = refLevel(map, light, front, h, c, im.tick, -im.flash);
           if (lvl === want) lvlOk++;
           else note(`frame ${f + 1} col ${c}: level ${lvl}, rule ${want}`);
           // ---- the masked layer (DESIGN §3.10)
@@ -137,7 +139,7 @@ describe('M26-M27 renderer', () => {
                 const du = Math.abs(rd(vm, 'col_mu', c, 1) - m.u);
                 if (du <= 1 || du === 31) mu++;
                 if (rd(vm, 'col_mfront', c) !== m.front) note(`frame ${f + 1} col ${c}: masked front ${rd(vm, 'col_mfront', c)}, oracle ${m.front}`);
-                if (rd(vm, 'col_mlvl', c, 1) === refLevel(map, light, m.front, rd(vm, 'col_mh', c), c, im.tick)) mLvl++;
+                if (rd(vm, 'col_mlvl', c, 1) === refLevel(map, light, m.front, rd(vm, 'col_mh', c), c, im.tick, -im.flash)) mLvl++;
               } else note(`frame ${f + 1} col ${c}: masked face ${mface}, oracle ${m?.face ?? 'none'}`);
             }
           }
@@ -196,7 +198,7 @@ describe('M26-M27 renderer', () => {
     for (let f = 0; f < rf.frames; f++) {
       a.step(inputs[f]!);
       b.step(inputs[f]!);
-      if (f % 10 !== 9 || a.read16(n.S('pace')) === 1) continue;
+      if (f % 10 !== 9 || a.read16(n.S('pace')) !== 0) continue;
       checked++;
       // the background tile under each differing pixel must be transparent there
       const zone = a.read16(n.S('cam_zone'));

@@ -28,7 +28,16 @@ export class Bot {
     return this.vm.read16(this.S('cam_a'));
   }
 
+  /** M29: before every step the bot fights an alerted enemy in sight (fight()); off for routes that must not */
+  fightOn = true;
+  /** M29: a route that may die (the death replay); otherwise a death throws */
+  allowDeath = false;
+  private fighting = false;
   step(buttons = 0, dash = false) {
+    if (this.fightOn && !this.fighting && !dash) this.fight();
+    this.raw(buttons, dash);
+  }
+  private raw(buttons: number, dash = false) {
     const prev = this.inputs[this.inputs.length - 1] ?? 0;
     const f = this.inputs.length;
     for (const d of [B.L, B.R]) {
@@ -40,6 +49,64 @@ export class Bot {
     this.inputs.push(buttons);
     if (this.vm.fault) throw new Error(`VM fault at frame ${this.inputs.length}: ${this.vm.fault}`);
     if (this.inputs.length > this.maxFrames) throw new Error('route too long');
+    if (!this.allowDeath && this.vm.read16(this.S('dead')) !== 0) throw new Error(`the bot died at frame ${this.inputs.length} at ${this.x.toFixed(2)}, ${this.y.toFixed(2)}`);
+  }
+  /** The nearest living enemy that is alerted (DESIGN §6.3 states 1-6), sees the player and is within 7 cells. */
+  target(): { x: number; y: number; i: number } | null {
+    let best: { x: number; y: number; i: number } | null = null;
+    let bd = 7;
+    for (let i = 0; i < k('MAX_ENEMIES'); i++) {
+      const a = this.S('enemies') + this.eSize * i;
+      if (i >= this.S('NUM_ENEMIES')) break;
+      const st = this.vm.read8(a + 4);
+      if (st < 1 || st > 6 || this.vm.read8(a + 12) === 0) continue;
+      const x = this.vm.read16(a) / 256;
+      const y = this.vm.read16(a + 2) / 256;
+      const d = Math.hypot(x - this.x, y - this.y);
+      if (d < bd) {
+        bd = d;
+        best = { x, y, i };
+      }
+    }
+    return best;
+  }
+  private readonly eSize = 24;
+  /** Turns to the target and holds A (the weapon fires whenever it is ready) until no enemy is a target. */
+  fight() {
+    this.fighting = true;
+    try {
+      for (let n = 0; n < 3000; n++) {
+        const t = this.target();
+        if (!t) return;
+        const deg = (Math.atan2(t.y - this.y, t.x - this.x) * 180) / Math.PI;
+        const d = this.diff(Math.round((deg * ANG) / 360) & (ANG - 1));
+        let btn = 0;
+        if (Math.abs(d) > 6) {
+          const b = d < 0 ? B.L : B.R;
+          const held = this.inputs[this.inputs.length - 1]! & b;
+          const kk = held ? this.vm.read16(this.S('turn_k')) : 0;
+          const next = Math.min(k('TURN_MAX'), k('TURN_MIN') + k('TURN_ACC') * kk);
+          if (next <= Math.abs(d) + 6) btn |= b;
+        }
+        if (Math.abs(d) <= 20) btn |= B.A;
+        this.raw(btn);
+      }
+      throw new Error(`fight: no end at ${this.x.toFixed(2)}, ${this.y.toFixed(2)}`);
+    } finally {
+      this.fighting = false;
+    }
+  }
+  /** a word of RAM, signed */
+  read(name: string) {
+    return (this.vm.read16(this.S(name)) << 16) >> 16;
+  }
+  /** Steps without input until `cond` holds (at most `max` frames). */
+  waitUntil(cond: () => boolean, max: number) {
+    for (let i = 0; i < max; i++) {
+      if (cond()) return;
+      this.step(0);
+    }
+    throw new Error(`waitUntil: not after ${max} frames (at ${this.x.toFixed(2)}, ${this.y.toFixed(2)})`);
   }
   wait(n: number) {
     for (let i = 0; i < n; i++) this.step(0);

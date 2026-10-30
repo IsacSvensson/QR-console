@@ -156,6 +156,8 @@ span_light:
     ST [sp_zone], r1
     LDB r0, [r1 + zone_amb]
     SUB r0, r4
+    LD r3, [rflash]                 ; the muzzle flash (DESIGN §6.1)
+    SUB r0, r3
     ST [sp_base], r0
     SHL r1, 8
     ADD r1, shade

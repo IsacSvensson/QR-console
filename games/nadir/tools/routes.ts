@@ -246,6 +246,43 @@ export const ROUTES: Record<string, Route> = {
     },
   },
   /** M27: the whole loop of the level at walking speed. */
+  /** M29: hit by a Kryp's leap (the bot holds its fire until then), the fight, a medkit, ammunition, reloads. */
+  'm29-combat': {
+    seed: 7,
+    run(b) {
+      b.fightOn = false;
+      b.walkTo(3.5, 4.4);
+      b.walkTo(3.5, 7.0);
+      b.walkTo(3.6, 13.5);
+      b.walkTo(6.5, 14.5);
+      b.walkTo(8.5, 12.0);
+      b.waitUntil(() => b.read('hits_taken') >= 1, 900); // stands still until a leap lands
+      b.fightOn = true;
+      b.wait(30);
+      b.walkTo(11.3, 10.4); // the medkit (health below 100 now)
+      b.walkTo(12.6, 11.6); // the ammunition
+      b.walkTo(14.5, 11.6);
+      tourFromWorkshop(b);
+    },
+  },
+  /** M29: the bot does not fight: the Kryp kill it, the restart (DESIGN §6.5), then it walks a little again. */
+  'm29-death': {
+    seed: 8,
+    run(b) {
+      b.fightOn = false;
+      b.allowDeath = true;
+      b.walkTo(3.5, 4.4);
+      b.walkTo(3.5, 7.0);
+      b.walkTo(3.6, 13.5);
+      b.walkTo(6.5, 14.5);
+      b.walkTo(8.5, 12.0);
+      b.waitUntil(() => b.read('restarts') >= 1, 3000);
+      b.wait(30);
+      b.allowDeath = false;
+      b.walkTo(3.5, 4.4);
+      b.walkTo(3.5, 6.0);
+    },
+  },
   'm27-tour': {
     seed: 5,
     run(b) {

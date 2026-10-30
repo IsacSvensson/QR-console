@@ -25,13 +25,46 @@ const doorAt = (n: Nadir, vm: VM, i: number) => {
 };
 
 /** Runs a replay frame by frame; `each` gets the state before and after each frame. */
-function walk(n: Nadir, name: string, each: (f: number, vm: VM, held: number, pressed: number, before: { p: PlayerState; doors: ReturnType<typeof doorAt>[]; keys: number; alive: number[]; med: number; ammo: number }) => void) {
+interface Before {
+  p: PlayerState;
+  doors: ReturnType<typeof doorAt>[];
+  keys: number;
+  alive: number[];
+  med: number;
+  ammo: number;
+  /** M29: health, death, restarts, hits taken, the enemies (x, y, state) */
+  hp: number;
+  dead: number;
+  restarts: number;
+  hits: number;
+  /** a pending start pose (the frame after init or a restart puts the player there) */
+  pose: number;
+  enemies: { x: number; y: number; st: number }[];
+}
+const readBefore = (n: Nadir, vm: VM): Before => ({
+  p: readPlayer(n, vm),
+  doors: map.doors.map((_, i) => doorAt(n, vm, i)),
+  keys: vm.read16(n.S('keys')),
+  alive: map.props.map((_, i) => alive(n, vm, i)),
+  med: vm.read16(n.S('picked_med')),
+  ammo: vm.read16(n.S('picked_ammo')),
+  hp: s16(vm.read16(n.S('hp'))),
+  dead: vm.read16(n.S('dead')),
+  restarts: vm.read16(n.S('restarts')),
+  hits: vm.read16(n.S('hits_taken')),
+  pose: vm.read16(n.S('dbg_pose')),
+  enemies: Array.from({ length: n.S('NUM_ENEMIES') }, (_, i) => {
+    const b = n.S('enemies') + 24 * i;
+    return { x: vm.read16(b), y: vm.read16(b + 2), st: vm.read8(b + 4) };
+  }),
+});
+function walk(n: Nadir, name: string, each: (f: number, vm: VM, held: number, pressed: number, before: Before) => void) {
   const rf: ReplayFile & { frames: number } = loadReplay(name);
   const inputs = expandInputs(rf.inputs, rf.frames);
   const vm = VM.fromCartridge(n.cart, { seed: rf.seed ?? 1 });
   vm.step(inputs[0]!); // init and the first frame (the start pose)
   for (let f = 1; f < rf.frames; f++) {
-    const before = { p: readPlayer(n, vm), doors: map.doors.map((_, i) => doorAt(n, vm, i)), keys: vm.read16(n.S('keys')), alive: map.props.map((_, i) => alive(n, vm, i)), med: vm.read16(n.S('picked_med')), ammo: vm.read16(n.S('picked_ammo')) };
+    const before = readBefore(n, vm);
     const held = inputs[f]!;
     const pressed = held & ~inputs[f - 1]!;
     vm.step(held);
@@ -101,9 +134,23 @@ describe('M27 world', () => {
         };
         // blocking props (DESIGN §3.12): the box overlaps one if both axis distances are < P_RAD + its half-size
         const propHit = (x: number, y: number) => map.props.some((p, i) => propSprite[i]!.block > 0 && Math.abs(x - Math.round(p.x * 256)) < K.P_RAD! + propSprite[i]!.block && Math.abs(y - Math.round(p.y * 256)) < K.P_RAD! + propSprite[i]!.block);
-        const want = stepPlayer(before.p, held, pressed, tick, passable, false, false, propHit);
+        // M29 (DESIGN §6.3): living enemies block the player too (their positions before the frame: the player moves first)
+        const enemyHit = (x: number, y: number) => before.enemies.some((e) => e.st !== 7 && Math.abs(x - e.x) < K.P_RAD! + K.E_RAD! && Math.abs(y - e.y) < K.P_RAD! + K.E_RAD!);
+        // a restart (DESIGN §6.5) sets everything as at the start: combat.test.ts compares it with a fresh start
+        if (vm.read16(n.S('restarts')) !== before.restarts) return;
         const got = readPlayer(n, vm);
-        expect(got, `frame ${f + 1}`).toEqual(want);
+        let want = before.p;
+        if (before.pose) {
+          // the start pose after a restart (combat.test.ts: the frame equals a fresh start's first frame)
+        } else if (before.dead) {
+          // dead: no control, the player stands; the horizon sinks (DESIGN §6.5)
+          const dead = vm.read16(n.S('dead'));
+          expect({ ...got, bob: 0 }, `frame ${f + 1}: dead`).toEqual({ ...before.p, bob: 0 });
+          expect(got.bob, `frame ${f + 1}: sinking`).toBe(Math.min(16, (K.DEATH_FRAMES! - dead) >> 2));
+        } else {
+          want = stepPlayer(before.p, held, pressed, tick, passable, false, false, (x, y) => propHit(x, y) || enemyHit(x, y));
+          expect(got, `frame ${f + 1}`).toEqual(want);
+        }
         if (got.dashN === K.DASH_FRAMES! - 1) dashes++;
         // collision: the circle never overlaps a solid cell or a door that is not fully open, never leaves the map
         const x = got.x / 256;
@@ -118,7 +165,7 @@ describe('M27 world', () => {
             const di = map.doors.findIndex((d) => d.x === cx && d.y === cy);
             expect(di >= 0 && doorAt(n, vm, di).open === 256 && before.doors[di]!.open === 256, `frame ${f + 1}: the player circle overlaps ${cx},${cy}`).toBe(true);
           }
-        const move = Math.hypot(got.x - before.p.x, got.y - before.p.y);
+        const move = before.pose ? 0 : Math.hypot(got.x - before.p.x, got.y - before.p.y);
         maxMove = Math.max(maxMove, move);
         expect(move, `frame ${f + 1}: moved ${move}`).toBeLessThanOrEqual(K.P_RAD!);
         if (got.x === before.p.x && want.x === before.p.x && held & 12) blockedX++;
@@ -128,14 +175,18 @@ describe('M27 world', () => {
         let ammo = before.ammo;
         map.props.forEach((p, i) => {
           const sp = propSprite[i]!;
-          let want = before.alive[i]!;
-          if (want && sp.pick && Math.abs(got.x - Math.round(p.x * 256)) < K.P_RAD! + K.PICK_HALF! && Math.abs(got.y - Math.round(p.y * 256)) < K.P_RAD! + K.PICK_HALF!) {
-            want = 0;
+          let alive0 = before.alive[i]!;
+          // M29 (DESIGN §6.1): a medkit only below HP_MAX (health after this frame's leap hits); ammunition only below
+          // AMMO_MAX (the reserve after the weapon's step: combat.test.ts follows it exactly, here the engine's choice)
+          const hpAtWorld = before.hp - K.KRYP_DMG! * (vm.read16(n.S('hits_taken')) - before.hits);
+          const needed = sp.pick === 1 ? hpAtWorld < K.HP_MAX! : !alive(n, vm, i) || s16(vm.read16(n.S('w_res'))) < K.AMMO_MAX!;
+          if (alive0 && sp.pick && needed && Math.abs(got.x - Math.round(p.x * 256)) < K.P_RAD! + K.PICK_HALF! && Math.abs(got.y - Math.round(p.y * 256)) < K.P_RAD! + K.PICK_HALF!) {
+            alive0 = 0;
             if (sp.pick === 1) med++;
             else ammo++;
             picks++;
           }
-          expect(alive(n, vm, i), `frame ${f + 1}: prop ${i} alive`).toBe(want);
+          expect(alive(n, vm, i), `frame ${f + 1}: prop ${i} alive`).toBe(alive0);
         });
         expect([vm.read16(n.S('picked_med')), vm.read16(n.S('picked_ammo'))], `frame ${f + 1}: pickups`).toEqual([med, ammo]);
         // the player never overlaps a blocking prop
@@ -163,7 +214,7 @@ describe('M27 world', () => {
         expect(lockedRefused.size).toBe(1);
       }
       if (name === 'm27-walk') expect(dashes).toBeGreaterThanOrEqual(4);
-      if (name === 'm28-props') expect(picks).toBeGreaterThanOrEqual(1);
+      if (name === 'm29-combat') expect(picks).toBeGreaterThanOrEqual(2); // a medkit (after a hit) and ammunition
       console.log(`[world] ${name}: ${picks} pickups`);
     });
 

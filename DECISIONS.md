@@ -917,3 +917,38 @@ own near plane BOX_NEAR = 0.125 cell; the clip is exact (a b / c) instead of six
 as 1/z up close); h is stepped in 1/32 px (h up to 788), fog index clamped at 512 again. The sweep is now a test
 (`boxes.test.ts`, "touching every box"): 0 columns missing. The replays never touched a box, so the per-image oracle
 could not catch it.
+
+## D-045 - NADIR M29: the shotgun, Kryp, health and restart; three-frame images
+Date: 2026-10-30 - Milestone: M29
+Decision:
+- **Exact, testable rules over physics:** pellets are 5 rays at fixed angle offsets; a pellet hits the nearest
+  living enemy whose centre lies ahead within RANGE and within E_HIT of the ray (the enemy radius plus aim assist:
+  "fattened" targets instead of an angle snap, so no atan is needed) and that the player can see (the line-of-sight
+  rule, not a wall cast: one rule for AI and hits, 1 LOS per candidate per shot). Products are byte-split and
+  truncated towards zero, steps use an octagonal norm and f = V 256 / L, so a 30-line TypeScript model reproduces
+  every frame bit for bit (combat.test.ts compares the whole RAM state of weapon, enemies and health every frame).
+- **Line of sight** samples the segment every half cell (N = max >> 7 + 1) with an exact floor(|d| k / N)
+  stepping; masked cells see-through, doors at >= 128 open. Checked every 4th frame per enemy (phase = index) within
+  SIGHT: ~430-920 checks per replay.
+- **Enemies are prop entries** after the static props (the prop table grew to 32, SPR_CAND to 32): the sprite code
+  draws them without per-cell tables; their sprite type is the animation frame. Kryp art: 12 frames of 14 x 22
+  generated from rectangles (`art/sprites.txt`, map char `-`).
+- **Weapon art as MAP tiles** (`art/weapon.txt`, 39 unique tiles, 1.2 KB ROM): MAP and SPR cost one syscall each,
+  the cheapest way to draw a 64 x 48 weapon; pump and flash are separate small maps.
+- **Restart = the start routine** (`game_reset`, called by init too), so "restart equals a fresh start" holds by
+  construction and is tested as a RAM comparison of the game state one frame after it.
+- **Pacing (DESIGN §3.11):** the game logic adds ~1 000-1 500 cycles per frame; PACE_EST lowered to 7 000 and,
+  new, images whose rays alone estimate >= PACE_HEAVY (14 000) take three frames (rays, sprite choice, drawing):
+  ~5 % of images. Tried and abandoned: moving the sprite choice into the drawing frame for every paced image
+  (drawing frames of mask-heavy images went to 30 683) and lowering PACE_EST alone (the cast frames of the heaviest
+  images still reached 26 330).
+- The bot fights by itself (turn to the nearest alerted enemy in sight within 7 cells, hold A), so every route
+  survives the enemies; m29-combat lets one leap land first, m29-death never fights.
+- **Sprite h up close (DESIGN §3.12):** a Kryp can stand 0.25 cell from the camera (270 px tall); z in u8.8 gave
+  1.8 px and z in 1/1024 1.15 px of height error against the +-1 px criterion. Sprites nearer than ~1 cell take h
+  from z in 1/4096 cell (exact products summed, one rounding) with 16-bit DIVs (integer + four 2-bit steps); a
+  32-bit muldiv here cost ~600 cycles in a busy frame and pushed m27-doors to 25 046 (abandoned).
+Measured: every frame of the eight replays <= 24 388 cycles; the bot kills all six Kryp in the tours (9-13 shots).
+ROM 31.2 KB of 32 (code 18.8 KB, data 12.5 KB; cartridge 28.7 KB): M30's budget gate starts nearly full.
+Revisit if: M30's budget gate needs ROM (the Kryp frames are ~1 KB of rectangle lists), or the human finds the aim
+assist too generous (E_HIT).

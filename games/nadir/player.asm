@@ -258,21 +258,65 @@ player:
     ST [tap_tick], r0
     RET
 
-; r0 = x, r1 = y (u8.8) -> Z clear (JNZ) if the box +-P_RAD around (x, y) touches a cell that is not passable or
-; overlaps a blocking prop (DESIGN §3.12). Clobbers r0-r4.
+; r0 = x, r1 = y (u8.8) -> Z clear (JNZ) if the player's box +-P_RAD around (x, y) touches a cell that is not
+; passable, overlaps a blocking prop near the player's cell (DESIGN §3.12) or a living enemy's box (§6.3).
+; Clobbers r0-r4.
 blocked:
+    PUSH r0
+    PUSH r1
+    LDI r2, P_RAD
+    LDI r3, pnear
+    CALL box_free
+    POP r1
+    POP r0
+    JNZ @hit
+    LDI r4, enemies                 ; |x - ex| < P_RAD + E_RAD and |y - ey| < P_RAD + E_RAD
+@en:
+    CMP r4, enemies + NUM_ENEMIES * E_SIZE
+    JAE @free
+    LDB r2, [r4 + E_ST]
+    CMP r2, ST_DEAD
+    JEQ @ne
+    LD r2, [r4 + E_X]
+    SUB r2, r0
+    ADD r2, P_RAD + E_RAD - 1
+    CMP r2, 2 * (P_RAD + E_RAD) - 1
+    JAE @ne
+    LD r2, [r4 + E_Y]
+    SUB r2, r1
+    ADD r2, P_RAD + E_RAD - 1
+    CMP r2, 2 * (P_RAD + E_RAD) - 1
+    JAE @ne
+    CMP r4, 0                       ; blocked: Z clear
+    RET
+@ne:
+    ADD r4, E_SIZE
+    JMP @en
+@free:
+    CMP r4, r4
+@hit:
+    RET
+
+; r0 = x, r1 = y (u8.8), r2 = half size, r3 = a 3-byte set of nearby props -> Z clear (JNZ) if the box +-r2
+; around (x, y) touches a cell that is not passable or overlaps a blocking prop of the set. Clobbers r0-r4.
+.var bk_r
+.var bk_set
+box_free:
     ST [bk_x], r0
     ST [bk_y], r1
+    ST [bk_r], r2
+    ST [bk_set], r3
+    MOV r4, r2
     MOV r2, r0
-    SUB r2, P_RAD
+    SUB r2, r4
     SHR r2, 8                       ; left column
-    ADD r0, P_RAD
+    ADD r0, r4
     SHR r0, 8                       ; right column
     MOV r3, r1
-    SUB r3, P_RAD
+    SUB r3, r4
     SHR r3, 8
     SHL r3, 5                       ; top row * 32
-    ADD r1, P_RAD
+    ADD r1, r4
     SHR r1, 8
     SHL r1, 5                       ; bottom row * 32
     MOV r4, r3
@@ -291,24 +335,27 @@ blocked:
     ADD r4, r0
     CALL passable
     JNZ @hit
-    ; ---- blocking props: |x - px| < P_RAD + half and |y - py| < P_RAD + half (none near: nothing to test)
-    LDB r4, [pnear]
-    LDB r0, [pnear + 1]
+    ; ---- blocking props: |x - px| < r + half and |y - py| < r + half (none near: nothing to test)
+    LD r3, [bk_set]
+    LDB r4, [r3]
+    LDB r0, [r3 + 1]
     OR r4, r0
-    LDB r0, [pnear + 2]
+    LDB r0, [r3 + 2]
     OR r4, r0
     JZ @free
     LDI r4, props
 @prop:
     CMP r4, props + NUM_PROPS * PROP_SIZE
     JAE @free
-    MOV r0, r4                      ; only the props near the player's cell
+    MOV r0, r4                      ; only the props in the set
     SUB r0, props
     SHR r0, 3
     MOV r1, r0
     AND r1, 7
     SHR r0, 3
-    LDB r0, [r0 + pnear]
+    LD r3, [bk_set]
+    ADD r0, r3
+    LDB r0, [r0]
     SHR r0, r1
     AND r0, 1
     JZ @np
@@ -317,7 +364,9 @@ blocked:
     LD r2, [r2 + spr_type + 4]      ; half-size, 0 = not blocking
     CMP r2, 0
     JEQ @np
-    ADD r2, P_RAD - 1
+    LD r0, [bk_r]
+    ADD r2, r0
+    SUB r2, 1
     MOV r0, r2
     SHL r0, 1
     ADD r0, 1                       ; inside if d + reach - 1 < 2 reach - 1

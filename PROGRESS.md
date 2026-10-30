@@ -49,13 +49,20 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 - [ ] M26 Renderer prototype (risk gate) — built and verified; **cycle gate fails (19.2k / 15.6k vs 14k / 11k), human decision, D-040**
 - [ ] M27 Player, collision, doors, masked walls (feel build) — built and verified; **cycle gate fails (33.8k per image vs 16k), D-042**
 - [x] M28 Sprites and props — 3D boxes (M28b, D-044); prop drawing 9 991 vs 5 000 cycles per frame **accepted by the human** (2026-10-30), the gate stays red in `nadir-gate` as a measurement
-- [ ] M29 Weapon, combat, the first enemy
+- [x] M29 Weapon, combat, the first enemy (D-045; the M26/M27/M28 cycle gates stay red, see below)
 - [ ] M30 Atmosphere, effects, the second enemy (budget gate)
 - [ ] M31 The vertical slice and the game around it
 - [ ] M32 Sound, polish, delivery
 
 ## Current work
 
+Part 4: M29 done (D-045): the bolt shotgun (MAP art, sway, recoil, pump, reload, muzzle flash that lights the
+image), 5 pellets with aim assist and line of sight, Kryp (12 animation frames, idle/alert/chase/windup/leap/
+recover/pain/dead), health, medkits and ammunition only when needed, death and restart, a minimal HUD, green hit
+sparks; the bot fights by itself. Tested automatically: an independent model of DESIGN §6 equals the RAM state of
+weapon, every pellet, every enemy and the player's health in every frame of eight replays; the restart equals a
+fresh start (RAM); the flash's light in every column. Every frame <= 24 388 cycles (three-frame images for the
+heaviest views). ROM 31.2 KB of 32: M30 starts nearly full. Not verified: how it plays on a phone.
 Part 4: M28b done (D-044), on the human's "the objects are two-dimensional, especially the boxes": crates and
 consoles are real axis-aligned 3D boxes (flat-shaded sides with per-column light by the walls' rule, lid, crate
 frame and cross brace, console screens); round props and pickups stay billboards (barrel with cylinder shading).
@@ -143,10 +150,11 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 ## Blocked / needs human
 
-- **NADIR cycle gates (D-040, D-042, D-043, D-044):** per image (rays + drawing) the whole level costs (M28b) max
-  46 613 / mean 18 000-31 100 cycles (M28: max 42 288 / mean 17 900-26 800) (M27: max 33 753 / mean 17 000-18 800) against M26's 14 000 / 11 000 and M27's 16 000 (`nadir-gate`, red as specified). The hard
+- **NADIR cycle gates (D-040, D-042, D-043, D-044):** per image (rays + drawing) the whole level costs (M29) max
+  50 712 / mean 19 500-33 600 cycles (M28: max 42 288 / mean 17 900-26 800); M28 prop drawing 10 201 (accepted) (M27: max 33 753 / mean 17 000-18 800) against M26's 14 000 / 11 000 and M27's 16 000 (`nadir-gate`, red as specified). The hard
   25 000 per frame is met by adaptive pacing (mask-heavy views draw at 30 images/s). Per the human's "proceed per your
   recommendations": the gate is re-derived after M28-M29 with measured sprite and logic costs; floor layer kept.
+- **NADIR ROM 31.2 KB of 32 KB after M29 (D-045):** M30's budget gate starts nearly full; its cut list will apply.
 - **NADIR M27 feel test (manual, PLAN Manual acceptance 2):** scan `demo/nadir.gif`, try S2 on a phone (B walks,
   double tap = side step); say if S1 should be the default. Not verified by me (no device).
 

@@ -86,6 +86,12 @@ ray_frame:
     ST [rcam_s8], r4
     LD r4, [tick]
     ST [rtick], r4
+    LD r4, [w_flash]                ; the muzzle flash lights this image (DESIGN §6.1)
+    CMP r4, 0
+    JEQ @fl0
+    LDI r4, FLASH_LIGHT
+@fl0:
+    ST [rflash], r4
     LDI r4, 0
     ST [mcount], r4
     ST [ncast], r4

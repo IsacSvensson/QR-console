@@ -17,9 +17,10 @@ SR_LOD   = 18
 SR_TYPE  = 20                       ; address of its spr_type entry
 SR_CELL  = 22                       ; its map cell (light)
 SR_SIZE  = 58                       ; (boxes keep their corners from byte 24 on: boxes.asm)
-SPR_CAND = 24                       ; candidates at most (all props)
+SPR_CAND = 32                       ; candidates at most (all props and enemies)
 
 .var spr_cn                         ; candidates this image
+.var spr_img                        ; images whose sprites were chosen (tests)
 .var spr_o0                         ; first drawn entry of spr_ord (the farthest ones are dropped)
 .var spr_rects                      ; rectangles drawn this image (after the budget)
 .var spr_cand, SPR_CAND * SR_SIZE
@@ -65,6 +66,9 @@ in_set:
 
 ; ---- after cast_all: candidates, order, LODs and budget, spr_hc --------------------------------------------
 spr_frame:
+    LD r0, [spr_img]                ; (tests: which frame chose the sprites)
+    ADD r0, 1
+    ST [spr_img], r0
     LDI r0, spr_hc
     LDI r1, 0
     LDI r2, 2 * COLS
@@ -92,11 +96,14 @@ spr_frame:
     CALL prop_set
     LDI r6, props
 @prop:
-    CMP r6, props + NUM_PROPS * PROP_SIZE
+    CMP r6, props + (NUM_PROPS + NUM_ENEMIES) * PROP_SIZE
     JAE @sort
+    CMP r6, props + NUM_PROPS * PROP_SIZE
+    JAE @dyn                        ; an enemy (DESIGN §6.3): it moves, no per-cell table
     LDI r7, pvs_img
     CALL in_set
     JZ @next
+@dyn:
     LDB r0, [r6 + P_ALIVE]
     CMP r0, 0
     JEQ @next
@@ -191,6 +198,56 @@ spr_frame:
     CALL smul12
     POP r1
     SUB r1, r0                      ; lat in 1/1024 cell
+    ; h with its fraction in eighths (h8): from z in 1/4096 cell (exact products, one rounding) for a sprite nearer
+    ; than ~1 cell (DESIGN §3.12: a Kryp up close), else from z in u8.8
+    PUSH r1
+    CMP r7, 1008
+    JAE @coarse
+    MOV r0, r4
+    LD r1, [rcam_c12]
+    CALL smul12r
+    PUSH r0
+    MOV r0, r5
+    LD r1, [rcam_s12]
+    CALL smul12r
+    POP r1
+    ADD r1, r0                      ; z4096 (< 4096)
+    LDI r0, F256                    ; 2 h8 = 256 F256 / z4096: the integer, then four 2-bit steps (16-bit DIVs)
+    MOV r2, r0
+    DIV r0, r1
+    MOD r2, r1
+    SHL r0, 8
+    LDI r4, 6
+@q:
+    SHL r2, 2
+    MOV r3, r2
+    DIV r3, r1
+    MOD r2, r1
+    SHL r3, r4
+    ADD r0, r3
+    SUB r4, 2
+    JGE @q
+    ADD r0, 1
+    SHR r0, 1                       ; h8, rounded
+    JMP @hd
+@coarse:
+    MOV r2, r7
+    ADD r2, 2
+    SHR r2, 2                       ; z, u8.8
+    LDI r0, F256
+    DIV r0, r2                      ; h
+    LDI r3, F256                    ; f = ((F256 mod z) 8 + z / 2) / z, eighths (rounded)
+    MOD r3, r2
+    SHL r3, 3
+    MOV r1, r2
+    SHR r1, 1
+    ADD r3, r1
+    DIV r3, r2
+    SHL r0, 3
+    ADD r0, r3                      ; h8
+@hd:
+    POP r1
+    MOV r2, r0
     ADD r7, 2
     SHR r7, 2                       ; z, u8.8 (rounded)
     ; the record
@@ -200,17 +257,12 @@ spr_frame:
     MOV r5, r0                      ; r5 = record
     ST [r5 + SR_PROP], r6
     ST [r5 + SR_Z], r7
-    LDI r0, F256
-    DIV r0, r7
-    ST [r5 + SR_H], r0              ; h = F256 / z
+    MOV r0, r2
+    MOV r3, r0
+    AND r3, 7                       ; f
+    SHR r0, 3
+    ST [r5 + SR_H], r0              ; h
     MOV r4, r0
-    LDI r3, F256                    ; and its fraction f = ((F256 mod z) 8 + z / 2) / z, eighths (rounded)
-    MOD r3, r7
-    SHL r3, 3
-    MOV r0, r7
-    SHR r0, 1
-    ADD r3, r0
-    DIV r3, r7
     PUSH r3
     LDB r2, [r6 + P_TYPE]
     SHL r2, 4
@@ -447,6 +499,12 @@ spr_frame:
 smul12:
     PUSH r4
     LDI r4, 0
+    JMP smul_core
+; the same in 1/4096 cell, not rounded further: R (for |d| < 2 cells, so that |R| < 8192)
+smul12r:
+    PUSH r4
+    LDI r4, 4
+smul_core:
     CMP r0, 0
     JGE @a
     NEG r0
@@ -478,10 +536,22 @@ smul12:
 @nc:
     SHR r0, 8
     ADD r0, r2
+    MOV r2, r4
+    AND r2, 4
+    JNZ @s
+    MOV r2, r4
+    AND r2, 2
+    JNZ @f
     ADD r0, 2
     SHR r0, 2
-    CMP r4, 0
-    JEQ @p
+    JMP @s
+@f:
+    ADD r0, 1
+    SHR r0, 1
+@s:
+    MOV r2, r4
+    AND r2, 1
+    JZ @p
     NEG r0
 @p:
     POP r4
@@ -603,6 +673,58 @@ draw_sprites:
     LD r4, [r5 + SR_H]
     JMP @scan
 @nextspr:
+    ; ---- a hit enemy (DESIGN §6.2): green sparks around its chest while E_SPK runs, if it is nearer than the wall
+    LD r6, [sd_rec]
+    LD r5, [r6 + spr_ord]
+    LD r0, [r5 + SR_PROP]
+    SUB r0, props
+    SHR r0, 3
+    CMP r0, NUM_PROPS
+    JLT @ns
+    SUB r0, NUM_PROPS
+    MUL r0, E_SIZE
+    ADD r0, enemies
+    LDB r7, [r0 + E_SPK]
+    CMP r7, 0
+    JEQ @ns
+    LD r0, [r5 + SR_CX]
+    CMP r0, 0
+    JLT @ns
+    CMP r0, 127
+    JGT @ns
+    SHR r0, 1
+    SHL r0, 1
+    LD r2, [r0 + col_h]
+    LD r3, [r5 + SR_H]
+    CMP r3, r2
+    JLE @ns
+    LD r1, [r5 + SR_HGT]
+    CMP r1, 4 * SPARK_FRAMES
+    JLT @ns                         ; too small: no room for them inside its box
+    LDI r6, SPARK_FRAMES + 1
+    SUB r6, r7                      ; the sparks fly apart: 1 .. SPARK_FRAMES px
+    SHR r1, 2
+    LD r0, [r5 + SR_TOP]
+    ADD r1, r0                      ; y: a quarter down, in its centre column
+    LD r0, [r5 + SR_CX]
+    LDI r7, 3
+@sp:
+    PUSH r0
+    PUSH r1
+    LDI r2, 1
+    LDI r3, 1
+    LDI r4, 11
+    CMP r7, 1
+    JNE @sc
+    LDI r4, 14
+@sc:
+    SYS RECTFILL
+    POP r1
+    POP r0
+    ADD r1, r6
+    SUB r7, 1
+    JNZ @sp
+@ns:
     LD r6, [sd_rec]
     ADD r6, 2
     JMP @spr

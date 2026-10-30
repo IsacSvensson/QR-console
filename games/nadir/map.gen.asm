@@ -4,6 +4,7 @@ NUM_POSES = 20
 NUM_DOORS = 5
 NUM_KEYS = 1
 NUM_PROPS = 22
+NUM_ENEMIES = 6
 POSE_START = 1
 POSE_SHAFT = 2
 POSE_GRATE = 3
@@ -89,6 +90,14 @@ prop_init:
     .byte 1, 1, 0, 0
     .word 3942, 4762
     .byte 0, 1, 0, 0
+; enemies at the start (DESIGN §6.3): x, y (u8.8)
+enemy_init:
+    .word 2432, 2304
+    .word 3200, 3712
+    .word 4480, 2944
+    .word 6272, 1664
+    .word 6784, 3712
+    .word 7296, 4480
 ; key triggers: cell, key bit
 key_tab:
     .word 123, 1

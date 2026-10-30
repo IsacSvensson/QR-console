@@ -52,15 +52,17 @@ export interface RefMap {
   doors: { x: number; y: number; key: number }[];
   keys: { x: number; y: number; bit: number }[];
   props: { x: number; y: number; s: string }[];
+  /** DESIGN §6.3: the enemies at the start (K = Kryp) */
+  enemies: { x: number; y: number; t: string }[];
 }
 
 export function readRefMap(name = 'nadir'): RefMap {
-  const m: RefMap = { grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [] };
+  const m: RefMap = { grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [], enemies: [] };
   let part = '';
   for (const raw of readFileSync(join(GAME_DIR, 'levels', `${name}.map`), 'utf8').split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
-    if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props'].includes(line)) part = line;
+    if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props', 'enemies'].includes(line)) part = line;
     else if (line.startsWith('name ')) continue;
     else if (part === 'grid') m.grid.push(line);
     else if (part === 'zones') m.zones.push([...line].map(Number));
@@ -73,6 +75,9 @@ export function readRefMap(name = 'nadir'): RefMap {
     } else if (part === 'props') {
       const [x, y, ch] = line.split(/\s+/);
       m.props.push({ x: Number(x), y: Number(y), s: ch! });
+    } else if (part === 'enemies') {
+      const [x, y, t] = line.split(/\s+/);
+      m.enemies.push({ x: Number(x), y: Number(y), t: t! });
     } else if (part === 'keys') {
       const [x, y, bit] = line.split(/\s+/).map(Number);
       m.keys.push({ x: x!, y: y!, bit: bit! });

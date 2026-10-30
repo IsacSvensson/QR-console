@@ -11,7 +11,7 @@ function imageCosts(n: Nadir, name: string): number[] {
   runReplay(n, name, (f, vm) => {
     if (f === 0) return;
     pending += vm.cyclesLastFrame;
-    if (vm.read16(n.S('pace')) === 1) return;
+    if (vm.read16(n.S('pace')) !== 0) return;
     out.push(pending);
     pending = 0;
   });

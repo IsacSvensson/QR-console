@@ -106,14 +106,12 @@ describe('M28 sprites', () => {
       let seen = 0;
       const bad: string[] = [];
       const note = (s: string) => bad.length < 10 && bad.push(s);
-      let castOpen = false;
+      let lastImg = -1;
       runReplay(n, name, (f, vm) => {
-        // the records are those of the image's rays (they stay while a paced image is drawn)
-        if (vm.read16(n.S('pace')) === 1) castOpen = true;
-        else if (castOpen) {
-          castOpen = false;
-          return;
-        }
+        // checked in the frame that chose the sprites (spr_img counts them; DESIGN §3.11: with the image's camera)
+        const img = vm.read16(n.S('spr_img'));
+        if (img === lastImg) return;
+        lastImg = img;
         images++;
         const { cand, drawn } = records(n, vm);
         const cx0 = vm.read16(n.S('rcam_x'));
@@ -139,14 +137,17 @@ describe('M28 sprites', () => {
         }
         expect(drawn.map((r) => r.lod), `frame ${f + 1}: LODs`).toEqual(lods);
         // projection against floating point (DESIGN §3.12)
+        // a prop: from the map; an enemy (DESIGN §6.3): its entry in the RAM prop table
+        const nProps = map.props.length;
+        const propAt = (i: number) => (i < nProps ? map.props[i]! : { x: vm.read16(n.S('props') + 8 * i) / 256, y: vm.read16(n.S('props') + 8 * i + 2) / 256 });
         for (const r of drawn) {
           if (isBox(r)) {
             expect(r.s, `frame ${f + 1}: a box's cost in rectangles`).toBe(boxCost(r));
             continue; // boxes: boxes.test.ts
           }
           drawnN++;
-          const p = map.props[r.prop]!;
-          const sp = sprites.find((s) => s.char === p.s)!;
+          const p = propAt(r.prop);
+          const sp = sprites[r.type]!;
           const dx = Math.round(p.x * 256) - cx0;
           const dy = Math.round(p.y * 256) - cy0;
           const z = dx * Math.cos(th) + dy * Math.sin(th);
@@ -162,9 +163,10 @@ describe('M28 sprites', () => {
         }
         // every prop that shows on screen (nearer than the wall in a column it covers, by the engine's z-buffer)
         // is a candidate
-        map.props.forEach((p, i) => {
+        Array.from({ length: nProps + n.S('NUM_ENEMIES') }, (_, i) => i).forEach((i) => {
           if (vm.read8(n.S('props') + 8 * i + 5) === 0) return;
-          const sp = sprites.find((s) => s.char === p.s)!;
+          const p = propAt(i);
+          const sp = sprites[vm.read8(n.S('props') + 8 * i + 4)]!;
           if (sp.box) return; // boxes: boxes.test.ts (every box side the oracle sees is drawn)
           const dx = Math.round(p.x * 256) - cx0;
           const dy = Math.round(p.y * 256) - cy0;

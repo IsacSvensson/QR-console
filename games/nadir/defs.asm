@@ -56,7 +56,7 @@ Q_SIZE      = 32            ; (fields from 8 on: ray.asm)
 .var opt_nobob              ; 1: no head bob
 .var keys                   ; key bits held
 .var doors, 16 * DOOR_SIZE  ; the door table
-.var props, 24 * PROP_SIZE  ; the prop table
+.var props, 32 * PROP_SIZE  ; the prop table: the static props, then one entry per enemy (DESIGN §6.3)
 .var picked_med             ; pickups collected
 .var picked_ammo
 .var pvs_img, 3             ; props that may be seen from the image's camera cell (DESIGN §3.12)
@@ -87,6 +87,7 @@ Q_SIZE      = 32            ; (fields from 8 on: ray.asm)
 .var rcam_s12
 .var rbob
 .var rtick
+.var rflash                 ; FLASH_LIGHT if the muzzle flash lights this image, else 0
 .var pace                   ; 1: the rays of this image are cast, it is drawn next frame
 .var mcount                 ; columns with a masked plane in this image
 .var ncast                  ; rays cast for this image

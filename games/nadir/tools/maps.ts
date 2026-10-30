@@ -54,11 +54,13 @@ export interface GameMap {
   doors: Door[];
   keys: KeyTrigger[];
   props: Prop[];
+  /** DESIGN §6.3: enemies at the start (type K = Kryp) */
+  enemies: { x: number; y: number; t: string }[];
 }
 
 export function readMap(name = 'nadir'): GameMap {
   const lines = readFileSync(join(GAME_DIR, 'levels', `${name}.map`), 'utf8').split(/\r?\n/);
-  const m: GameMap = { name: '', W: k('MAP_W'), H: k('MAP_H'), grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [] };
+  const m: GameMap = { name: '', W: k('MAP_W'), H: k('MAP_H'), grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [], enemies: [] };
   let part = '';
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!.trim();
@@ -66,7 +68,7 @@ export function readMap(name = 'nadir'): GameMap {
     if (!line || line.startsWith('#')) continue;
     const [kw, ...args] = line.split(/\s+/);
     if (kw === 'name') m.name = args.join(' ');
-    else if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props'].includes(kw!)) part = kw!;
+    else if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props', 'enemies'].includes(kw!)) part = kw!;
     else if (part === 'grid') {
       if (line.length !== m.W) throw new Error(`${where}: grid row has ${line.length} cells, expected ${m.W}`);
       m.grid.push(line);
@@ -81,6 +83,9 @@ export function readMap(name = 'nadir'): GameMap {
       m.doors.push({ x: x!, y: y!, key: key! });
     } else if (part === 'props') {
       m.props.push({ x: Number(kw), y: Number(args[0]), s: args[1]! });
+    } else if (part === 'enemies') {
+      if (args[1] !== 'K') throw new Error(`${where}: enemy type must be K (Kryp)`);
+      m.enemies.push({ x: Number(kw), y: Number(args[0]), t: args[1] });
     } else if (part === 'keys') {
       const [x, y, bit] = [kw, ...args].map(Number);
       m.keys.push({ x: x!, y: y!, bit: bit! });
@@ -261,7 +266,14 @@ export function checkMap(m: GameMap) {
   const sight = longestSight(m);
   if (sight.d > k('MAX_SIGHT')) throw new Error(`${m.name}: a sight line of ${sight.d.toFixed(2)} cells from ${sight.x},${sight.y} at ${sight.deg.toFixed(1)} deg (MAX_SIGHT ${k('MAX_SIGHT')})`);
   const sprites = readSprites();
-  if (m.props.length > 24) throw new Error(`${m.name}: at most 24 props`);
+  if (m.props.length > 24) throw new Error(`${m.name}: at most 24 props (the per-cell tables hold 24 bits)`);
+  if (m.props.length + m.enemies.length > 32) throw new Error(`${m.name}: at most 32 props and enemies (the prop table)`);
+  if (m.enemies.length > k('MAX_ENEMIES')) throw new Error(`${m.name}: at most ${k('MAX_ENEMIES')} enemies`);
+  for (const e of m.enemies) {
+    const r = k('E_RAD') / 256;
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const)
+      if (solidAt(m, Math.floor(e.x + dx * r), Math.floor(e.y + dy * r))) throw new Error(`${m.name}: the enemy at ${e.x},${e.y} touches a wall`);
+  }
   for (const p of m.props) {
     const sp = sprites.find((s) => s.char === p.s);
     if (!sp) throw new Error(`${m.name}: unknown sprite '${p.s}' at ${p.x},${p.y}`);
@@ -361,6 +373,7 @@ export function mapAsm(m: GameMap): string {
     `NUM_DOORS = ${m.doors.length}`,
     `NUM_KEYS = ${m.keys.length}`,
     `NUM_PROPS = ${m.props.length}`,
+    `NUM_ENEMIES = ${m.enemies.length}`,
     ...m.poses.map((p, i) => `POSE_${p.name.toUpperCase()} = ${i + 1}`),
     '',
     '.data',
@@ -373,6 +386,9 @@ export function mapAsm(m: GameMap): string {
     '; props (DESIGN §3.12), copied to the RAM prop table by init: x, y (u8.8), sprite type, alive',
     'prop_init:',
     ...m.props.map((p) => `    .word ${fix(p.x)}, ${fix(p.y)}\n    .byte ${readSprites().findIndex((s) => s.char === p.s)}, 1, 0, 0`),
+    '; enemies at the start (DESIGN §6.3): x, y (u8.8)',
+    'enemy_init:',
+    ...m.enemies.map((e) => `    .word ${fix(e.x)}, ${fix(e.y)}`),
     '; key triggers: cell, key bit',
     'key_tab:',
     ...m.keys.map((t) => `    .word ${t.y * m.W + t.x}, ${t.bit}`),

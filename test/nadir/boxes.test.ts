@@ -50,6 +50,7 @@ describe('M28 3D boxes', () => {
         const th = ((vm.read16(n.S('rcam_a')) + 0.5) * 2 * Math.PI) / 4096;
         const hor = 64 + s16(vm.read16(n.S('rbob')));
         const tick = vm.read16(n.S('rtick'));
+        const flash = vm.read16(n.S('rflash'));
         if (any) images++;
         for (let c = 0; c < 64; c++) {
           const face = rd(vm, 'col_bface', c);
@@ -102,7 +103,7 @@ describe('M28 3D boxes', () => {
           else note(`frame ${f + 1} col ${c}: top ${top}, oracle ${topf.toFixed(2)}`);
           const pr = map.props[best.prop]!;
           const lvl = rd(vm, 'col_blvl', c);
-          const wantL = refLevel(map, light, Math.floor(pr.y) * W + Math.floor(pr.x), h, c, tick, best.side < 2 ? 1 : 0);
+          const wantL = refLevel(map, light, Math.floor(pr.y) * W + Math.floor(pr.x), h, c, tick, (best.side < 2 ? 1 : 0) - flash);
           if (lvl === wantL) lvlOk++;
           else note(`frame ${f + 1} col ${c}: level ${lvl}, rule ${wantL}`);
         }

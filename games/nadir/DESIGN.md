@@ -325,7 +325,7 @@ eftersom `DOOR_REACH` är större än spelarens halva låda plus en halv cell ka
 | `DOOR_WAIT` | 90 | bildrutor en öppen dörr väntar efter att spelaren gått |
 | `DOOR_REACH` | 384 | avstånd (u8.8, per axel) från dörrens mitt som öppnar den: 1,5 celler |
 
-### 3.11 Adaptiv pacing (M27, M28)
+### 3.11 Adaptiv pacing (M27, M28, M29)
 
 En bild kostar strålar (fas 1) plus ritning (fas 2). Faserna är var för sig långt under 25 000 cykler, men
 tillsammans kan de gå över. Därför skattas bildens kostnad efter fas 1 (strålar och spriteurval) med
@@ -341,12 +341,20 @@ bildrutor utan pacing; största underskattning 4 703 cykler). Gränsen valdes ef
 kostar ingen bildruta i repriserna mer än 24 402 (M27: en enklare regel, minst 8 maskade kolumner). Material som
 inte är kompilerade (`nocompile`, organiskt i kärnan) ingår inte i skattningen; de syns i marginalen.
 
+**M29:** spelets logik (fiender, vapen, HUD) kostar ~1 000–1 500 cykler i varje bildruta, så gränsen sänktes till
+7 000 efter mätning. **Tunga bilder:** är skattningen redan efter strålarna (utan spritarna) minst `PACE_HEAVY`
+tar bilden **tre** bildrutor: strålarna, sedan spriteurvalet (`pace` = 2), sedan ritningen (`pace` = 1), alltid
+från bildens kamera. Det gäller de dyraste vyerna (maskade väggar och många föremål, ~5 % av bilderna i
+repriserna): sådana bilder kostar upp till ~50 000 cykler och ryms inte på två bildrutor med logiken. Mätt med
+7 000 / 14 000: ingen bildruta i de åtta repriserna över 24 388 (D-045).
+
 | Konstant | Värde | Betydelse |
 |---|---|---|
+| `PACE_HEAVY` | 14000 | skattningen efter strålarna som gör att bilden tar tre bildrutor |
 | `PACE_W_CAST` | 264 | vikt per kastad stråle |
 | `PACE_W_MASK` | 160 | vikt per maskad kolumn |
 | `PACE_W_RECT` | 164 | vikt per spriterektangel |
-| `PACE_EST` | 8000 | skattningen som gör att bilden ritas i nästa bildruta |
+| `PACE_EST` | 7000 | skattningen som gör att bilden ritas i nästa bildruta |
 
 ### 3.12 Sprites och rekvisita (M28)
 
@@ -367,7 +375,10 @@ genomgångbar) och plockbar sort (0 = nej, 1 = medkit, 2 = ammunition). K = roun
 
 **Projektion** av en prop i (px, py) (u8.8), med dx = px − rcam_x, dy = py − rcam_y och bildens cos/sin i s1.12
 (halvstegstabellen sin_h >> 2): z = dx · cos + dy · sin, lat = dy · cos − dx · sin, räknade i 1/1024 cell (var
-produkt / 1024 avrundad, bytevis delad), z sedan avrundad till u8.8; h = ⌊F256 / z⌋ (vägghöjden på det djupet) med bråket f = round(8 · (F256 mod z) / z) (åttondelar);
+produkt / 1024 avrundad, bytevis delad); h med bråket f i åttondelar: h8 = 8 ⌊F256 / z⌋ + round(8 (F256 mod z) / z) med z avrundad
+till u8.8; men för en sprite närmare än ~1 cell (z₁₀₂₄ < 1008) från z räknat en gång till i 1/4096 cell (de
+oavrundade produkterna summerade): h8 = round(128 F256 / z₄₀₉₆), heltalet och fyra steg om 2 bitar med 16-bitars
+divisioner (M29: en Kryp 0,25 cell bort är 270 px hög och behöver z på ±0,1 %); h = h8 >> 3, f = h8 & 7;
 `s = ((h + f/8) · K) / 32` (1/64 px), spritens höjd `hgt = (källhöjd · s + 32) >> 6`, bredd
 `wid = (källbredd · s + 32) >> 6`, mitt `cx = 64 + lat · (h + f/8) / 256` (produkterna avrundade), vänsterkant `cx − wid / 2`, underkant på golvet `hor + h / 2`, överkant
 underkant − hgt. Testet jämför mitt-x och höjd med flyttal (±1 px). En prop ritas om z ≥ `SPR_NEAR`, z ≤ `SPR_FAR` och lådan [vänster,
@@ -544,11 +555,14 @@ Tillstånd `w_state`: 0 REDO, 1 SKOTT, 2 PUMP, 3 LADDA; `w_t` = bildrutor i till
 - **REDO:** hålls A (`BTN`) och `w_mag` > 0 → SKOTT (avfyras i samma bildruta). Är `w_mag` = 0 och `w_res` > 0 →
   LADDA. Annars inget.
 - **SKOTT** varar `FIRE_FRAMES` bildrutor, sedan PUMP. I första bildrutan: `w_mag` − 1, `shots` + 1, hagelträffarna
-  (§6.2), och mynningsblixten: `w_flash` = `FLASH_FRAMES`.
-- **PUMP** varar `PUMP_FRAMES`, sedan REDO. (Skottcykel 20 bildrutor: tre skott per sekund.)
+  (§6.2), mynningsblixten `w_flash` = `FLASH_FRAMES` och ljudet `noise` = 1 (fienderna hör det i nästa bildruta,
+  som sedan nollställer det).
+- **PUMP** varar `PUMP_FRAMES`, sedan REDO. `w_t` ökar först i varje bildruta; ett tillstånd lämnas i den
+  bildruta där `w_t` når sin längd (skottcykel 21 bildrutor: knappt tre skott per sekund).
 - **LADDA** varar `RELOAD_FRAMES`; i sista bildrutan n = min(`MAG` − `w_mag`, `w_res`): `w_mag` + n, `w_res` − n;
   sedan REDO.
-- `w_flash` minskar med 1 per bildruta (efter vapnets steg) ned till 0. **Mynningsblixten:** en bild vars strålar
+- `w_flash` minskar med 1 först i vapnets steg (ned till 0); ett skott sätter den till `FLASH_FRAMES`, så den är
+  > 0 i exakt `FLASH_FRAMES` bildrutor. **Mynningsblixten:** en bild vars strålar
   kastas när `w_flash` > 0 (`rflash` = 1) har ljusnivån `FLASH_LIGHT` steg ljusare i varje kolumn (väggar, maskade
   plan, sprites och lådor: spannbasen minus `FLASH_LIGHT`, sedan klämning som i §3.5).
 - Start: `w_mag` = `MAG`, `w_res` = `AMMO_START`. **Plock** (§3.12) gäller bara om det behövs: medkit om `hp` <
@@ -568,8 +582,9 @@ spelarens (u8.8):
 - siktlinjen (§6.4) från spelaren till fienden är fri.
 Bland sådana fiender träffas den med minst t (lika: lägst index). Skadan = `dmg_tab[t >> 9]` = 8, 6, 4, 2 för
 t i [0, 2), [2, 4), [4, 6), [6, 8] celler (t = 8 celler räknas till sista steget). Hagelutfallen lagras (`pel_hit[k]` = fiendeindex eller 255, `pel_dmg[k]`), skadan dras av i
-ordning k = −2 … 2. En träffad fiende får `e_hit` = `SPARK_FRAMES` (gnistor vid fienden) och går till SMÄRTA, eller
-DÖD om hp ≤ 0 (§6.3).
+ordning k = −2 … 2. En träffad fiende får `E_SPK` = `SPARK_FRAMES` (tre gnistor i dess mittkolumn, en
+fjärdedel ned, som flyger isär 1 px per bildruta; bara om den syns där och är minst `4 · SPARK_FRAMES` px hög) och
+går till SMÄRTA, eller DÖD om hp ≤ 0 (§6.3).
 
 ### 6.3 Kryp
 
@@ -591,10 +606,14 @@ sprite-typ = aktuell animationsruta; döda ligger kvar som lik).
 
 Från 0–6 går en fiende till 6 SMÄRTA när den träffas och överlever, till 7 DÖD när hp ≤ 0 (i vapnets steg).
 - **Avstånd** = max(|d_x|, |d_y|) + min(|d_x|, |d_y|) / 2 (oktagonal norm, u8.8).
-- **Siktlinje** prövas för fiende i när (tick + i) & 3 = 0 och avståndet ≤ `SIGHT`, annars behålls förra
-  resultatet (utanför `SIGHT`: 0). Fri siktlinje → målet = spelarens position.
-- **Rörelse i JAKT:** d = mål − position, L = avståndet; steg = (d_x · `KRYP_V` / L, d_y · `KRYP_V` / L)
-  (heltalsdivision mot noll, L > 0). **SPRÅNG:** steget sätts vid språngets början på samma sätt med `LEAP_V`.
+- Varje bildruta: gnisttimern minskar, `E_T` ökar (högst 255), sedan (inte för döda) avstånd, siktlinje och
+  tillståndet. Ett tillstånd i tabellen "varar X" lämnas i den bildruta där `E_T` når X.
+- **Siktlinje** prövas för fiende i när (tick + i) & 3 = 0 och avståndet ≤ `SIGHT` (siktlinje från fienden till
+  spelaren, dörrarna som före bildrutan), annars behålls förra resultatet (utanför `SIGHT`: 0). Fri siktlinje →
+  målet = spelarens position. Ett skott (`noise`) väcker en VILA-fiende inom `HEAR` och ger den spelarens position.
+- **Rörelse i JAKT:** d = mål − position, L = avståndet (oktagonalt); f = ⌊V · 256 / L⌋, steg = (⌊d_x · f / 256⌋,
+  ⌊d_y · f / 256⌋), 0 om L = 0 (|d · f| ≤ V · 256: ryms i 16 bitar). **SPRÅNG:** steget sätts vid språngets början
+  på samma sätt med `LEAP_V` mot spelaren och behålls.
 - **Kollision** som spelarens (§5 steg 5, x sedan y) med halvlådan `E_RAD`, mot väggar, stängda dörrar,
   blockerande props och spelarens låda (|Δ| < `E_RAD` + `P_RAD` på båda axlarna är överlapp). Blockeras ett
   språng (någon axel stoppas) slutar det.
@@ -602,10 +621,12 @@ Från 0–6 går en fiende till 6 SMÄRTA när den träffas och överlever, till
   axlarna: spelaren `hp` − `KRYP_DMG`, `hits_taken` + 1, fienden → ÅTERHÄMTNING.
 - **Spelaren** kolliderar också med levande fienders lådor (samma överlappsregel).
 
-**Animation** (sprite-typ per tillstånd, rutorna i ordning, varje `ANIM_K` bildrutor om inget annat):
-VILA: `kryp_i0`, `kryp_i1` (16 bildrutor var), LARM: `kryp_a`, JAKT: `kryp_w0` … `kryp_w3` (6 var),
-UPPTAKT: `kryp_a`, SPRÅNG: `kryp_l`, ÅTERHÄMTNING: `kryp_i0`, SMÄRTA: `kryp_p`, DÖD: `kryp_d0`, `kryp_d1`,
-`kryp_d2` (6 var), sedan `kryp_d2` för alltid. Ett nytt tillstånd börjar om animationen.
+**Animation** (sprite-typ per tillstånd: rutorna i ordning med sina längder i bildrutor, sedan om från början;
+0 = hålls för alltid): VILA `kryp_i0` 16, `kryp_i1` 16 · LARM `kryp_a` 8 · JAKT `kryp_w0` … `kryp_w3` 6 var ·
+UPPTAKT `kryp_a` 8 · SPRÅNG `kryp_l` 8 · ÅTERHÄMTNING `kryp_i0` 16 · SMÄRTA `kryp_p` 8 · DÖD `kryp_d0` 6,
+`kryp_d1` 6, `kryp_d2` 0. Ett nytt tillstånd börjar om animationen (index och räknare 0); i bildrutan då tillståndet
+började står animationen still, annars räknas den upp ett steg efter tillståndslogiken. Proptabellens post skrivs
+efter animationen (en träff i vapnets steg syns alltså i nästa bildruta).
 
 ### 6.4 Siktlinje
 
@@ -616,8 +637,10 @@ eller utanför kartan; maskade celler (galler, fönster, räcke, låg vägg) är
 ### 6.5 Hälsa, död och omstart
 
 `hp` = `HP_MAX` vid start. `hp` ändras bara av en språngträff (−`KRYP_DMG`) och av ett medkit (+`MED_HP`, högst
-`HP_MAX`). När `hp` ≤ 0: död (`dead` = `DEATH_FRAMES`): ingen styrning, horisonten sjunker 1 px per 4 bildrutor
-(högst 16), vapnet ritas inte; när `dead` når 0 görs **omstart**: hela spelets tillstånd sätts som vid start
+`HP_MAX`). När `hp` ≤ 0 efter fiendernas steg: död (`dead` = `DEATH_FRAMES`, vapnet stegas inte den bildrutan).
+Död: spelaren och vapnet stegas inte (fienderna och världen gör det), `bob` = min(16, (`DEATH_FRAMES` − `dead`) >> 2)
+(horisonten sjunker), vapnet ritas inte; `dead` minskar först i bildrutan och när den når 0 görs i stället
+**omstart**: hela spelets tillstånd sätts som vid start
 (dörrar, props, fiender, spelaren i startläget, nycklar, vapen, hp, räknare utom `tick` och `restarts`, som ökar).
 
 **HUD (M29):** hälsa nere till vänster (`NUM`), magasin på vapnet, reserv bredvid, ett sikte (4 px) i mitten,
@@ -656,6 +679,7 @@ nyckelkort uppe till vänster. Slutlig HUD i M31.
 | `SIGHT` | 2560 | siktlinje prövas inom (10 celler) |
 | `HEAR` | 2048 | skott hörs inom (8 celler) |
 | `DEATH_FRAMES` | 90 | död till omstart |
+| `MAX_ENEMIES` | 8 | fiender i banan högst (props, högst 24, och fiender delar proptabellens 32 poster) |
 
 **Spottare** (M30): 50 HP, håller avstånd 2–8 celler, syraboll var 90:e bildruta, 12 skada + stänk.
 

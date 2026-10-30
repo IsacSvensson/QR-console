@@ -54,7 +54,7 @@ export function readSprites(text = readFileSync(join(GAME_DIR, 'art', 'sprites.t
     if (kw === 'sprite') {
       const isBox = a[2] === 'box';
       cur = { id: out.length, char: a[0]!, name: a[1]!, w: isBox ? 0 : Number(a[2]), h: isBox ? 0 : Number(a[3]), height: 0, block: 0, pick: 0, px: [] };
-      if (!/^[A-Z]$/.test(cur.char) || cur.w > 16 || cur.h > 24) throw new Error(`${where}: sprite needs a capital letter and at most 16 x 24 pixels`);
+      if (!/^[A-Z-]$/.test(cur.char) || cur.w > 16 || cur.h > 24) throw new Error(`${where}: sprite needs a capital letter (- = not placed in a map: animation frames) and at most 16 x 24 pixels`);
       if (isBox) cur.box = { face: 0, lid: 0, line: 0, style: 0 };
       out.push(cur);
       legend = new Map();
