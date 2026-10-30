@@ -71,6 +71,8 @@ ray_frame:
     LDB r4, [r2 + zmap]
     ST [cam_zone], r4
     LD r4, [bob]
+    LD r5, [shk_off]                ; the shake (DESIGN §6.8)
+    ADD r4, r5
     ST [rbob], r4
     ADD r4, HORIZON
     ST [hor], r4
@@ -92,6 +94,17 @@ ray_frame:
     LDI r4, FLASH_LIGHT
 @fl0:
     ST [rflash], r4
+    LD r4, [dl_cell]                ; the dynamic lights of this image (DESIGN §6.7)
+    ST [rdl_cell], r4
+    LD r4, [dl_cell + 2]
+    ST [rdl_cell + 2], r4
+    LD r4, [dl_i]
+    ST [rdl_i], r4
+    LD r4, [dl_i + 2]
+    ST [rdl_i + 2], r4
+    LD r5, [dl_i]
+    OR r4, r5
+    ST [rdl_any], r4
     LDI r4, 0
     ST [mcount], r4
     ST [ncast], r4
@@ -426,18 +439,24 @@ cast:
     MOV r2, r0
     LDI r4, 32767                   ; dY
     JMP @sy
-@tiny:                              ; r0 = m (0..256), r4 = |c| s1.14 -> r0 = m / |c| in u8.8, saturated
+@tiny:                              ; r0 = m (0..256), r4 = |c| s1.14 -> r0 = m / |c| in u8.8, saturated (D-046)
     CMP r0, 256
     JB @m
     LDI r0, 255
-@m:
-    SHL r0, 7
+@m:                                 ; m * 16384 / |c| in two 7-bit steps, the first one's remainder carried
+    SHL r0, 7                       ; (|c| < 128 here: the remainder << 7 fits). Clobbers r5.
+    MOV r5, r0
+    MOD r5, r4
     DIV r0, r4
     CMP r0, 256
     JB @q
-    LDI r0, 255
+    LDI r0, 255 << 7
+    RET
 @q:
     SHL r0, 7
+    SHL r5, 7
+    DIV r5, r4
+    ADD r0, r5
     RET
 ; r0 = material, r1 = t (u8.8), r2 = front cell, r3 = side, r4 = |sin| or |cos| (s1.14), r5 = hit cell,
 ; r6 = the camera's fraction on the hit axis (0.16), r7 = the component's sign, ray_mir = the mirror mask.
@@ -543,12 +562,38 @@ interp:
     SUB r2, r1                      ; 2l
     MOV r3, r7
     ADD r3, r1                      ; 2r
+    LD r4, [r2 + col_h]             ; a steep wall (h differs more than 2x, a grazing view): cast (D-046)
+    LD r5, [r3 + col_h]
+    CMP r4, r5
+    JB @wlo
+    SHL r5, 1
+    CMP r5, r4
+    JB cast
+    JMP @wok
+@wlo:
+    SHL r4, 1
+    CMP r4, r5
+    JB cast
+@wok:
     LD r4, [r2 + col_face + LAYER]
     LD r5, [r3 + col_face + LAYER]
     CMP r4, r5
     JNE @general
     CMP r4, -1
     JEQ @nomask
+    LD r1, [r2 + col_h + LAYER]     ; a steep masked plane: cast
+    LD r5, [r3 + col_h + LAYER]
+    CMP r1, r5
+    JB @mlo
+    SHL r5, 1
+    CMP r5, r1
+    JB cast
+    JMP @mok
+@mlo:
+    SHL r1, 1
+    CMP r1, r5
+    JB cast
+@mok:
     PUSH r0                         ; one masked face on both sides: the fast path on the masked layer
     PUSH r2
     PUSH r3
@@ -707,6 +752,19 @@ interp:
 @plane:
     CMP r6, 0
     JEQ @pl
+    LD r4, [r2 + col_h]             ; a steep masked plane: cast
+    LD r5, [r3 + col_h]
+    CMP r4, r5
+    JB @plo
+    SHL r5, 1
+    CMP r5, r4
+    JB @fail
+    JMP @pok
+@plo:
+    SHL r4, 1
+    CMP r4, r5
+    JB @fail
+@pok:
     LD r4, [mcount]
     ADD r4, 1
     ST [mcount], r4

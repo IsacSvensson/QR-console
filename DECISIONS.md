@@ -955,3 +955,43 @@ assist too generous (E_HIT).
 Human feedback (2026-10-30, after playing M29 on a phone): "do not like walking with B; rather B + left/right
 walks sideways". S1 (DESIGN §5, already built and tested since M27) is now the default (`ctl_s1` = 1 set by init);
 S2 stays as the flag's other value. m27-walk now walks sideways with B both ways and checks B alone does nothing.
+
+## D-046 - NADIR M30: effects, barrels, the Spottare, the stress replay and the budget gate
+Date: 2026-10-30 - Milestone: M30
+Decision:
+- **Effects as exact rules (DESIGN §6.6-6.10)** so the independent model in `combat.test.ts` follows them bit for
+  bit every frame: barrels (8 hp, chain reactions one frame later), explosions (radius 1.5 cells, damage by the
+  octagonal distance and line of sight), damage flash and direction (an 8-way marker), shake (+-2 px of the
+  horizon, never the camera), 24 particles, dynamic lights (explosion, first acid ball: strength minus the Chebyshev
+  cell distance, added to the walls', masked planes' and boxes' light rule), the Spottare (keeps 2.5-6 cells, aims,
+  spits every 90 frames) and acid balls (direct hit 12, splash 4 within 0.5 cell).
+- **Room for M30 (cut list, first steps):** sprite rectangle lists moved to xdata (one COPY per drawn sprite), rcp_h
+  and the fog tables copied from xdata into RAM at init, five rarely-near materials `nocompile`. The nocompile LOD 0
+  path drew a masked column's transparent base as black (the see-through test found it): fixed.
+- **Bugs found by the new replays and fixed in the engine:** (1) a leap that started 128-148 from the player never
+  hit (the step into the player's box was blocked whole, the hit test then saw the old position): LEAP_REACH 16 ->
+  40 >= LEAP_V, so a leap the player stops is always a hit (DESIGN §6.3); (2) the tiny-angle path of the ray setup
+  dropped the first division's remainder (h 13 % off for rays within 0.4 degrees of an axis); (3) interpolation
+  across a wall seen at a grazing angle was 4 % off (integer column angles: 1/z is only nearly linear) - columns
+  whose neighbours' heights differ more than 2x are cast; (4) the particle loop's exit skipped the live-particle
+  count; (5) enemy-vs-prop collision walked all 24 props per test (~400 cycles) - it now walks the set bits.
+- **Logic-heavy frames render nothing:** a frame that fires or explodes (~6 000 cycles of pellets, line of sight and
+  particles) skips the rendering step (`lg_heavy`), and the pacing estimate counts awake enemies (PACE_W_EN 700).
+  Tried first: deferring only the drawing (the cast frame still reached 26 547).
+- **Stress replay `m30-stress`** (control room re-laid out: two Kryp and two Spottare at the east end, the barrel
+  pair in the strip south of the BB wall, the player at the west end): 4 living enemies in view with 2 acid balls,
+  then a chain explosion (24 particles, both lights) with 4 enemies in view (two die in it); `stress.test.ts`.
+- **Oracle tolerances made consistent, not wider:** the render oracle's masked layer treats a column whose wall hit
+  is at a corner the engine passes as a corner case too (what lies behind it differs); the box oracle's edge zone
+  scales like `nearMiss`, max(0.02, t / 128). Both cases were confirmed as fixed-point corner grazes at the poses.
+Measured: every frame of the nine replays <= 24 597 cycles (stress replay 24 597); 1 021 of 18 090 images took three
+frames. ROM 30 226 B (code 22 820, data 7 406), xdata 49 469 B, cartridge 31 721 B, RAM up to 0xF6FD, deepest
+stack unchanged (< 512 B).
+**Budget gate (PLAN M30):** projected for the finished slice (DESIGN §9 table): ROM 36-38.3 KB (over 32 KB), RAM top
+0xF9C0-0xFB40 (under 0xFE00), cartridge 35-37 KB (under 40 KB). DESIGN §9's new ROM/RAM cut list applies: step 1
+(music, ambience and long texts in xdata behind a 128-byte RAM window) is a rule for M31-M32 now; steps 2-4
+(screens as overlays in idle RAM, weapon/vignette tiles in RAM, RAM freed from spr_cand and zmap) bring the
+projection to ~30-32 KB and are applied as the content lands; step 5 (losses) only by a human. Flagged in PROGRESS.
+Abandoned: more `nocompile` materials for RAM (locked door, railing, low wall: -450 B RAM, frames up to 26 182).
+Revisit if: M31's measured ROM exceeds the projection's upper bound, or the human prefers a loss from step 5 over
+the overlay work of step 2.

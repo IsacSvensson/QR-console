@@ -37,6 +37,8 @@ interface Before {
   dead: number;
   restarts: number;
   hits: number;
+  /** M30: damage taken in total (leaps, acid, explosions) */
+  dmg: number;
   /** a pending start pose (the frame after init or a restart puts the player there) */
   pose: number;
   enemies: { x: number; y: number; st: number }[];
@@ -52,6 +54,7 @@ const readBefore = (n: Nadir, vm: VM): Before => ({
   dead: vm.read16(n.S('dead')),
   restarts: vm.read16(n.S('restarts')),
   hits: vm.read16(n.S('hits_taken')),
+  dmg: vm.read16(n.S('dmg_taken')),
   pose: vm.read16(n.S('dbg_pose')),
   enemies: Array.from({ length: n.S('NUM_ENEMIES') }, (_, i) => {
     const b = n.S('enemies') + 24 * i;
@@ -133,8 +136,8 @@ describe('M27 world', () => {
           if (c !== '+') return false;
           return before.doors[map.doors.findIndex((d) => d.x === cx && d.y === cy)]!.open === 256;
         };
-        // blocking props (DESIGN §3.12): the box overlaps one if both axis distances are < P_RAD + its half-size
-        const propHit = (x: number, y: number) => map.props.some((p, i) => propSprite[i]!.block > 0 && Math.abs(x - Math.round(p.x * 256)) < K.P_RAD! + propSprite[i]!.block && Math.abs(y - Math.round(p.y * 256)) < K.P_RAD! + propSprite[i]!.block);
+        // blocking props (DESIGN §3.12; a burst barrel no longer blocks, §6.6): the box overlaps one if both axis distances are < P_RAD + its half-size
+        const propHit = (x: number, y: number) => map.props.some((p, i) => propSprite[i]!.block > 0 && before.alive[i] && Math.abs(x - Math.round(p.x * 256)) < K.P_RAD! + propSprite[i]!.block && Math.abs(y - Math.round(p.y * 256)) < K.P_RAD! + propSprite[i]!.block);
         // M29 (DESIGN §6.3): living enemies block the player too (their positions before the frame: the player moves first)
         const enemyHit = (x: number, y: number) => before.enemies.some((e) => e.st !== 7 && Math.abs(x - e.x) < K.P_RAD! + K.E_RAD! && Math.abs(y - e.y) < K.P_RAD! + K.E_RAD!);
         // a restart (DESIGN §6.5) sets everything as at the start: combat.test.ts compares it with a fresh start
@@ -181,7 +184,7 @@ describe('M27 world', () => {
           let alive0 = before.alive[i]!;
           // M29 (DESIGN §6.1): a medkit only below HP_MAX (health after this frame's leap hits); ammunition only below
           // AMMO_MAX (the reserve after the weapon's step: combat.test.ts follows it exactly, here the engine's choice)
-          const hpAtWorld = before.hp - K.KRYP_DMG! * (vm.read16(n.S('hits_taken')) - before.hits);
+          const hpAtWorld = before.hp - (vm.read16(n.S('dmg_taken')) - before.dmg);
           const needed = sp.pick === 1 ? hpAtWorld < K.HP_MAX! : !alive(n, vm, i) || s16(vm.read16(n.S('w_res'))) < K.AMMO_MAX!;
           if (alive0 && sp.pick && needed && Math.abs(got.x - Math.round(p.x * 256)) < K.P_RAD! + K.PICK_HALF! && Math.abs(got.y - Math.round(p.y * 256)) < K.P_RAD! + K.PICK_HALF!) {
             alive0 = 0;
@@ -189,6 +192,8 @@ describe('M27 world', () => {
             else ammo++;
             picks++;
           }
+          // M30 (DESIGN §6.6): a barrel bursts (combat.test.ts follows its health and the explosions exactly), never returns
+          if (sp.char === 'B' && alive0 && !alive(n, vm, i)) alive0 = 0;
           expect(alive(n, vm, i), `frame ${f + 1}: prop ${i} alive`).toBe(alive0);
         });
         expect([vm.read16(n.S('picked_med')), vm.read16(n.S('picked_ammo'))], `frame ${f + 1}: pickups`).toEqual([med, ammo]);

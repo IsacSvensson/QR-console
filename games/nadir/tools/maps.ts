@@ -54,7 +54,7 @@ export interface GameMap {
   doors: Door[];
   keys: KeyTrigger[];
   props: Prop[];
-  /** DESIGN §6.3: enemies at the start (type K = Kryp) */
+  /** DESIGN §6.3, §6.10: enemies at the start (type K = Kryp, S = Spottare) */
   enemies: { x: number; y: number; t: string }[];
 }
 
@@ -84,7 +84,7 @@ export function readMap(name = 'nadir'): GameMap {
     } else if (part === 'props') {
       m.props.push({ x: Number(kw), y: Number(args[0]), s: args[1]! });
     } else if (part === 'enemies') {
-      if (args[1] !== 'K') throw new Error(`${where}: enemy type must be K (Kryp)`);
+      if (args[1] !== 'K' && args[1] !== 'S') throw new Error(`${where}: enemy type must be K (Kryp) or S (Spottare)`);
       m.enemies.push({ x: Number(kw), y: Number(args[0]), t: args[1] });
     } else if (part === 'keys') {
       const [x, y, bit] = [kw, ...args].map(Number);
@@ -389,6 +389,9 @@ export function mapAsm(m: GameMap): string {
     '; enemies at the start (DESIGN §6.3): x, y (u8.8)',
     'enemy_init:',
     ...m.enemies.map((e) => `    .word ${fix(e.x)}, ${fix(e.y)}`),
+    '; their kinds (DESIGN §6.10): 0 Kryp, 1 Spottare',
+    'enemy_kind:',
+    ...byteLines(m.enemies.map((e) => (e.t === 'S' ? 1 : 0))),
     '; key triggers: cell, key bit',
     'key_tab:',
     ...m.keys.map((t) => `    .word ${t.y * m.W + t.x}, ${t.bit}`),

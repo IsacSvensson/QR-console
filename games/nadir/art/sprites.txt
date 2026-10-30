@@ -501,3 +501,218 @@ rows
 .svvvppppgggp.
 gggggggggggggg
 end
+sprite - spit_i0 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+.....pppp.....
+.....eppe.....
+..pppppppppp..
+.ddpppppppppp.
+.ddpppppppppp.
+.ddgggppppppp.
+.ddgggppgggpp.
+.ddgggppgggpp.
+.ddpppppgggpp.
+.ddppgggppppp.
+.ddppgggppppp.
+.ddpppppppppp.
+...dd....pp...
+...dd....pp...
+...dd....pp...
+end
+
+sprite - spit_i1 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+..............
+.....pppp.....
+.....eppe.....
+..pppppppppp..
+.ddpppppppppp.
+.ddpppppppppp.
+.ddGGGppppppp.
+.ddGGGppGGGpp.
+.ddGGGppGGGpp.
+.ddpppppGGGpp.
+.ddppGGGppppp.
+.ddppGGGppppp.
+.ddpppppppppp.
+...dd....pp...
+...dd....pp...
+end
+
+sprite - spit_w0 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+.....pppp.....
+.....eppe.....
+..pppppppppp..
+.ddpppppppppp.
+.ddpppppppppp.
+.ddgggppppppp.
+.ddgggppgggpp.
+.ddgggppgggpp.
+.ddpppppgggpp.
+.ddppgggppppp.
+.ddppgggppppp.
+.ddpppppppppp.
+..dd......pp..
+..dd......pp..
+..dd......pp..
+end
+
+sprite - spit_w1 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+..............
+.....pppp.....
+.....eppe.....
+..pppppppppp..
+.ddpppppppppp.
+.ddpppppppppp.
+.ddgggppppppp.
+.ddgggppgggpp.
+.ddgggppgggpp.
+.ddpppppgggpp.
+.ddppgggppppp.
+.ddppgggppppp.
+.ddpppppppppp.
+....dd..pp....
+....dd..pp....
+end
+
+sprite - spit_a 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+.....pppp.....
+.....eppe.....
+..ppppggpppp..
+.ddpppggppppp.
+.ddpppppppppp.
+.ddyyyppppppp.
+.ddyyyppyyypp.
+.ddyyyppyyypp.
+.ddpppppyyypp.
+.ddppyyyppppp.
+.ddppyyyppppp.
+.ddpppppppppp.
+...dd....pp...
+...dd....pp...
+...dd....pp...
+end
+
+sprite - spit_p 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+..............
+.....wwww.....
+.....ewwe.....
+..wwwwwwwwww..
+.ppwwwwwwwwww.
+.ppwwwwwwwwww.
+.ppgggwwwwwww.
+.ppgggwwgggww.
+.ppgggwwgggww.
+.ppwwwwwgggww.
+.ppwwgggwwwww.
+.ppwwgggwwwww.
+.ppwwwwwwwwww.
+...pp....ww...
+...pp....ww...
+end
+
+sprite - spit_d0 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+..............
+..............
+..............
+.....pppp.....
+.....eppe.....
+..pppppppppp..
+.ddpppppppppp.
+.ddpppppppppp.
+.ddGGGppppppp.
+.ddGGGppGGGpp.
+.ddGGGppGGGpp.
+.ddpppppGGGpp.
+.ddppGGGppppp.
+.ddppGGGppppp.
+.ddpppppppppp.
+end
+
+sprite - spit_d1 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+.ddpppppppppp.
+.ddpGGGpppppp.
+.ddpGGGpppppp.
+.ddpppppppppp.
+.ddpppppGGGGp.
+gggggggggggggg
+end
+
+sprite - spit_d2 14 16
+height 55
+block 0
+pick 0
+legend . t  p 2  d 1  g 11!  G 5  y 14!  e 14!  w 15
+rows
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+..............
+.ddpppppppppp.
+.ddpGGGpGGGGp.
+gggggggggggggg
+end

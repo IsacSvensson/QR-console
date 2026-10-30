@@ -34,6 +34,7 @@ SPR_CAND = 32                       ; candidates at most (all props and enemies)
 .var sd_cr
 .var sd_top
 .var sd_list
+.var spr_buf, 48 * 5 + 1                ; the drawn sprite's rectangle list (from xdata)
 
 ; r0 = RAM destination, r4 = map cell, r5 = 0 (the seen set) or 3 (the near set): fetches the cell's 3-byte prop set
 ; from the per-cell table in xdata (one COPY). Clobbers r0-r4.
@@ -620,13 +621,22 @@ draw_sprites:
     LDI r1, 0
     LDI r3, 32
     SYS COPY
-    ; ---- its rectangle list and scale at its LOD
+    ; ---- its rectangle list at its LOD (in xdata: copied into spr_buf, count 5 + 1 bytes) and its scale
     LD r1, [r5 + SR_LOD]
     LD r2, [r5 + SR_TYPE]
     MOV r3, r1
     SHL r3, 1
     ADD r3, r2
-    LD r3, [r3 + 6]
+    LD r4, [r3 + 6]                 ; the list's address in the bank SPR_X_HI
+    ADD r1, r2
+    LDB r3, [r1 + 12]
+    MUL r3, 5
+    ADD r3, 1
+    MOV r2, r4
+    LDI r1, SPR_X_HI
+    LDI r0, spr_buf
+    SYS COPY
+    LDI r3, spr_buf
     ST [sd_list], r3
     LD r0, [r5 + SR_S]
     ST [sd_k], r0                   ; 1/64 px per source pixel (every LOD is in source pixels)

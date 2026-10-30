@@ -17,6 +17,8 @@ E_SPK   = 15                        ; sparks: frames left, byte
 E_VX    = 16                        ; step per frame (chase is recomputed every frame; the leap keeps its own)
 E_VY    = 18
 E_LOSN  = 20                        ; line-of-sight checks made (tests), word
+E_KIND  = 22                        ; 0 Kryp, 1 Spottare (DESIGN §6.10), byte
+E_CD    = 23                        ; Spottare: frames until it may spit again, byte
 E_SIZE  = 24
 
 ST_IDLE = 0
@@ -27,6 +29,7 @@ ST_LEAP = 4
 ST_RECOVER = 5
 ST_PAIN = 6
 ST_DEAD = 7
+ST_AIM  = 8                         ; Spottare only
 
 .var enemies, MAX_ENEMIES * E_SIZE
 .var noise                          ; 1: a shot was fired last frame (enemies hear it this frame)
@@ -74,7 +77,13 @@ enemies_init:
     LD r0, [r1 + enemy_init + 2]
     ST [r5 + E_Y], r0
     ST [r5 + E_TY], r0
+    LDB r1, [r6 + enemy_kind]
+    STB [r5 + E_KIND], r1
     LDI r0, KRYP_HP
+    CMP r1, 0
+    JEQ @hp
+    LDI r0, SPIT_HP
+@hp:
     ST [r5 + E_HP], r0
     CALL en_prop
     ADD r6, 1
@@ -92,9 +101,7 @@ en_prop:
     ST [r1 + P_X], r0
     LD r0, [r5 + E_Y]
     ST [r1 + P_Y], r0
-    LDB r0, [r5 + E_ST]
-    SHL r0, 1
-    LD r0, [r0 + anim_tab]
+    CALL en_list
     LDB r2, [r5 + E_AN]
     SHL r2, 1
     ADD r0, r2
@@ -102,6 +109,16 @@ en_prop:
     STB [r1 + P_TYPE], r0
     LDI r0, 1
     STB [r1 + P_ALIVE], r0
+    RET
+
+; r5 = enemy -> r0 = its state's animation list (anim_tab by its kind: 9 states each). Clobbers r0, r2.
+en_list:
+    LDB r0, [r5 + E_KIND]
+    MUL r0, 9
+    LDB r2, [r5 + E_ST]
+    ADD r0, r2
+    SHL r0, 1
+    LD r0, [r0 + anim_tab]
     RET
 
 ; r5 = enemy, r0 = new state: enters it (timer and animation from the start). Clobbers r0.
@@ -134,9 +151,12 @@ octnorm:
     RET
 
 ; ---- per frame --------------------------------------------------------------------------------------------
+; awake enemies (states other than VILA and DÖD) after this frame: the pacing estimate (DESIGN §3.11)
+.var n_awake
 enemies_frame:
     LDI r0, 0
     ST [en_i], r0
+    ST [n_awake], r0
 @e:
     LD r6, [en_i]
     CMP r6, NUM_ENEMIES
@@ -151,6 +171,16 @@ enemies_frame:
     LD r5, [en_p]
     LD r6, [en_i]
     CALL en_prop
+    LD r5, [en_p]
+    LDB r0, [r5 + E_ST]
+    CMP r0, ST_IDLE
+    JEQ @na
+    CMP r0, ST_DEAD
+    JEQ @na
+    LD r0, [n_awake]
+    ADD r0, 1
+    ST [n_awake], r0
+@na:
     LD r0, [en_i]
     ADD r0, 1
     ST [en_i], r0
@@ -165,9 +195,7 @@ en_anim:
     LDB r0, [r5 + E_T]
     CMP r0, 0
     JEQ @new
-    LDB r0, [r5 + E_ST]
-    SHL r0, 1
-    LD r0, [r0 + anim_tab]
+    CALL en_list
     LDB r1, [r5 + E_AN]
     SHL r1, 1
     ADD r0, r1
@@ -206,6 +234,12 @@ en_step:
     ADD r0, 1
     STB [r5 + E_T], r0
 @t:
+    LDB r0, [r5 + E_CD]             ; the Spottare's cooldown
+    CMP r0, 0
+    JEQ @cd
+    SUB r0, 1
+    STB [r5 + E_CD], r0
+@cd:
     LDB r0, [r5 + E_ST]
     CMP r0, ST_DEAD
     JNE @alive
@@ -267,6 +301,8 @@ en_step:
     JEQ @leap
     CMP r0, ST_RECOVER
     JEQ @recover
+    CMP r0, ST_AIM
+    JEQ @aim
     ; ---- PAIN
     LDB r0, [r5 + E_T]
     CMP r0, PAIN_FRAMES
@@ -326,12 +362,14 @@ en_step:
     ADD r0, E_RAD + P_RAD + LEAP_REACH - 1
     CMP r0, 2 * (E_RAD + P_RAD + LEAP_REACH) - 1
     JAE @lmiss
-    LD r0, [hp]
-    SUB r0, KRYP_DMG
-    ST [hp], r0
     LD r0, [hits_taken]
     ADD r0, 1
     ST [hits_taken], r0
+    LDI r0, KRYP_DMG
+    LD r1, [r5 + E_X]
+    LD r2, [r5 + E_Y]
+    CALL hurt
+    LD r5, [en_p]
     JMP @torec
 @lmiss:
     LD r0, [en_blk]
@@ -343,7 +381,48 @@ en_step:
 @torec:
     LDI r0, ST_RECOVER
     JMP en_set
+@aim:                               ; ---- Spottare (DESIGN §6.10): aims, then spits at the player
+    LDB r0, [r5 + E_T]
+    CMP r0, AIM_FRAMES
+    JB @ret
+    CALL spit
+    LD r5, [en_p]
+    LDI r0, SPIT_FRAMES
+    STB [r5 + E_CD], r0
+    JMP @tochase
+@schase:
+    LDB r0, [r5 + E_LOS]
+    CMP r0, 0
+    JEQ @blind
+    LD r0, [en_dist]
+    LDB r1, [r5 + E_CD]
+    CMP r1, 0
+    JNE @keep
+    CMP r0, KEEP_FAR + 512 + 1
+    JAE @keep
+    LDI r0, ST_AIM
+    JMP en_set
+@keep:
+    CMP r0, KEEP_FAR + 1
+    JAE @walk                       ; far: nearer
+    CMP r0, KEEP_NEAR
+    JAE @ret                        ; in its band: it stands
+    LD r0, [r5 + E_X]               ; near: away (towards 2 position - player)
+    SHL r0, 1
+    LD r1, [cam_x]
+    SUB r0, r1
+    LD r1, [r5 + E_Y]
+    SHL r1, 1
+    LD r2, [cam_y]
+    SUB r1, r2
+    LDI r2, SPIT_V
+    CALL en_vel
+    LD r5, [en_p]
+    JMP en_move
 @chase:
+    LDB r0, [r5 + E_KIND]
+    CMP r0, 0
+    JNE @schase
     LDB r0, [r5 + E_LOS]
     CMP r0, 0
     JEQ @blind
@@ -371,6 +450,11 @@ en_step:
     LD r0, [r5 + E_TX]
     LD r1, [r5 + E_TY]
     LDI r2, KRYP_V
+    LDB r3, [r5 + E_KIND]
+    CMP r3, 0
+    JEQ @v
+    LDI r2, SPIT_V
+@v:
     CALL en_vel
     LD r5, [en_p]
     CALL en_move
@@ -597,9 +681,11 @@ los:
     RET
 
 .data
-; per state: the animation (sprite type, frames shown; 255 ends the list and it starts again; 0 frames = held)
+; per kind and state (Kryp, then Spottare; 9 states each): the animation (sprite type, frames shown; 255 ends the
+; list and it starts again; 0 frames = held)
 anim_tab:
-    .word an_idle, an_alert, an_chase, an_windup, an_leap, an_recover, an_pain, an_dead
+    .word an_idle, an_alert, an_chase, an_windup, an_leap, an_recover, an_pain, an_dead, an_windup
+    .word as_idle, as_alert, as_chase, as_alert, as_alert, as_idle, as_pain, as_dead, as_aim
 an_idle:    .byte SPR_KRYP_I0, 16, SPR_KRYP_I1, 16, 255
 an_alert:   .byte SPR_KRYP_A, 8, 255
 an_chase:   .byte SPR_KRYP_W0, 6, SPR_KRYP_W1, 6, SPR_KRYP_W2, 6, SPR_KRYP_W3, 6, 255
@@ -608,4 +694,10 @@ an_leap:    .byte SPR_KRYP_L, 8, 255
 an_recover: .byte SPR_KRYP_I0, 16, 255
 an_pain:    .byte SPR_KRYP_P, 8, 255
 an_dead:    .byte SPR_KRYP_D0, 6, SPR_KRYP_D1, 6, SPR_KRYP_D2, 0, 255
+as_idle:    .byte SPR_SPIT_I0, 16, SPR_SPIT_I1, 16, 255
+as_alert:   .byte SPR_SPIT_A, 8, 255
+as_chase:   .byte SPR_SPIT_W0, 10, SPR_SPIT_W1, 10, 255
+as_aim:     .byte SPR_SPIT_A, 4, SPR_SPIT_I1, 4, 255
+as_pain:    .byte SPR_SPIT_P, 8, 255
+as_dead:    .byte SPR_SPIT_D0, 6, SPR_SPIT_D1, 6, SPR_SPIT_D2, 0, 255
 .code

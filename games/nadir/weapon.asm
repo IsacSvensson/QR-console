@@ -15,6 +15,7 @@ W_LOAD  = 3
 .var pel_hit, PELLETS               ; per pellet of the last shot: enemy index or 255
 .var pel_dmg, PELLETS               ; and its damage
 .var sh_los, MAX_ENEMIES            ; per enemy at the last shot: 1 if it could be hit (in reach, line of sight)
+.var sh_bl, NUM_PROPS               ; per prop: 1 if it is a barrel that could be hit
 .var sh_k                           ; pellet loop
 .var sh_c                           ; its cos and sin, s.8
 .var sh_s
@@ -125,6 +126,8 @@ mt8:
 
 ; ---- a shot (DESIGN §6.2): which enemies may be hit, then the pellets one by one, damage in order
 shoot:
+    LDI r0, 1
+    ST [lg_heavy], r0               ; the image waits a frame (DESIGN §3.11)
     LDI r0, 0
     ST [sh_i], r0
 @cand:
@@ -165,6 +168,49 @@ shoot:
     ST [sh_i], r0
     JMP @cand
 @pellets:
+    LDI r0, 0                       ; the barrels that may be hit (DESIGN §6.6): whole, in reach, in sight
+    ST [sh_i], r0
+@bc:
+    LD r6, [sh_i]
+    CMP r6, NUM_PROPS
+    JAE @pel0
+    LDI r0, 0
+    STB [r6 + sh_bl], r0
+    LDB r0, [r6 + bar_hp]
+    CMP r0, 1
+    JLT @bcn
+    SHL r6, 3
+    ADD r6, props
+    LDB r0, [r6 + P_ALIVE]
+    CMP r0, 0
+    JEQ @bcn
+    LD r0, [r6 + P_X]
+    LD r1, [cam_x]
+    SUB r0, r1
+    ADD r0, RANGE + E_HIT
+    CMP r0, 2 * (RANGE + E_HIT) + 1
+    JAE @bcn
+    LD r0, [r6 + P_Y]
+    LD r1, [cam_y]
+    SUB r0, r1
+    ADD r0, RANGE + E_HIT
+    CMP r0, 2 * (RANGE + E_HIT) + 1
+    JAE @bcn
+    LD r0, [cam_x]
+    LD r1, [cam_y]
+    LD r2, [r6 + P_X]
+    LD r3, [r6 + P_Y]
+    CALL los
+    JNZ @bcn
+    LD r6, [sh_i]
+    LDI r0, 1
+    STB [r6 + sh_bl], r0
+@bcn:
+    LD r0, [sh_i]
+    ADD r0, 1
+    ST [sh_i], r0
+    JMP @bc
+@pel0:
     LDI r0, 0
     ST [sh_k], r0
 @pel:
@@ -192,7 +238,7 @@ shoot:
 @en:
     LD r6, [sh_i]
     CMP r6, NUM_ENEMIES
-    JAE @apply
+    JAE @bars
     LDB r0, [r6 + sh_los]
     CMP r0, 0
     JEQ @enext
@@ -241,6 +287,41 @@ shoot:
     ADD r0, 1
     ST [sh_i], r0
     JMP @en
+@bars:
+    LDI r0, 0                       ; the barrels: only a strictly nearer one beats an enemy
+    ST [sh_i], r0
+@bar:
+    LD r6, [sh_i]
+    CMP r6, NUM_PROPS
+    JAE @apply
+    LDB r0, [r6 + sh_bl]
+    CMP r0, 0
+    JEQ @barn
+    LDB r0, [r6 + bar_hp]
+    CMP r0, 1
+    JLT @barn                       ; burst by an earlier pellet of this shot
+    SHL r6, 3
+    ADD r6, props
+    LD r0, [r6 + P_X]
+    LD r1, [r6 + P_Y]
+    CALL @tl
+    CMP r5, 1
+    JLT @barn
+    LD r0, [sh_bt]
+    CMP r5, r0
+    JGE @barn
+    ADD r7, E_HIT
+    CMP r7, 2 * E_HIT + 1
+    JAE @barn
+    ST [sh_bt], r5
+    LD r0, [sh_i]
+    ADD r0, 128
+    ST [sh_best], r0
+@barn:
+    LD r0, [sh_i]
+    ADD r0, 1
+    ST [sh_i], r0
+    JMP @bar
 @apply:
     LD r7, [sh_k]
     LD r0, [sh_best]
@@ -248,6 +329,24 @@ shoot:
     LDI r1, 0
     CMP r0, 255
     JEQ @pd
+    CMP r0, 128
+    JB @pen
+    SUB r0, 128                     ; a barrel: its health; at 0 it explodes next frame
+    LD r1, [sh_bt]
+    SHR r1, 9
+    LDB r1, [r1 + dmg_tab]
+    LDB r2, [r0 + bar_hp]
+    SUB r2, r1
+    CMP r2, 1
+    JGE @bk
+    LDI r2, 1
+    STB [r0 + bar_boom], r2
+    ST [boom_any], r2
+    LDI r2, 0
+@bk:
+    STB [r0 + bar_hp], r2
+    JMP @pd
+@pen:
     MUL r0, E_SIZE
     ADD r0, enemies
     MOV r5, r0
@@ -275,6 +374,33 @@ shoot:
     ST [sh_k], r7
     JMP @pel
 @done:
+    RET
+; r0, r1 = a target (u8.8) -> r5 = t, r7 = lateral miss along the pellet (sh_c, sh_s). Clobbers r0-r4.
+@tl:
+    LD r2, [cam_x]
+    SUB r0, r2
+    LD r2, [cam_y]
+    SUB r1, r2
+    PUSH r0
+    PUSH r1
+    LD r1, [sh_c]
+    CALL mt8
+    MOV r5, r0
+    POP r1
+    PUSH r1
+    MOV r0, r1
+    LD r1, [sh_s]
+    CALL mt8
+    ADD r5, r0
+    POP r1
+    MOV r0, r1
+    LD r1, [sh_c]
+    CALL mt8
+    MOV r7, r0
+    POP r0
+    LD r1, [sh_s]
+    CALL mt8
+    SUB r7, r0
     RET
 
 ; ---- drawing (after the 3D view): the weapon, its flash and the HUD ---------------------------------------

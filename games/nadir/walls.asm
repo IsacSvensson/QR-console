@@ -158,6 +158,17 @@ span_light:
     SUB r0, r4
     LD r3, [rflash]                 ; the muzzle flash (DESIGN §6.1)
     SUB r0, r3
+    LD r3, [rdl_any]
+    CMP r3, 0
+    JEQ @nd
+    PUSH r1
+    PUSH r0
+    CALL dyn_light                  ; and the dynamic lights at this cell (DESIGN §6.7)
+    POP r1
+    SUB r1, r0
+    MOV r0, r1
+    POP r1
+@nd:
     ST [sp_base], r0
     SHL r1, 8
     ADD r1, shade
@@ -320,6 +331,8 @@ col_data:
     LDB r4, [r1]
     ADD r1, 1
     ST [cd_p], r1
+    CMP r4, TRANSPARENT
+    JEQ @run                        ; a masked column has no base (DESIGN §3.10)
     ADD r4, r6
     LDB r4, [r4]
     MOV r1, r7

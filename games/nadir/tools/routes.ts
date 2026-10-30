@@ -1,6 +1,6 @@
 // Replay routes for the bot (bot.ts) in levels/nadir.map. Each says what the player does; `npm run nadir:record`
 // turns them into replays/<name>.json, then `npm run refs:games` writes their per-frame hashes.
-import type { Bot } from './bot';
+import { B, type Bot } from './bot';
 
 export interface Route {
   seed: number;
@@ -283,6 +283,36 @@ export const ROUTES: Record<string, Route> = {
       b.allowDeath = false;
       b.walkTo(3.5, 4.4);
       b.walkTo(3.5, 6.0);
+    },
+  },
+  /**
+   * M30 stress (PLAN M30): into the control room without firing (two Kryp, two Spottare at its east end), stands at its west end
+   * until two acid balls fly, then shoots the barrel pair: a chain explosion (24 particles) with four enemies in view.
+   */
+  'm30-stress': {
+    seed: 9,
+    run(b) {
+      b.walkTo(3.5, 4.4);
+      b.walkTo(3.5, 8.0);
+      b.walkTo(3.6, 13.5);
+      b.walkTo(6.5, 14.5);
+      b.walkTo(14.2, 13.5);
+      b.walkTo(16.5, 13.5);
+      b.walkTo(16.5, 11.5);
+      b.walkTo(19.4, 11.6);
+      b.walkTo(19.5, 12.5);
+      b.fightOn = false;
+      b.walkTo(21.5, 12.5);
+      b.walkTo(21.5, 10.5);
+      b.walkTo(21.5, 8.4);
+      b.walkTo(19.8, 7.5);
+      b.turnTo((Math.atan2(7.6 - b.y, 23.3 - b.x) * 180) / Math.PI);
+      const acids = () => [0, 1, 2, 3].filter((k) => b.vm.read8(b.S('acids') + 10 * k + 8)).length;
+      b.waitUntil(() => acids() >= 2, 900);
+      for (let i = 0; i < 90 && b.read('booms') < 2; i++) b.step(B.A);
+      b.wait(40);
+      b.fightOn = true;
+      b.wait(200);
     },
   },
   'm27-tour': {

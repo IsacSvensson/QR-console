@@ -236,6 +236,13 @@ export function refLevel(m: RefMap, light: ReturnType<typeof refLight>, front: n
   return Math.max(0, Math.min(7, fog + AMB[m.zones[fy]![fx]!]! - lightv - cone + extra));
 }
 
+/** DESIGN §6.7: the image's dynamic lights [cell, strength] -> the extra light at a cell: max(0, I - Chebyshev distance) */
+export function refDyn(lights: [number, number][], cell: number, W: number): number {
+  let v = 0;
+  for (const [lc, i] of lights) if (i) v = Math.max(v, i - Math.max(Math.abs((lc % W) - (cell % W)), Math.abs(Math.floor(lc / W) - Math.floor(cell / W))));
+  return v;
+}
+
 // ---- the player (DESIGN §5) ------------------------------------------------------------------------------------
 
 /** DESIGN §5: sin and cos of angle a in s.8: floor(S / 64), S = sign * round(|sin((a + 1/2) * 2 pi / 4096)| * 16384) */

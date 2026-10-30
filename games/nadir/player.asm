@@ -301,6 +301,10 @@ blocked:
 ; around (x, y) touches a cell that is not passable or overlaps a blocking prop of the set. Clobbers r0-r4.
 .var bk_r
 .var bk_set
+.var bk_p                           ; the props of the set's current byte
+.var bk_k
+.var bk_bits
+.var bk_q
 box_free:
     ST [bk_x], r0
     ST [bk_y], r1
@@ -343,22 +347,29 @@ box_free:
     LDB r0, [r3 + 2]
     OR r4, r0
     JZ @free
-    LDI r4, props
-@prop:
-    CMP r4, props + NUM_PROPS * PROP_SIZE
+    LDI r4, props                   ; the set's bits, byte by byte: prop 8k + i is bit i of byte k
+    ST [bk_p], r4
+    LDI r0, 0
+    ST [bk_k], r0
+@byte:
+    LD r0, [bk_k]
+    CMP r0, 3
     JAE @free
-    MOV r0, r4                      ; only the props in the set
-    SUB r0, props
-    SHR r0, 3
-    MOV r1, r0
-    AND r1, 7
-    SHR r0, 3
     LD r3, [bk_set]
-    ADD r0, r3
-    LDB r0, [r0]
-    SHR r0, r1
-    AND r0, 1
-    JZ @np
+    ADD r3, r0
+    LDB r0, [r3]
+    LD r4, [bk_p]
+@bit:
+    CMP r0, 0
+    JEQ @nextb
+    MOV r1, r0
+    AND r1, 1
+    JZ @skip
+    ST [bk_bits], r0
+    ST [bk_q], r4
+    LDB r2, [r4 + P_ALIVE]          ; a burst barrel no longer blocks (DESIGN §6.6)
+    CMP r2, 0
+    JEQ @np
     LDB r2, [r4 + P_TYPE]
     SHL r2, 4
     LD r2, [r2 + spr_type + 4]      ; half-size, 0 = not blocking
@@ -385,8 +396,20 @@ box_free:
     CMP r4, 0                       ; blocked: Z clear
     RET
 @np:
+    LD r0, [bk_bits]
+    LD r4, [bk_q]
+@skip:
+    SHR r0, 1
     ADD r4, PROP_SIZE
-    JMP @prop
+    JMP @bit
+@nextb:
+    LD r4, [bk_p]
+    ADD r4, 8 * PROP_SIZE
+    ST [bk_p], r4
+    LD r0, [bk_k]
+    ADD r0, 1
+    ST [bk_k], r0
+    JMP @byte
 @free:
     CMP r4, r4                      ; free: Z set
 @hit:

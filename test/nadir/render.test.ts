@@ -3,7 +3,7 @@
 // (The cycle gates themselves are in gate.test.ts.)
 import { describe, expect, it } from 'vitest';
 import { VM, expandInputs } from '@qrc/vm';
-import { K, MASKED_CHARS, MATERIAL_CHARS, castRef, colOff, readRefMap, refLevel, refLight, transparency, type RefHit } from './ref';
+import { K, MASKED_CHARS, MATERIAL_CHARS, castRef, colOff, readRefMap, refDyn, refLevel, refLight, transparency, type RefHit } from './ref';
 import { REPLAYS, buildNadir, loadReplay, runReplay, type Nadir } from './play';
 
 
@@ -50,6 +50,8 @@ interface Image {
   tick: number;
   /** DESIGN §6.1: the muzzle flash's light steps in this image (rflash) */
   flash: number;
+  /** DESIGN §6.7: the image's dynamic lights (rdl_cell, rdl_i) */
+  dyn: [number, number][];
   open: (cell: number) => number;
 }
 
@@ -61,6 +63,7 @@ function eachImage(n: Nadir, name: string, onImage: (f: number, vm: VM, im: Imag
   let cast: Map<number, number> | null = null;
   const opens = (vm: VM) => new Map(map.doors.map((d, i) => [d.y * W + d.x, vm.read16(n.S('doors') + 16 * i + 2)]));
   return runReplay(n, name, (f, vm) => {
+    if (vm.read16(n.S('lg_heavy')) !== 0) return; // a shot or an explosion: no rendering step in this frame (DESIGN §3.11)
     // pace 2 then 1: a heavy image's rays were cast two frames before it is drawn (DESIGN §3.11)
     if (vm.read16(n.S('pace')) !== 0) {
       cast ??= opens(vm);
@@ -68,7 +71,7 @@ function eachImage(n: Nadir, name: string, onImage: (f: number, vm: VM, im: Imag
     }
     const o = cast ?? opens(vm);
     cast = null;
-    onImage(f, vm, { cx: vm.read16(n.S('rcam_x')) / 256, cy: vm.read16(n.S('rcam_y')) / 256, ca: vm.read16(n.S('rcam_a')), tick: vm.read16(n.S('rtick')), flash: vm.read16(n.S('rflash')), open: (cell) => o.get(cell) ?? 0 });
+    onImage(f, vm, { cx: vm.read16(n.S('rcam_x')) / 256, cy: vm.read16(n.S('rcam_y')) / 256, ca: vm.read16(n.S('rcam_a')), tick: vm.read16(n.S('rtick')), flash: vm.read16(n.S('rflash')), dyn: [0, 1].map((k) => [vm.read16(n.S('rdl_cell') + 2 * k), vm.read16(n.S('rdl_i') + 2 * k)]), open: (cell) => o.get(cell) ?? 0 });
   });
 }
 
@@ -118,7 +121,7 @@ describe('M26-M27 renderer', () => {
           const front = rd(vm, 'col_front', c);
           const lvl = rd(vm, 'col_lvl', c, 1);
           // the light level follows DESIGN §3.5 from the column's own height and cell in front
-          const want = refLevel(map, light, front, h, c, im.tick, -im.flash);
+          const want = refLevel(map, light, front, h, c, im.tick, -im.flash - refDyn(im.dyn, front, W));
           if (lvl === want) lvlOk++;
           else note(`frame ${f + 1} col ${c}: level ${lvl}, rule ${want}`);
           // ---- the masked layer (DESIGN §3.10)
@@ -127,6 +130,8 @@ describe('M26-M27 renderer', () => {
           if (mface !== 0xffff || m) {
             const edge = (x: RefHit) => x.frac < 0.02 || x.frac > 0.98;
             if (m && edge(m)) mCorner++;
+            // the oracle's ray stops at a wall corner the engine's ray passes (or the reverse): what lies behind it differs
+            else if (edge(r) && face !== r.face) mCorner++;
             else if (mface !== 0xffff && (!m || m.face !== mface) && nearMiss(mface, r.t, im.cx, im.cy, im.ca, c)) mCorner++;
             else if (m && mface === 0xffff && nearMiss(m.face, r.t, im.cx, im.cy, im.ca, c) && Math.abs(m.t - r.t) < 0.05) mCorner++;
             else {
@@ -139,7 +144,7 @@ describe('M26-M27 renderer', () => {
                 const du = Math.abs(rd(vm, 'col_mu', c, 1) - m.u);
                 if (du <= 1 || du === 31) mu++;
                 if (rd(vm, 'col_mfront', c) !== m.front) note(`frame ${f + 1} col ${c}: masked front ${rd(vm, 'col_mfront', c)}, oracle ${m.front}`);
-                if (rd(vm, 'col_mlvl', c, 1) === refLevel(map, light, m.front, rd(vm, 'col_mh', c), c, im.tick, -im.flash)) mLvl++;
+                if (rd(vm, 'col_mlvl', c, 1) === refLevel(map, light, m.front, rd(vm, 'col_mh', c), c, im.tick, -im.flash - refDyn(im.dyn, m.front, W))) mLvl++;
               } else note(`frame ${f + 1} col ${c}: masked face ${mface}, oracle ${m?.face ?? 'none'}`);
             }
           }

@@ -23,9 +23,11 @@
 .include "enemies.asm"
 .include "weapon.asm"
 .include "game.asm"
+.include "fx.asm"
 .code
 
 init:
+    FARCOPY rcp_h, ramtab_x, RAMTAB_BYTES
     FARCOPY texram, tex_x, TEX_BYTES
     FARCOPY coderam, code_x, CODE_BYTES
     FARCOPY bgram, bg_x, BG_BYTES
@@ -46,6 +48,14 @@ update:
     SYS BTNP
     ST [btnp], r0
     CALL game_frame
+    LD r0, [lg_heavy]               ; a shot or an explosion this frame: no rendering step, the image waits
+    CMP r0, 0
+    JEQ @pace
+    LD r0, [dbg_flags]
+    AND r0, FL_NOPACE
+    JNZ @pace
+    RET
+@pace:
     ; ---- adaptive pacing (DESIGN §3.11): an image whose estimated cost is high is drawn in the next frame (pace = 1);
     ; when the rays alone reach PACE_HEAVY, the sprites are chosen in the next frame and it is drawn in the third
     ; (pace = 2, then 1)
@@ -70,6 +80,12 @@ update:
     MUL r0, PACE_W_CAST
     LD r1, [mcount]
     MUL r1, PACE_W_MASK
+    ADD r0, r1
+    LD r1, [np_live]                ; particles (DESIGN §6.9)
+    MUL r1, PACE_W_PART
+    ADD r0, r1
+    LD r1, [n_awake]                ; the next frame's game logic: awake enemies (DESIGN §3.11)
+    MUL r1, PACE_W_EN
     ADD r0, r1
     LD r1, [dbg_flags]
     AND r1, FL_NOPACE
@@ -104,4 +120,6 @@ update:
     CALL draw_sprites
     LDI r0, 1
     CALL draw_masks
-    JMP draw_weapon
+    CALL draw_fx
+    CALL draw_weapon
+    JMP draw_dmg

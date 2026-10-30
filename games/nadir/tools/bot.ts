@@ -78,6 +78,7 @@ export class Bot {
       for (let n = 0; n < 3000; n++) {
         const t = this.target();
         if (!t) return;
+        if (this.read('w_mag') === 0 && this.read('w_res') === 0) return; // nothing left to shoot with
         const deg = (Math.atan2(t.y - this.y, t.x - this.x) * 180) / Math.PI;
         const d = this.diff(Math.round((deg * ANG) / 360) & (ANG - 1));
         let btn = 0;

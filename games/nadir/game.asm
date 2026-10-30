@@ -11,6 +11,7 @@
 game_reset:
     CALL world_init
     CALL enemies_init
+    CALL fx_reset
     LDI r0, 0
     ST [keys], r0
     ST [picked_med], r0
@@ -41,9 +42,14 @@ game_reset:
     ST [dbg_pose], r0
     RET
 
-; Per frame, the logic in DESIGN §6's order: the player (not while dead), the enemies, the weapon, the world;
-; then death and the restart.
+; Per frame, the logic in DESIGN §6's order: the effects' timers, the player (not while dead), the barrels that
+; explode, the enemies, acid balls and particles, the weapon (not while dead), the world; then death and restart.
+; nonzero when this frame's logic fired the weapon or exploded a barrel: no image is drawn in it (DESIGN §3.11)
+.var lg_heavy
 game_frame:
+    LDI r0, 0
+    ST [lg_heavy], r0
+    CALL fx_timers
     LD r0, [dead]
     CMP r0, 0
     JEQ @alive
@@ -63,11 +69,15 @@ game_frame:
     LDI r1, 16
 @b:
     ST [bob], r1
+    CALL fx_booms
     CALL enemies_frame
+    CALL fx_frame
     JMP world
 @alive:
     CALL player
+    CALL fx_booms
     CALL enemies_frame
+    CALL fx_frame
     LD r0, [hp]
     CMP r0, 1
     JGE @live

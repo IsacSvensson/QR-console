@@ -110,7 +110,9 @@ bakgrund som inte kan ockludera. Väggar ditheras inte (med 2-px-kolumner blir d
   `top = HORIZON + bob − ⌊h/2⌋`, underkant `top + h`. Golvet och taket ligger på samma avstånd från ögat
   (ögonhöjd = halva väggen).
 - **Interpolering:** jämna kolumner och kolumn 63 kastas. En udda kolumn interpoleras när båda grannarna träffar
-  samma yta (h = medelvärdet, u perspektivriktigt), annars kastas den. Steg 4 med uppdelning mättes långsammare
+  samma yta (h = medelvärdet, u perspektivriktigt), annars kastas den. Den kastas också när grannarnas höjder
+  skiljer mer än en faktor 2 (en vägg i strykvinkel: kolumnvinklarna är heltal, så 1/z är bara nästan linjärt och
+  felet växer med lutningen; M30 hittade 4 % fel på h där, D-046). Steg 4 med uppdelning mättes långsammare
   (ytorna byter för ofta).
 - **Ytor:** `sida` 0 = västra ytan (strålen går mot +x), 1 = östra (−x), 2 = norra (+y), 3 = södra (−y).
   Yt-id = cellindex · 4 + sida.
@@ -325,7 +327,7 @@ eftersom `DOOR_REACH` är större än spelarens halva låda plus en halv cell ka
 | `DOOR_WAIT` | 90 | bildrutor en öppen dörr väntar efter att spelaren gått |
 | `DOOR_REACH` | 384 | avstånd (u8.8, per axel) från dörrens mitt som öppnar den: 1,5 celler |
 
-### 3.11 Adaptiv pacing (M27, M28, M29)
+### 3.11 Adaptiv pacing (M27–M30)
 
 En bild kostar strålar (fas 1) plus ritning (fas 2). Faserna är var för sig långt under 25 000 cykler, men
 tillsammans kan de gå över. Därför skattas bildens kostnad efter fas 1 (strålar och spriteurval) med
@@ -348,13 +350,18 @@ från bildens kamera. Det gäller de dyraste vyerna (maskade väggar och många 
 repriserna): sådana bilder kostar upp till ~50 000 cykler och ryms inte på två bildrutor med logiken. Mätt med
 7 000 / 14 000: ingen bildruta i de åtta repriserna över 24 388 (D-045).
 
+**M30:** skattningen räknar också `PACE_W_PART` per levande partikel och `PACE_W_EN` per vaken fiende (§6.9). En
+bildruta vars logik avfyrar vapnet eller spränger en tunna (`lg_heavy`, skott: ~6 000 cykler med fyra mål och
+tunnor) gör **inget** renderingssteg: varken strålar, spriteurval eller ritning; bilden väntar en bildruta. Mätt:
+ingen bildruta i de nio repriserna (med stressreprisen) över 24 597 (D-046).
+
 | Konstant | Värde | Betydelse |
 |---|---|---|
-| `PACE_HEAVY` | 14000 | skattningen efter strålarna som gör att bilden tar tre bildrutor |
+| `PACE_HEAVY` | 12000 | skattningen efter strålarna som gör att bilden tar tre bildrutor |
 | `PACE_W_CAST` | 264 | vikt per kastad stråle |
 | `PACE_W_MASK` | 160 | vikt per maskad kolumn |
 | `PACE_W_RECT` | 164 | vikt per spriterektangel |
-| `PACE_EST` | 7000 | skattningen som gör att bilden ritas i nästa bildruta |
+| `PACE_EST` | 6000 | skattningen som gör att bilden ritas i nästa bildruta |
 
 ### 3.12 Sprites och rekvisita (M28)
 
@@ -548,9 +555,11 @@ Spelaren har 100 HP (M29).
 
 ## 6. Vapen, fiender och AI (M29–M30)
 
-**Ordning per bildruta (M29):** knappar → spelaren (§5; död: ingen styrning) → fienderna (AI, rörelse, språngträff)
-→ vapnet (avfyrning, träffar, omladdning) → världen (nycklar, plock, dörrar) → bilden. Allt som testerna läser
-står i RAM efter bildrutan; en fiendes position efter bildrutan är alltså den position skotten prövades mot.
+**Ordning per bildruta (M29, M30):** knappar → effekternas timrar (`dmg_t`, `shake` − 1; skakets förskjutning)
+→ spelaren (§5; död: ingen styrning) → tunnor som ska explodera (§6.6) → fienderna (AI, rörelse, språngträff,
+Spottarens klot) → syraklot och partiklar (§6.9–6.10) → vapnet (avfyrning, träffar, omladdning) → världen (nycklar,
+plock, dörrar) → bilden. Allt som testerna läser står i RAM efter bildrutan; en fiendes position efter bildrutan är
+alltså den position skotten prövades mot.
 
 ### 6.1 Bultbössan
 
@@ -621,7 +630,9 @@ Från 0–6 går en fiende till 6 SMÄRTA när den träffas och överlever, till
   blockerande props och spelarens låda (|Δ| < `E_RAD` + `P_RAD` på båda axlarna är överlapp). Blockeras ett
   språng (någon axel stoppas) slutar det.
 - **Språngträff:** i SPRÅNG, om fiendens och spelarens lådor är inom `E_RAD` + `P_RAD` + `LEAP_REACH` på båda
-  axlarna: spelaren `hp` − `KRYP_DMG`, `hits_taken` + 1, fienden → ÅTERHÄMTNING.
+  axlarna: spelaren `hp` − `KRYP_DMG`, `hits_taken` + 1, fienden → ÅTERHÄMTNING. Prövas efter steget; eftersom `LEAP_REACH`
+  ≥ `LEAP_V` träffar ett språng som stoppas av spelarens låda alltid (före M30 var marginalen 16 och ett språng
+  som startade 128–148 från spelaren studsade mot lådan utan att träffa).
 - **Spelaren** kolliderar också med levande fienders lådor (samma överlappsregel).
 
 **Animation** (sprite-typ per tillstånd: rutorna i ordning med sina längder i bildrutor, sedan om från början;
@@ -672,7 +683,7 @@ nyckelkort uppe till vänster. Slutlig HUD i M31.
 | `KRYP_V` | 14 | Kryps fart i JAKT (u8.8 per bildruta) |
 | `LEAP_V` | 36 | språngets fart |
 | `LEAP_DIST` | 512 | avstånd för upptakt (2 celler) |
-| `LEAP_REACH` | 16 | språngträffens marginal |
+| `LEAP_REACH` | 40 | språngträffens marginal (≥ `LEAP_V`: ett språng som spelarens låda stoppar är alltid en träff, M30) |
 | `KRYP_DMG` | 15 | språngets skada |
 | `ALERT_FRAMES` | 16 | larm |
 | `WINDUP_FRAMES` | 20 | upptakt |
@@ -684,7 +695,91 @@ nyckelkort uppe till vänster. Slutlig HUD i M31.
 | `DEATH_FRAMES` | 90 | död till omstart |
 | `MAX_ENEMIES` | 8 | fiender i banan högst (props, högst 24, och fiender delar proptabellens 32 poster) |
 
-**Spottare** (M30): 50 HP, håller avstånd 2–8 celler, syraboll var 90:e bildruta, 12 skada + stänk.
+### 6.6 Explosiva tunnor (M30)
+
+Tunnorna (proptyp `barrel`) har `BARREL_HP` (`bar_hp`, en byte per prop). Hagel prövar tunnor som mål precis som
+fiender (§6.2: levande, inom räckvidd, siktlinje till tunnans mitt, |lat| ≤ `E_HIT`; närmaste mål av fiender och
+tunnor; lika: fiender före tunnor, sedan lägst index). En tunna med hp ≤ 0 får `bar_boom` = 1 och **exploderar i
+nästa bildruta** (i effekternas steg, före fienderna): den försvinner (`P_ALIVE` = 0, blockerar inte längre), och
+varje levande fiende, spelaren och varje annan hel tunna med oktagonalt avstånd d ≤ `EXPL_R` till tunnans mitt och
+fri siktlinje från tunnan får skadan ⌊`EXPL_DMG` · (`EXPL_R` − d) / `EXPL_R`⌋ (fiender: SMÄRTA/DÖD som vid hagel;
+tunnor: kedjereaktion nästa bildruta). Explosionen tänder ett ljus (§6.7), skakar skärmen `SHAKE_EXPL` bildrutor och
+sänder 12 partiklar (§6.9).
+
+### 6.7 Dynamiskt ljus (M30)
+
+Högst två ljus per bild (`dl_cell`, `dl_i`): plats 0 = den senaste explosionen (styrka `EXPL_LIGHT` − (t >> 2)
+under `EXPL_LIGHT` · 4 bildrutor), plats 1 = det första flygande syraklotet (styrka `ACID_LIGHT`). Ljusen kopieras
+till bilden när strålarna kastas (`rdl_*`). För en cell c är det dynamiska ljuset L(c) = max över ljusen av
+max(0, I − max(|cx − lx|, |cy − ly|)); det dras från spannbasen som allt annat ljus (§3.5): nivån för en kolumn med
+främre cell c (väggar, maskade plan; sprites och lådor: propens cell) är regeln med `rflash` + L(c) steg ljusare.
+
+### 6.8 Skärmeffekter (M30)
+
+- **Skadeblink:** när spelarens hp minskar: `dmg_t` = `DMG_FRAMES` och `dmg_dir` = sidan angriparen (eller
+  explosionen) ligger åt: med d = källa − spelare, z = (d_x cos + d_y sin), lat = (d_y cos − d_x sin) (produkter som
+  §6.2): |lat| > |z| → höger (lat > 0) eller vänster, annars fram (z ≥ 0) eller bak. Ritas medan `dmg_t` > 0: en
+  röd ram (2 px) och en röd balk (4 px) på den kanten (fram = överkant, bak = underkant).
+- **Skak:** `shake` (bildrutor) sätts av explosioner (`SHAKE_EXPL`) och träffar på spelaren (`SHAKE_HIT`), högst
+  det största; varje bildruta: förskjutning = +2 om `shake` & 2, annars −2 (0 när `shake` = 0), sedan `shake` − 1.
+  Bildens horisont = `HORIZON` + bob + förskjutningen (`rbob` inkluderar den).
+- **Vinjett:** fyra mörka hörn (2 × 2 rutor à 8 × 8 per hörn, `SPR` med spegling) över 3D-vyn, under vapnet.
+
+### 6.9 Partiklar (M30)
+
+`PART_MAX` = 24 platser: x, y (u8.8), höjd z (1/256 cell över golvet), hastigheter, livslängd och färg. Varje
+bildruta (efter fienderna): x += vx, y += vy, z += vz, vz −= `PART_G`; dör när livet tar slut eller z < 0.
+Explosion: 12 partiklar ut i 12 riktningar (`part_dir`, fart `PART_V`), vz = `PART_VZ`, liv 24, färger orange och
+gul. Syrastänk: 6 gröna, liv 16. En ny partikel tar den första lediga platsen; finns ingen skapas den inte.
+Ritning: projektion som en sprites mitt (§3.12, z i u8.8), en 2 × 2-ruta (1 × 1 bortom 4 celler) i dess färg, bara
+om dess h > `col_h` i dess kolumn och den ligger på skärmen. Pacingskattningen räknar `PACE_W_PART` per levande
+partikel och `PACE_W_EN` per vaken fiende (tillstånd 1–6 och 8: rörelse, kollision och siktlinje kostar i den
+bildruta som också ritar). En bildruta där vapnet avfyras eller en tunna exploderar gör inget renderingssteg alls
+(inga strålar, inget spriteval, ingen ritning): bilden väntar en bildruta (`lg_heavy`).
+
+### 6.10 Spottare och syraklot (M30)
+
+Fiendeposten har en sort (`E_KIND`: 0 Kryp, 1 Spottare). Spottare: `SPIT_HP`, samma låda och samma VILA/LARM/
+SMÄRTA/DÖD som Kryp. I JAKT med siktlinje: avståndet > `KEEP_FAR` → mot spelaren med `SPIT_V`, < `KEEP_NEAR` →
+bort från spelaren (målet 2 · position − spelaren), annars står den; är `E_CD` (nedräkning) 0 och avståndet ≤
+`KEEP_FAR` + 512 → **SIKTA** (`AIM_FRAMES`, står), sedan skjuts ett syraklot mot spelarens position just då (fart
+`ACID_V`, steget som §6.3:s med L = oktagonala avståndet), `E_CD` = `SPIT_FRAMES`, → JAKT. Utan siktlinje: som Kryp.
+Övergångar: 2 → 8 SIKTA → 2 (utöver Kryps tabell, utan 3 och 4).
+**Syraklot** (`ACID_MAX` = 4 platser: x, y, steg, liv `ACID_LIFE`): varje bildruta (efter fienderna) flyttas det;
+överlappar dess låda (±`ACID_R`) spelarens låda → spelaren − `ACID_DMG` och stänk; ligger det i en cell som inte är
+passerbar → stänk där (spelaren inom oktagonalt `SPLASH_R` får `ACID_SPLASH`); livet slut → försvinner. Ritas som
+partikel (3 × 3, emissivt grönt), lyser (§6.7).
+
+| Konstant | Värde | Betydelse |
+|---|---|---|
+| `BARREL_HP` | 8 | en tunnas hälsa |
+| `EXPL_R` | 384 | explosionens radie (u8.8, 1,5 celler) |
+| `EXPL_DMG` | 60 | skada i explosionens mitt |
+| `EXPL_LIGHT` | 5 | explosionens ljus |
+| `ACID_LIGHT` | 2 | syraklotets ljus |
+| `DMG_FRAMES` | 12 | skadeblinkens längd |
+| `SHAKE_EXPL` | 16 | skak vid explosion |
+| `SHAKE_HIT` | 6 | skak när spelaren träffas |
+| `PART_MAX` | 24 | partiklar högst |
+| `PART_V` | 20 | partiklarnas fart i sidled (u8.8 per bildruta) |
+| `PART_VZ` | 24 | uppåt vid start (1/256 cell per bildruta) |
+| `PART_G` | 3 | tyngd per bildruta |
+| `PACE_W_PART` | 70 | pacingvikt per partikel |
+| `PACE_W_EN` | 700 | pacingvikt per vaken fiende (spellogiken i bildrutan som ritar bilden) |
+| `SPIT_HP` | 50 | Spottarens hälsa |
+| `SPIT_V` | 10 | Spottarens fart |
+| `KEEP_NEAR` | 640 | backar närmare än (2,5 celler) |
+| `KEEP_FAR` | 1536 | går närmare längre bort än (6 celler) |
+| `AIM_FRAMES` | 16 | sikta |
+| `SPIT_FRAMES` | 90 | mellan två klot |
+| `ACID_MAX` | 4 | syraklot högst |
+| `ACID_V` | 24 | klotets fart |
+| `ACID_LIFE` | 90 | klotets livslängd |
+| `ACID_R` | 32 | klotets halva låda |
+| `ACID_DMG` | 12 | direktträff |
+| `SPLASH_R` | 128 | stänkets räckvidd (oktagonalt) |
+| `ACID_SPLASH` | 4 | stänkskada |
+
 
 ## 7. Banan (M27, M31)
 
@@ -758,6 +853,41 @@ två bildrutor) högst 33 753, medel 17 000–18 800: grindarna 14 000 / 11 000 
 bildruta (grinden 14 000 / 11 000 nås inte; projektets tak 25 000 hålls). Utan golvlagret 16 270 / 13 688, utan
 interpolering 20 597 / 17 458. ROM 11,7 KB, xdata 37 KB (texturer 2,9 KB, kompilerade kolumner 13,8 KB,
 golvkort 16 KB, bakgrund 2,2 KB, karta 3 KB), kassett 16,9 KB, RAM till 0xD413.
+
+**Uppmätt i M30** (nio repriser med stressreprisen, D-046): varje bildruta högst **24 597**; stressreprisen (fyra
+levande fiender och två syrabollar i bild, sedan en kedjeexplosion med 24 partiklar) högst 24 597. ROM **30 226 B**
+(kod 22 820, data 7 406), xdata 49 469 B, kassett 31 721 B, RAM till 0xF6FD (1 795 B kvar under 0xFE00).
+
+**Budgetgrinden M30 — prognos för den färdiga skivan** (M31: titel med attract-läge, kontrollpunkt, segersekvens
+och statistik, slutlig HUD, mål, nyckelkort, hemligheter; M32: sekvenserare, effekter, hotljud, motiv, musik):
+
+| | Nu | M31 | M32 | Prognos | Gräns |
+|---|---:|---:|---:|---:|---:|
+| ROM | 30,2 KB | +2,8–4,5 KB | +3,0–3,6 KB (kod 0,9, musik som data 2,1–2,7) | **36–38,3 KB** | 32 KB |
+| RAM-topp | 0xF6FD | +0,5–0,8 KB (kontrollpunkt, statistik) | +0,1–0,2 KB | 0xF9C0–0xFB40 | < 0xFE00 |
+| Kassett | 31,0 KB | +2–3 KB | +2–3 KB | 35–37 KB | 40 KB |
+
+ROM går **över** gränsen; RAM och kassett håller. Nedskärningslistan nedan gäller (i ordning, minst förlust först);
+läget flaggas för en människa (PROGRESS).
+
+**Nedskärningslista ROM/RAM (M30):**
+
+1. **Musik, ambiens och långa texter i xdata** (M32/M31-regel): sekvenseraren läser mönster genom ett RAM-fönster
+   på ≤ 128 B (en `COPY` per mönsterstart); segerskärmens texter och attract-lägets kamerabana likaså.
+   ROM −2,4–3,2 KB, RAM +0,2 KB, ingen förlust. → prognos 33–35 KB.
+2. **Skärmar som overlay:** titel-, seger- och statistikkoden ligger i xdata och kopieras till RAM som är ledigt
+   när 3D-vyn inte ritas (`colbuf`, `spr_cand`: 3,6 KB) — segerskärmen helt, titeln utom attract-läget. ROM
+   −1,0–1,8 KB, ingen RAM-kostnad. → 31,5–34 KB.
+3. **Vapnets och vinjettens tiles från xdata till RAM** (`wpn_tiles` 1 248 B, `vig_tiles` 544 B; MAP läser RAM lika
+   gärna): ROM −1,8 KB, RAM +1,8 KB — kräver RAM från steg 4. → 29,7–32,2 KB.
+4. **RAM frigörs:** `spr_cand` 32 → 24 poster (−464 B: fler än 24 kandidater har ingen repris haft), `zmap` packad i
+   `lmap`-bytens lediga bitar eller som nibblar (−512 B). Prövat och förkastat: fler `nocompile`-material
+   (låst dörr, räcke, låg vägg: −450 B RAM, men bildrutor till 26 182 cykler).
+5. **Förlust (sista utvägen):** attract-läget som stillbild i stället för flygtur (−0,5 KB), kortare musik (ett riff
+   per motiv, −1 KB), färre Kryp-animationsrutor (−0,5 KB).
+
+Steg 1 är tillämpat som regel för M31–M32 (ingen musik eller lång text i ROM); steg 2–4 tillämpas när innehållet
+landar och mäts vid varje milstolpe; steg 5 bara efter beslut av en människa.
 
 ROM (beräknat för hela spelet): kod 12–17 KB + tabeller 4–5 KB + bana och ljud ~3 KB = 19–27 KB av 32. xdata → RAM: 13–23 KB. RAM:
 tillstånd 6–8 KB + tillgångar, stackreserv 512 B (inga variabler över 0xFE00). Kassett ~18–30 KB (mål ≤ 32 KB).

@@ -10,13 +10,15 @@ const map = readRefMap('nadir');
 const sprites = readRefSprites();
 const LIMITS = [48, 20, 8];
 
-/** the rectangle list of sprite type t at LOD k, read from the cartridge's ROM */
+/** the rectangle list of sprite type t at LOD k, read from the cartridge's xdata (M30): the type table holds the low
+ * word of its address in the bank SPR_X_HI */
 function romRects(n: Nadir, vm: VM, t: number, k: number) {
   const e = n.S('spr_type') + 16 * t;
-  let p = vm.read16(e + 6 + 2 * k);
+  const xd = n.cart.sections.xdata!;
+  let p = (n.S('SPR_X_HI') - 1) * 0x10000 + vm.read16(e + 6 + 2 * k);
   const out: { x0: number; y0: number; x1: number; y1: number; c: number }[] = [];
-  while (vm.read8(p) !== 255) {
-    out.push({ x0: vm.read8(p), y0: vm.read8(p + 1), x1: vm.read8(p + 2), y1: vm.read8(p + 3), c: vm.read8(p + 4) });
+  while (xd[p] !== 255) {
+    out.push({ x0: xd[p]!, y0: xd[p + 1]!, x1: xd[p + 2]!, y1: xd[p + 3]!, c: xd[p + 4]! });
     p += 5;
   }
   return out;
@@ -76,6 +78,8 @@ describe('M28 sprites', () => {
       expect([vm.read8(e), vm.read8(e + 1), vm.read8(e + 2), vm.read8(e + 3), vm.read16(e + 4)], sp.name).toEqual([sp.w, sp.h, refK(sp), sp.pick, sp.block]);
       for (let k = 0; k < 3; k++) {
         const src = refLod(sp.px, k);
+        // every list lies in the bank SPR_X_HI (the drawing code copies it from there)
+        expect(n.S(`spr_${sp.name}_${k}`) >>> 16, `${sp.name} LOD ${k} bank`).toBe(n.S('SPR_X_HI'));
         const rects = romRects(n, vm, t, k);
         expect(rects.length, `${sp.name} LOD ${k}`).toBeLessThanOrEqual(LIMITS[k]!);
         expect(vm.read8(e + 12 + k)).toBe(rects.length);

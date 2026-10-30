@@ -3,7 +3,7 @@
 // y of its top edge and its light level (DESIGN §3.5, W and E sides one level darker).
 import { describe, expect, it } from 'vitest';
 import { VM } from '@qrc/vm';
-import { K, boxRay, readRefMap, readRefSprites, refBoxK, refLevel, refLight, solid } from './ref';
+import { K, boxRay, refDyn, readRefMap, readRefSprites, refBoxK, refLevel, refLight, solid } from './ref';
 import { REPLAYS, buildNadir, runReplay, type Nadir } from './play';
 
 const map = readRefMap('nadir');
@@ -43,6 +43,7 @@ describe('M28 3D boxes', () => {
       const rd = (vm: VM, s: string, c: number) => vm.read16(n.S(s) + 2 * c);
       runReplay(n, name, (f, vm) => {
         if (vm.read16(n.S('pace')) !== 0) return; // rays cast, nothing drawn yet
+        if (vm.read16(n.S('lg_heavy')) !== 0) return; // no rendering step in this frame (DESIGN §3.11)
         const boxes = drawnBoxes(n, vm);
         const any = boxes.length > 0;
         const cx = vm.read16(n.S('rcam_x')) / 256;
@@ -51,6 +52,7 @@ describe('M28 3D boxes', () => {
         const hor = 64 + s16(vm.read16(n.S('rbob')));
         const tick = vm.read16(n.S('rtick'));
         const flash = vm.read16(n.S('rflash'));
+        const dyn: [number, number][] = [0, 1].map((k) => [vm.read16(n.S('rdl_cell') + 2 * k), vm.read16(n.S('rdl_i') + 2 * k)]);
         if (any) images++;
         for (let c = 0; c < 64; c++) {
           const face = rd(vm, 'col_bface', c);
@@ -69,14 +71,15 @@ describe('M28 3D boxes', () => {
             const sp = sprites.find((s) => s.char === pr.s)!;
             const a = sp.block / 256;
             const hit = boxRay(cx, cy, dx, dy, Math.round(pr.x * 256) / 256, Math.round(pr.y * 256) / 256, a);
-            // a ray that grazes the box (misses or enters within 0.02 cell of a vertical edge) is ambiguous
+            // a ray that grazes the box (misses or enters within max(0.02, t / 128) cell of a vertical edge: the fixed-point
+            // error, as nearMiss in render.test.ts) is ambiguous
             const graze = [-0.02, 0.02].some((e) => (boxRay(cx, cy, dx, dy, Math.round(pr.x * 256) / 256, Math.round(pr.y * 256) / 256, a + e) !== null) !== (hit !== null));
             if (!hit) {
               if (graze) ambiguous = true;
               continue;
             }
             const h = K.F256! / (256 * hit.t);
-            if (hit.edge < 0.02 || graze || Math.abs(h - colH) <= 1.5 || hit.t < K.SPR_NEAR! / 256 + 0.02) ambiguous = true;
+            if (hit.edge < Math.max(0.02, hit.t / 128) || graze || Math.abs(h - colH) <= 1.5 || hit.t < K.SPR_NEAR! / 256 + 0.02) ambiguous = true;
             if (h <= colH) continue; // behind the wall
             if (!best || hit.t < best.t) best = { prop: p, ...hit };
           }
@@ -103,7 +106,8 @@ describe('M28 3D boxes', () => {
           else note(`frame ${f + 1} col ${c}: top ${top}, oracle ${topf.toFixed(2)}`);
           const pr = map.props[best.prop]!;
           const lvl = rd(vm, 'col_blvl', c);
-          const wantL = refLevel(map, light, Math.floor(pr.y) * W + Math.floor(pr.x), h, c, tick, (best.side < 2 ? 1 : 0) - flash);
+          const cell = Math.floor(pr.y) * W + Math.floor(pr.x);
+          const wantL = refLevel(map, light, cell, h, c, tick, (best.side < 2 ? 1 : 0) - flash - refDyn(dyn, cell, W));
           if (lvl === wantL) lvlOk++;
           else note(`frame ${f + 1} col ${c}: level ${lvl}, rule ${wantL}`);
         }

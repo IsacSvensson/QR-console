@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M29 — NADIR weapon, combat and the first enemy (PLAN.md Part 4)
+**Current milestone:** M31 — NADIR vertical slice and the game around it (PLAN.md Part 4)
 **Status:** Parts 1–3 complete (one flaky Part 1 acceptance test, see *Blocked / needs human*); they await the
 human's manual acceptance. Part 4 (NADIR, a first-person shooter) planned and approved 2026-10-29: design in
 `games/nadir/DESIGN.md`, milestones M26–M32 in PLAN.md.
@@ -50,12 +50,20 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 - [ ] M27 Player, collision, doors, masked walls (feel build) — built and verified; **cycle gate fails (33.8k per image vs 16k), D-042**
 - [x] M28 Sprites and props — 3D boxes (M28b, D-044); prop drawing 9 991 vs 5 000 cycles per frame **accepted by the human** (2026-10-30), the gate stays red in `nadir-gate` as a measurement
 - [x] M29 Weapon, combat, the first enemy (D-045; the M26/M27/M28 cycle gates stay red, see below)
-- [ ] M30 Atmosphere, effects, the second enemy (budget gate)
+- [x] M30 Atmosphere, effects, the second enemy (D-046) — **budget gate: projected ROM 36-38 KB > 32 KB, cut list applies, flagged below**
 - [ ] M31 The vertical slice and the game around it
 - [ ] M32 Sound, polish, delivery
 
 ## Current work
 
+Part 4: M30 done (D-046): dynamic lights (explosions, acid balls) in the light rule of walls, masked planes and
+boxes; vignette; damage flash and direction marker; screen shake; 24 particles; explosive barrels with chain
+reactions; the Spottare (keeps its distance, aims, spits) and acid balls with splash damage. Tested automatically:
+the model of DESIGN §6 (now with barrels, explosions, acid, particles, lights, effect timers) equals RAM in every
+frame of nine replays; every column's light incl. the dynamic lights; the stress replay (4 living enemies and 2
+acid balls in view, then a chain explosion with 24 particles) and every other frame <= 24 597 cycles. Fixed on the
+way: Kryp leaps that never hit, a 13 % ray error near the axes, a 4 % interpolation error at grazing angles.
+Measured: ROM 30.2 KB, RAM to 0xF6FD, cartridge 31.7 KB. Not verified: how the effects look and play on a phone.
 Part 4: M29 done (D-045): the bolt shotgun (MAP art, sway, recoil, pump, reload, muzzle flash that lights the
 image), 5 pellets with aim assist and line of sight, Kryp (12 animation frames, idle/alert/chase/windup/leap/
 recover/pain/dead), health, medkits and ammunition only when needed, death and restart, a minimal HUD, green hit
@@ -150,13 +158,14 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 ## Blocked / needs human
 
-- **NADIR cycle gates (D-040, D-042, D-043, D-044):** per image (rays + drawing) the whole level costs (M29) max
-  50 712 / mean 19 500-33 600 cycles (M28: max 42 288 / mean 17 900-26 800); M28 prop drawing 10 201 (accepted) (M27: max 33 753 / mean 17 000-18 800) against M26's 14 000 / 11 000 and M27's 16 000 (`nadir-gate`, red as specified). The hard
+- **NADIR cycle gates (D-040, D-042, D-043, D-044):** per image (rays + drawing) the whole level costs (M30) max
+  67 220 (stress replay) / mean 21 200-35 000 cycles (M29: max 50 712 / mean 19 500-33 600) (M28: max 42 288 / mean 17 900-26 800); M28 prop drawing 10 254 (accepted) (M27: max 33 753 / mean 17 000-18 800) against M26's 14 000 / 11 000 and M27's 16 000 (`nadir-gate`, red as specified). The hard
   25 000 per frame is met by adaptive pacing (mask-heavy views draw at 30 images/s). Per the human's "proceed per your
   recommendations": the gate is re-derived after M28-M29 with measured sprite and logic costs; floor layer kept.
-- **NADIR ROM 31.2 KB of 32 KB after M29 (D-045):** M30's budget gate starts nearly full; its cut list will apply.
-- **NADIR M27 feel test (manual, PLAN Manual acceptance 2):** scan `demo/nadir.gif`, try S2 on a phone (B walks,
-  double tap = side step); say if S1 should be the default. Not verified by me (no device).
+- **NADIR budget gate (M30, D-046, DESIGN §9):** measured ROM 30.2 KB; projected for the finished slice 36-38.3 KB
+  against 32 KB (RAM and cartridge fit). The cut list's lossless steps (music/texts in xdata, screens as RAM
+  overlays, tiles in RAM, RAM freed from spr_cand/zmap) are projected to bring it to ~30-32 KB and are applied in
+  M31-M32; step 5 (attract mode as a still, shorter music, fewer Kryp frames) needs a human's decision if they do not.
 
 - **`npm run test:e2e:offline` (M10) is flaky: 3 of 8 runs pass.** Every failure is one browser-initiated
   `GET /sw.js` (the service-worker update check on reload) reaching the server ~2 s after going offline; the
