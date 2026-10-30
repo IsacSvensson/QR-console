@@ -325,20 +325,86 @@ eftersom `DOOR_REACH` är större än spelarens halva låda plus en halv cell ka
 | `DOOR_WAIT` | 90 | bildrutor en öppen dörr väntar efter att spelaren gått |
 | `DOOR_REACH` | 384 | avstånd (u8.8, per axel) från dörrens mitt som öppnar den: 1,5 celler |
 
-### 3.11 Adaptiv pacing (M27)
+### 3.11 Adaptiv pacing (M27, M28)
 
-En bild kostar strålar (fas 1) plus ritning (fas 2). Båda faserna är var för sig under ~18 000 cykler, men
-tillsammans kan de gå över 25 000 när strålarna möter många maskade plan (mätt i M27: alla bildrutor över 25 000
-hade minst 8 maskade kolumner, bildrutor utan maskade plan högst 21 510). Därför: räknar strålarna i fas 1 minst
-`PACE_MCOLS` maskade kolumner (varje inspelat maskat plan, kastat eller interpolerat, räknas) ritas bilden i
-**nästa** bildruta i stället. Den bildrutan kör spelarens logik och sedan bara ritningen; skärmen visar föregående
-bild under tiden (framebuffern ligger kvar). Bilden ritas från **bildens kamera** (`rcam_x`, `rcam_y`, `rcam_a`,
-`rbob`, `rtick`: kameran och bildrutan när strålarna kastades), inte spelarens nya position. Spelets logik går
-alltid i 60 bildrutor/s; bara bildtakten sjunker till 30/s i sådana vyer. `FL_NOPACE` stänger av pacingen.
+En bild kostar strålar (fas 1) plus ritning (fas 2). Faserna är var för sig långt under 25 000 cykler, men
+tillsammans kan de gå över. Därför skattas bildens kostnad efter fas 1 (strålar och spriteurval) med
+`PACE_W_CAST` · kastade strålar + `PACE_W_MASK` · maskade kolumner + `PACE_W_RECT` · spriterektanglar (efter
+budgeten); är skattningen minst `PACE_EST` ritas bilden i **nästa** bildruta. Den bildrutan kör spelarens logik och
+sedan bara ritningen; skärmen visar föregående bild under tiden (framebuffern ligger kvar). Bilden ritas från
+**bildens kamera** (`rcam_x`, `rcam_y`, `rcam_a`, `rbob`, `rtick`: kameran och bildrutan när strålarna kastades),
+inte spelarens nya position. Spelets logik går alltid i 60 bildrutor/s; bara bildtakten sjunker till 30/s i sådana
+vyer. `FL_NOPACE` stänger av pacingen.
+
+Vikterna är en minstakvadratanpassning av hela bildens kostnad mot de tre talen över alla repriser i M28 (19 196
+bildrutor utan pacing; största underskattning 4 703 cykler). Gränsen valdes efter mätning med marginal: med 8 000
+kostar ingen bildruta i repriserna mer än 24 402 (M27: en enklare regel, minst 8 maskade kolumner). Material som
+inte är kompilerade (`nocompile`, organiskt i kärnan) ingår inte i skattningen; de syns i marginalen.
 
 | Konstant | Värde | Betydelse |
 |---|---|---|
-| `PACE_MCOLS` | 8 | så många maskade kolumner gör att bilden ritas i nästa bildruta |
+| `PACE_W_CAST` | 264 | vikt per kastad stråle |
+| `PACE_W_MASK` | 160 | vikt per maskad kolumn |
+| `PACE_W_RECT` | 164 | vikt per spriterektangel |
+| `PACE_EST` | 8000 | skattningen som gör att bilden ritas i nästa bildruta |
+
+### 3.12 Sprites och rekvisita (M28)
+
+**Rect sprites.** En spritebild är en lista rektanglar `(x0, y0, x1, y1, färg)` i källpixlar (x1, y1 exklusiva),
+ritade i ordning: en senare rektangel skriver över en tidigare. Ingen rektangel täcker en genomskinlig källpixel.
+Generatorn (`tools/sprites.ts`) bygger listan lager för lager (en färg i taget, rektanglar som bara täcker den
+färgens pixlar eller pixlar som en senare färg skriver över) och prövar flera färgordningar. LOD 1 och 2 är källan
+nedsamplad 2 × 2 respektive 4 × 4 (vanligaste värdet i blocket, genomskinligt räknas som ett värde; emissiva färger
+vinner om de täcker en fjärdedel), kompilerade på samma sätt. Gränser: LOD 0 ≤ 48, LOD 1 ≤ 20, LOD 2 ≤ 8 rektanglar.
+
+**Skalning.** `s` = skärmstorlek per källpixel i 1/64 px. Alla LOD:ers rektanglar lagras i källpixlar (LOD k:s
+block är 2^k källpixlar, klippta till källans storlek så att en LOD aldrig blir större än källan). En kant v hamnar på
+`bas + (v · s + 32) >> 6`, samma formel för start och slut, så grannrektanglar delar kanter. Med s = 64 · n blir det
+exakt n gånger förstoring med närmaste granne.
+
+**Typer** (`art/sprites.txt`): källbild (≤ 16 × 24), höjd i procent av väggen, blockerande halvlåda (u8.8, 0 =
+genomgångbar) och plockbar sort (0 = nej, 1 = medkit, 2 = ammunition). K = round(höjd% / 100 · 2048 / källhöjd).
+
+**Projektion** av en prop i (px, py) (u8.8), med dx = px − rcam_x, dy = py − rcam_y och bildens cos/sin i s1.12
+(halvstegstabellen sin_h >> 2): z = dx · cos + dy · sin, lat = dy · cos − dx · sin, räknade i 1/1024 cell (var
+produkt / 1024 avrundad, bytevis delad), z sedan avrundad till u8.8; h = ⌊F256 / z⌋ (vägghöjden på det djupet) med bråket f = round(8 · (F256 mod z) / z) (åttondelar);
+`s = ((h + f/8) · K) / 32` (1/64 px), spritens höjd `hgt = (källhöjd · s + 32) >> 6`, bredd
+`wid = (källbredd · s + 32) >> 6`, mitt `cx = 64 + lat · (h + f/8) / 256` (produkterna avrundade), vänsterkant `cx − wid / 2`, underkant på golvet `hor + h / 2`, överkant
+underkant − hgt. Testet jämför mitt-x och höjd med flyttal (±1 px). En prop ritas om z ≥ `SPR_NEAR`, z ≤ `SPR_FAR` och lådan [vänster,
+vänster + wid) når in i [0, 128). LOD efter hgt: ≥ `SPR_LOD1_H` → 0, ≥ `SPR_LOD2_H` → 1, annars 2.
+
+**Urval, ordning och budget.** De synliga sorteras på z, längst bort först; är de fler än `SPR_MAX` stryks de
+längst bort. Summan av deras rektanglar får vara högst `SPR_RECTS`: så länge den är större sänks den sprite
+som ligger längst bort och inte redan har LOD 2 ett steg (varvet börjar om längst bort). De ritas längst bort först.
+
+**Tabeller per cell (PVS, i xdata).** Generatorn räknar för varje cell vilka props som kan synas därifrån (en fri
+linje från någon av 6 × 6 punkter i cellen till någon av 5 punkter i propens fotavtryck, högst `SPR_FAR` + 1 cell,
+dörrar öppna, maskade väggar genomskinliga) och vilka som ligger nära (fotavtrycket inom en cell). Bilden hämtar
+kamerans celler med en `COPY` (6 byte); bara de möjligen synliga projiceras, bara de nära prövas för kollision och
+plock. Före den exakta projektionen gallras dessutom med en grov kon (5-bitarskoordinater).
+
+**Ocklusion.** Provkolumn c visar spriten om spritens h > `col_h[c]` (spriten är närmare än väggen). Spriten ritas
+i intervall av sådana kolumner (rektanglarna klipps i x). `spr_h[c]` = största h bland spritarna som syns i c. Ett
+maskat plan i kolumn c ritas **före** spritarna om dess h ≤ `spr_h[c]` och annars **efter** (en kolumn med en
+sprite bakom ett galler och en annan framför ritar gallret före båda: dokumenterad begränsning).
+
+**Ljus.** Spritens cell ger spannljuset (§3.5); nivån = clamp_tab[fogtabellen för kolumnen under mitten
+(cx / 2, klämd) vid spritens h + spannljuset]; färg via zonens skuggtabell (emissiva färger lyser).
+
+**Blockerande props** är lådor ±halvlåda: spelarens låda (±`P_RAD`) får aldrig överlappa dem (strikt olikhet per
+axel, |spelare − prop| < `P_RAD` + halvlåda är överlapp); de ingår i kollisionens "passerbar" (§5 steg 5). **Plock:**
+efter spelarens rörelse plockas en levande plockbar prop vars avstånd per axel är < `P_RAD` + `PICK_HALF`; den
+försvinner och räknas (`picked_med`, `picked_ammo`).
+
+| Konstant | Värde | Betydelse |
+|---|---|---|
+| `SPR_NEAR` | 64 | närmaste djup som ritas (u8.8, 0,25 cell) |
+| `SPR_FAR` | 3328 | längsta djup som ritas (13 celler) |
+| `SPR_MAX` | 8 | flest synliga sprites per bild |
+| `SPR_RECTS` | 96 | rektangelbudget per bild |
+| `SPR_LOD1_H` | 24 | sprites lägre än så (px) använder LOD 1 |
+| `SPR_LOD2_H` | 10 | sprites lägre än så använder LOD 2 |
+| `PICK_HALF` | 64 | plockradie per axel utöver spelarens låda (u8.8) |
 
 ---
 
@@ -410,8 +476,9 @@ S(a) = tecken · round(|sin((a + ½) · 2π / 4096)| · 16384), dvs. halvstegsta
    Farten v närmar sig målet med högst `WALK_ACC` per bildruta.
 4. **Förflyttning:** framåt v, i sidled l = ±`DASH_V` under sidosteg (+ = höger), i S1 med B ±`WALK_MAX`.
    dx = (v · cos − l · sin) >> 8, dy = (v · sin + l · cos) >> 8 (aritmetiskt skift). Sidostegets räknare minskar.
-5. **Kollision med väggglidning:** först x: om lådan ±`P_RAD` runt (x + dx, y) bara rör passerbara celler flyttas
-   x, sedan samma för y med det nya x. Passerbar = golv eller en helt öppen dörr (open = 256). Lådans hörn är
+5. **Kollision med väggglidning:** först x: om lådan ±`P_RAD` runt (x + dx, y) bara rör passerbara celler och inte
+   överlappar någon blockerande prop (§3.12) flyttas x, sedan samma för y med det nya x. Passerbar = golv eller en
+   helt öppen dörr (open = 256). Lådans hörn är
    x ± `P_RAD` och y ± `P_RAD` (inklusive); lådan innesluter cirkeln med radien `P_RAD`, så cirkeln överlappar
    aldrig en solid cell. Största förflyttningen per bildruta är √(20² + 40²) ≈ 45 < `P_RAD`.
 6. **Huvudbob:** fasen ökar med |v|; står spelaren still (v = 0) och bob-indexet (fas >> `BOB_SHIFT`) & 7 inte är 0
@@ -459,7 +526,8 @@ Spelets fortsättning (seger via hissen, fiender, föremål) kommer i M29–M31 
 
 **Banfilens format:** `grid` (`.` golv, `+` dörr, versal = material), `zones` (en siffra per cell), `doors`
 (`x y nyckelbit`, exakt cellerna med `+`, i dörrtabellens ordning), `keys` (`x y bit`), `lamps` (`x y styrka
-grupp`), `poses` (`namn x y grader`).
+grupp`), `poses` (`namn x y grader`), `props` (`x y sprite`, §3.12; generatorn kontrollerar att en blockerande
+prop inte når in i en vägg eller en kameraposition).
 
 **Banregler (kontrolleras av generatorn):** solid kant runt hela kartan; tunna celler enligt §3.10; ingen fri
 siktlinje längre än `MAX_SIGHT` celler från någon golvcells mittpunkt (256 riktningar), genom maskade celler och
@@ -498,6 +566,12 @@ virvel och dubbla baskaggeslag. Lugnare drönare i utforskning, metallen när fi
 | Ljud | 100–300 |
 | **Totalt** | **15 200–26 500 (hårt tak 25 000)** |
 
+**Uppmätt i M28** (sex repriser, 21 380 bildrutor, D-043): per bildruta högst **24 402** (medel 14 800–17 600) med
+pacing; per bild högst 42 288, medel 17 900–26 800 (grindarna nås fortfarande inte). Spritarna: ritningen högst
+2 275 cykler per bildruta med åtta spritar (kravet 5 000), urvalet (projektion, sortering, budget) högst 4 627.
+Utan synliga spritar kostar rekvisitan ~200 cykler tack vare tabellerna per cell. ROM 19,0 KB (kod 9,9 KB),
+xdata 47,8 KB, kassett 22,4 KB, RAM till 0xF007.
+
 **Uppmätt i M27** (hela banan, fem repriser, 16 000 bildrutor, D-042): per **bildruta** högst **22 824** (taket 25 000
 hålls tack vare adaptiv pacing, §3.11), medel 15 400–17 600. Per **bild** (strålar + ritning, även när de delas på
 två bildrutor) högst 33 753, medel 17 000–18 800: grindarna 14 000 / 11 000 (M26) och 16 000 (M27) nås inte. Dyrast
@@ -518,24 +592,24 @@ tillstånd 6–8 KB + tillgångar, stackreserv 512 B (inga variabler över 0xFE0
 
 ```
 games/nadir/  nadir.asm defs.asm math.asm ray.asm walls.asm floor.asm light.asm (M26)
-              player.asm world.asm (M27; ersatte M26:s camera.asm)
-              sprites.asm weapon.asm enemies.asm fx.asm hud.asm screens.asm sound.asm (M28–M32)
+              player.asm world.asm (M27; ersatte M26:s camera.asm) sprites.asm (M28)
+              weapon.asm enemies.asm fx.asm hud.asm screens.asm sound.asm (M29–M32)
               *.gen.asm (genererat), art/, levels/, tools/, replays/
 test/nadir/   ref.ts (oberoende kartläsare, flyttalsraycaster, reglerna i detta dokument) och testerna
 ```
 
 `npm run nadir:gen` skriver all genererad data, `npm run nadir:record` spelar in bot-repriser, `npm run
 test:nadir` kör testerna. Utvecklingsverktyg: `tools/shot.ts` (bild från en kameraposition), `tools/sheet.ts`
-(kontaktark `m27-sheet.png`), `tools/profile.ts` (cykler per fil och rutin; `--flags 64` stänger av pacingen så
+(kontaktark `m28-sheet.png`), `tools/profile.ts` (cykler per fil och rutin; `--flags 64` stänger av pacingen så
 att en position mäts som en hel bild).
 
 ---
 
 ## 11. Prototypen (M26) och känslobygget (M27)
 
-![Kontaktark: banans femton kamerapositioner, ritade av VM:en](m27-sheet.png)
+![Kontaktark: banans sjutton kamerapositioner, ritade av VM:en](m28-sheet.png)
 
-M27: hela banan (§7) med spelaren (§5), dörrar och maskade väggar (§3.10). Kontaktarket ovan visar banans
+M27–M28: hela banan (§7) med spelaren (§5), dörrar, maskade väggar (§3.10) och rekvisita (§3.12). Kontaktarket ovan visar banans
 kamerapositioner: hissdörren, schaktet, gallret, verkstaden, låga väggen, dörrarna, den mörka gången,
 kontrollrummet, fönstret, säkerhetsdörren, kärnan, räcket, sydgången, en vägg på en kvarts cells avstånd och
 en strykvinkel.

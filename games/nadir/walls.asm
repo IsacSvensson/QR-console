@@ -162,11 +162,26 @@ span_light:
     ST [sp_set], r1
     RET
 
-; The masked layer (DESIGN §3.10), after all walls, by spans of columns with the same masked plane: light,
+; The masked layer (DESIGN §3.10, §3.12), after all walls, by spans of columns with the same masked plane: light,
 ; zone and material once per span; per column its light level and its opaque runs (LOD 0 compiled, without a
-; base colour, like the walls; LOD 1 and 2 as data runs).
+; base colour, like the walls; LOD 1 and 2 as data runs). r0 = 0: the columns whose plane is behind the sprites
+; there (h <= spr_hc), drawn before the sprites; r0 = 1: the others, after them.
 .var mc
+.var mpass
 draw_masks:
+    ST [mpass], r0
+    LD r1, [mcount]
+    CMP r1, 0
+    JNE @some
+    RET                             ; no masked plane in this image
+@some:
+    CMP r0, 0
+    JNE @go
+    LD r1, [spr_rects]
+    CMP r1, 0
+    JNE @go
+    RET                             ; no sprites: everything is drawn by the second pass
+@go:
     LDI r6, 0
 @span:
     ST [mc], r6
@@ -195,6 +210,17 @@ draw_masks:
     ST [sp_ent], r1
 @col:
     LD r0, [r7 + col_mh]
+    LD r1, [r7 + spr_hc]
+    CMP r1, r0
+    LD r1, [mpass]
+    JB @front                       ; nearer than every sprite here: after them
+    CMP r1, 0
+    JNE @next
+    JMP @this
+@front:
+    CMP r1, 0
+    JEQ @next
+@this:
     LD r1, [r7 + colfog]
     ADD r1, r0
     LDB r1, [r1]

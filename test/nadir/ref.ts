@@ -51,15 +51,16 @@ export interface RefMap {
   poses: { name: string; x: number; y: number; deg: number }[];
   doors: { x: number; y: number; key: number }[];
   keys: { x: number; y: number; bit: number }[];
+  props: { x: number; y: number; s: string }[];
 }
 
 export function readRefMap(name = 'nadir'): RefMap {
-  const m: RefMap = { grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [] };
+  const m: RefMap = { grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [] };
   let part = '';
   for (const raw of readFileSync(join(GAME_DIR, 'levels', `${name}.map`), 'utf8').split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
-    if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys'].includes(line)) part = line;
+    if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props'].includes(line)) part = line;
     else if (line.startsWith('name ')) continue;
     else if (part === 'grid') m.grid.push(line);
     else if (part === 'zones') m.zones.push([...line].map(Number));
@@ -69,6 +70,9 @@ export function readRefMap(name = 'nadir'): RefMap {
     } else if (part === 'doors') {
       const [x, y, key] = line.split(/\s+/).map(Number);
       m.doors.push({ x: x!, y: y!, key: key! });
+    } else if (part === 'props') {
+      const [x, y, ch] = line.split(/\s+/);
+      m.props.push({ x: Number(x), y: Number(y), s: ch! });
     } else if (part === 'keys') {
       const [x, y, bit] = line.split(/\s+/).map(Number);
       m.keys.push({ x: x!, y: y!, bit: bit! });
@@ -256,7 +260,7 @@ const BTN = { L: 1, R: 2, U: 4, D: 8, A: 16, B: 32 };
  * DESIGN §5, one frame: the player's next state from the previous one, the buttons held and pressed this frame,
  * the frame counter, and `passable(cell)` (floor or a fully open door, from the door state before the frame).
  */
-export function stepPlayer(p: PlayerState, held: number, pressed: number, tick: number, passable: (cx: number, cy: number) => boolean, s1 = false, noBob = false): PlayerState {
+export function stepPlayer(p: PlayerState, held: number, pressed: number, tick: number, passable: (cx: number, cy: number) => boolean, s1 = false, noBob = false, propHit: (x: number, y: number) => boolean = () => false): PlayerState {
   const q = { ...p };
   const s1b = s1 && (held & BTN.B) !== 0;
   // 1 double tap
@@ -300,7 +304,7 @@ export function stepPlayer(p: PlayerState, held: number, pressed: number, tick: 
   const R = K.P_RAD!;
   const free = (x: number, y: number) => {
     for (const cx of [(x - R) >> 8, (x + R) >> 8]) for (const cy of [(y - R) >> 8, (y + R) >> 8]) if (!passable(cx, cy)) return false;
-    return true;
+    return !propHit(x, y);
   };
   if (free(q.x + dx, q.y)) q.x += dx;
   if (free(q.x, q.y + dy)) q.y += dy;
@@ -348,3 +352,64 @@ export function stepDoor(d: DoorState, cx: number, cy: number, key: number, keys
   }
   return q;
 }
+
+// ---- sprites (DESIGN §3.12) ------------------------------------------------------------------------------------
+
+export const T = 32;
+export interface RefSprite {
+  char: string;
+  name: string;
+  w: number;
+  h: number;
+  height: number;
+  block: number;
+  pick: number;
+  px: number[][];
+}
+
+/** art/sprites.txt, read on its own */
+export function readRefSprites(): RefSprite[] {
+  const out: RefSprite[] = [];
+  let legend = new Map<string, number>();
+  const lines = readFileSync(join(GAME_DIR, 'art', 'sprites.txt'), 'utf8').split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i]!.trim().split(/\s+/);
+    if (t[0] === 'sprite') {
+      out.push({ char: t[1]!, name: t[2]!, w: Number(t[3]), h: Number(t[4]), height: 0, block: 0, pick: 0, px: [] });
+      legend = new Map();
+    } else if (t[0] === 'height') out[out.length - 1]!.height = Number(t[1]);
+    else if (t[0] === 'block') out[out.length - 1]!.block = Number(t[1]);
+    else if (t[0] === 'pick') out[out.length - 1]!.pick = Number(t[1]);
+    else if (t[0] === 'legend') for (let k = 1; k + 1 < t.length; k += 2) legend.set(t[k]!, t[k + 1] === 't' ? T : parseInt(t[k + 1]!, 10) + (t[k + 1]!.endsWith('!') ? 16 : 0));
+    else if (t[0] === 'rows') for (i++; lines[i]!.trim() !== 'end'; i++) out[out.length - 1]!.px.push([...lines[i]!.trim()].map((ch) => legend.get(ch)!));
+  }
+  return out;
+}
+
+/** DESIGN §3.12: the source downsampled by 2^k (the block's most common value, transparent counting; emissive wins at a quarter) */
+export function refLod(px: number[][], k: number): number[][] {
+  const b = 1 << k;
+  const out: number[][] = [];
+  for (let by = 0; by * b < px.length; by++) {
+    const row: number[] = [];
+    for (let bx = 0; bx * b < px[0]!.length; bx++) {
+      const n = new Map<number, number>();
+      let all = 0;
+      let emis = 0;
+      for (let y = by * b; y < Math.min(px.length, by * b + b); y++)
+        for (let x = bx * b; x < Math.min(px[0]!.length, bx * b + b); x++) {
+          const v = px[y]![x]!;
+          n.set(v, (n.get(v) ?? 0) + 1);
+          all++;
+          if (v >= 16 && v !== T) emis++;
+        }
+      const ranked = [...n].sort((p, q) => q[1] - p[1] || p[0] - q[0]);
+      row.push(emis * 4 >= all && emis ? ranked.find(([v]) => v >= 16 && v !== T)![0] : ranked[0]![0]);
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+/** DESIGN §3.12: K of a sprite */
+export const refK = (s: RefSprite) => Math.round(((s.height / 100) * 2048) / s.h);

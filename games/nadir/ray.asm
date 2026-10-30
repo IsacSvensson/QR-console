@@ -43,6 +43,14 @@ ray_init:
 
 ; Per frame: camera cell, fractions, zone, the first-crossing multipliers of the quadrant records.
 ray_frame:
+    LD r0, [cam_a]                  ; the image's cos and sin in s1.12 (sprites, DESIGN §3.12)
+    CALL cos_a
+    SAR r0, 2
+    ST [rcam_c12], r0
+    LD r0, [cam_a]
+    CALL sin_a
+    SAR r0, 2
+    ST [rcam_s12], r0
     LD r0, [cam_x]
     MOV r1, r0
     AND r1, 255                     ; fx
@@ -80,6 +88,7 @@ ray_frame:
     ST [rtick], r4
     LDI r4, 0
     ST [mcount], r4
+    ST [ncast], r4
     LDI r5, 256
     SUB r5, r1                      ; 256 - fx: the first x crossing when stepping +x
     LDI r7, 256
@@ -158,6 +167,9 @@ cast_all:
 
 ; r0 = column c: casts its ray and fills its column buffers. Clobbers r0-r7.
 cast:
+    LD r1, [ncast]                  ; rays cast this image (the pacing estimate, DESIGN §3.11)
+    ADD r1, 1
+    ST [ncast], r1
     ST [cc], r0
     MOV r7, r0
     SHL r7, 1
@@ -450,11 +462,16 @@ cast:
     MOV r3, r0
     DIV r0, r1                      ; h = F256 / cos(offset) / t = F256 / perp
     MOD r3, r1
-    SHL r3, 1
-    CMP r3, r1
-    JB @round
-    ADD r0, 1                       ; rounded, not truncated
+    SHL r0, 3
+    CMP r1, 4096
+    JAE @round
+    SHL r3, 3
+    DIV r3, r1
+    ADD r0, r3                      ; h8 = 8 h (with three fraction bits, for interpolation)
 @round:
+    ST [r7 + col_h8], r0
+    ADD r0, 4
+    SHR r0, 3                       ; h, rounded
     ST [r7 + col_h], r0
     RET
 
@@ -487,11 +504,16 @@ cast:
     MOV r3, r0
     DIV r0, r1                      ; h = F256 / cos(offset) / t = F256 / perp
     MOD r3, r1
-    SHL r3, 1
-    CMP r3, r1
-    JB @roundm
-    ADD r0, 1                       ; rounded, not truncated
+    SHL r0, 3
+    CMP r1, 4096
+    JAE @roundm
+    SHL r3, 3
+    DIV r3, r1
+    ADD r0, r3                      ; h8 = 8 h (with three fraction bits, for interpolation)
 @roundm:
+    ST [r7 + col_h8 + LAYER], r0
+    ADD r0, 4
+    SHR r0, 3                       ; h, rounded
     ST [r7 + col_h + LAYER], r0
     RET
 
@@ -559,12 +581,16 @@ interp:
     STB [r6 + col_mat], r1
     LD r1, [r2 + col_front]
     ST [r7 + col_front], r1
+    LD r4, [r2 + col_h8]
+    LD r5, [r3 + col_h8]
+    ADD r4, r5
+    SHR r4, 1                       ; h is linear in x on a plane (in eighths: no rounding drift)
+    ST [r7 + col_h8], r4
+    ADD r4, 4
+    SHR r4, 3
+    ST [r7 + col_h], r4
     LD r4, [r2 + col_h]
     LD r5, [r3 + col_h]
-    MOV r1, r4
-    ADD r1, r5
-    SHR r1, 1
-    ST [r7 + col_h], r1
 @fscale:
     CMP r4, 128
     JAE @fhalf
@@ -679,12 +705,16 @@ interp:
     ADD r4, 1
     ST [mcount], r4
 @pl:
+    LD r4, [r2 + col_h8]
+    LD r5, [r3 + col_h8]
+    ADD r4, r5
+    SHR r4, 1
+    ST [r7 + col_h8], r4
+    ADD r4, 4
+    SHR r4, 3
+    ST [r7 + col_h], r4
     LD r4, [r2 + col_h]
     LD r5, [r3 + col_h]
-    MOV r0, r4
-    ADD r0, r5
-    SHR r0, 1
-    ST [r7 + col_h], r0
 @scale:                             ; the weight of r: h_r / (h_l + h_r), heights scaled below 128
     CMP r4, 128
     JAE @half

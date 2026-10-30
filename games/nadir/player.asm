@@ -20,6 +20,15 @@ player:
     ST [walk_v], r0
     ST [dash_n], r0
 @control:
+    LD r4, [cam_y]                  ; the props near the player's cell (collision, pickups)
+    SHR r4, 8
+    SHL r4, 5
+    LD r0, [cam_x]
+    SHR r0, 8
+    ADD r4, r0
+    LDI r0, pnear
+    LDI r5, 3
+    CALL prop_set
     LD r7, [btn]
     ; ---- 1 double tap: LEFT (RIGHT) pressed this frame, no side step running, not B in S1
     LD r0, [dash_n]
@@ -249,9 +258,11 @@ player:
     ST [tap_tick], r0
     RET
 
-; r0 = x, r1 = y (u8.8) -> Z clear (JNZ) if the box +-P_RAD around (x, y) touches a cell that is not passable.
-; Clobbers r0-r4.
+; r0 = x, r1 = y (u8.8) -> Z clear (JNZ) if the box +-P_RAD around (x, y) touches a cell that is not passable or
+; overlaps a blocking prop (DESIGN §3.12). Clobbers r0-r4.
 blocked:
+    ST [bk_x], r0
+    ST [bk_y], r1
     MOV r2, r0
     SUB r2, P_RAD
     SHR r2, 8                       ; left column
@@ -279,6 +290,56 @@ blocked:
     MOV r4, r1
     ADD r4, r0
     CALL passable
+    JNZ @hit
+    ; ---- blocking props: |x - px| < P_RAD + half and |y - py| < P_RAD + half (none near: nothing to test)
+    LDB r4, [pnear]
+    LDB r0, [pnear + 1]
+    OR r4, r0
+    LDB r0, [pnear + 2]
+    OR r4, r0
+    JZ @free
+    LDI r4, props
+@prop:
+    CMP r4, props + NUM_PROPS * PROP_SIZE
+    JAE @free
+    MOV r0, r4                      ; only the props near the player's cell
+    SUB r0, props
+    SHR r0, 3
+    MOV r1, r0
+    AND r1, 7
+    SHR r0, 3
+    LDB r0, [r0 + pnear]
+    SHR r0, r1
+    AND r0, 1
+    JZ @np
+    LDB r2, [r4 + P_TYPE]
+    SHL r2, 4
+    LD r2, [r2 + spr_type + 4]      ; half-size, 0 = not blocking
+    CMP r2, 0
+    JEQ @np
+    ADD r2, P_RAD - 1
+    MOV r0, r2
+    SHL r0, 1
+    ADD r0, 1                       ; inside if d + reach - 1 < 2 reach - 1
+    LD r3, [bk_x]
+    LD r1, [r4 + P_X]
+    SUB r3, r1
+    ADD r3, r2
+    CMP r3, r0
+    JAE @np
+    LD r3, [bk_y]
+    LD r1, [r4 + P_Y]
+    SUB r3, r1
+    ADD r3, r2
+    CMP r3, r0
+    JAE @np
+    CMP r4, 0                       ; blocked: Z clear
+    RET
+@np:
+    ADD r4, PROP_SIZE
+    JMP @prop
+@free:
+    CMP r4, r4                      ; free: Z set
 @hit:
     RET
 

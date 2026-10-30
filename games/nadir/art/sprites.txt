@@ -1,0 +1,174 @@
+# NADIR sprites (DESIGN.md §3.12): props and pickups, drawn as lists of rectangles (tools/sprites.ts).
+#
+#   sprite <map char> <name> <width> <height>   starts a sprite (at most 16 x 24 source pixels)
+#   height <percent>                            its height as a percentage of the wall height (it stands on the floor)
+#   block <half>                                half-size of its blocking box in u8.8 (0 = the player walks through)
+#   pick <kind>                                 0 = not a pickup, 1 = medkit, 2 = ammunition
+#   legend <char> <colour>[!] ...               as in textures.txt; t = transparent
+#   rows ... end
+#
+# Rule for 128 x 128: broad shapes and few colour changes, so that LOD 0 stays within 48 rectangles.
+
+sprite B barrel 12 16
+height 45
+block 77
+pick 0
+legend . t  d 1  k 0  o 4  m 9  y 14
+rows
+..dddddddd..
+dddooooommmd
+dddooooommmd
+dkkkkkkkkkkd
+dddooooommmd
+dddooooommmd
+dddoyyyymmmd
+dddoyyyymmmd
+dddoyyyymmmd
+dddoyyyymmmd
+dddooooommmd
+dddooooommmd
+dkkkkkkkkkkd
+dddooooommmd
+dddooooommmd
+.dddddddddd.
+end
+
+sprite X crate 16 14
+height 42
+block 102
+pick 0
+legend . t  k 0  l 7  b 4  d 1
+rows
+kkkkkkkkkkkkkkkk
+kllllllllllllllk
+klbbbdbbbbdbbblk
+klbbbdbbbbdbbblk
+klbbbdbbbbdbbblk
+klbbbdbbbbdbbblk
+klkkkkkkkkkkkklk
+klkkkkkkkkkkkklk
+klbbbdbbbbdbbblk
+klbbbdbbbbdbbblk
+klbbbdbbbbdbbblk
+klbbbdbbbbdbbblk
+kllllllllllllllk
+kkkkkkkkkkkkkkkk
+end
+
+sprite P pipe 6 24
+height 100
+block 38
+pick 0
+legend . t  k 0  l 10  g 3  d 1  r 6
+rows
+kkkkkk
+kkkkkk
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+rrrrrr
+rrrrrr
+rrrrrr
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+.glgd.
+kkkkkk
+kkkkkk
+end
+
+sprite L floorlamp 6 24
+height 70
+block 38
+pick 0
+legend . t  k 0  g 3  w 15!  y 14!
+rows
+.yyyy.
+ywwwwy
+ywwwwy
+ywwwwy
+.yyyy.
+.kkkk.
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+..gg..
+.kkkk.
+.kkkk.
+kkkkkk
+end
+
+sprite T console 14 16
+height 48
+block 90
+pick 0
+legend . t  k 0  n 2  s 1!  c 13!  p 3
+rows
+.kkkkkkkkkkkk.
+.kkkkkkkkkkkk.
+knnnnnnnnnnnnk
+knssssssssssnk
+knccccccccssnk
+knssssssssssnk
+knccccccccssnk
+knssssssssssnk
+knnnnnnnnnnnnk
+kkkkkkkkkkkkkk
+kkppppppppppkk
+kkppppppppppkk
+knnnnnnnnnnnnk
+knnnnnnnnnnnnk
+knnnnnnnnnnnnk
+kkkkkkkkkkkkkk
+end
+
+sprite M medkit 10 7
+height 16
+block 0
+pick 1
+legend . t  k 0  l 7  w 15  r 6
+rows
+...kkkk...
+lwwwrrwwwl
+lwwwrrwwwl
+lwrrrrrrwl
+lwwwrrwwwl
+lwwwrrwwwl
+llllllllll
+end
+
+sprite A ammo 10 7
+height 16
+block 0
+pick 2
+legend . t  k 0  e 5  y 14  o 9
+rows
+.y.y.y.y..
+.y.y.y.y..
+.o.o.o.o..
+keeeeeeeek
+kyyyyyyyyk
+keeeeeeeek
+kkkkkkkkkk
+end

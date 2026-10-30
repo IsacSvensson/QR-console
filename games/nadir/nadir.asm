@@ -7,6 +7,7 @@
 .include "textures.gen.asm"
 .include "bg.gen.asm"
 .include "map.gen.asm"
+.include "sprites.gen.asm"
 .include "floor.gen.asm"
 .include "defs.asm"
 .include "math.asm"
@@ -16,6 +17,7 @@
 .include "ray.asm"
 .include "walls.asm"
 .include "floor.asm"
+.include "sprites.asm"
 .code
 
 init:
@@ -41,7 +43,7 @@ update:
     ST [btnp], r0
     CALL player
     CALL world
-    ; ---- adaptive pacing (DESIGN §3.11): an image whose rays met many masked planes is drawn in the next frame
+    ; ---- adaptive pacing (DESIGN §3.11): an image whose estimated cost is high is drawn in the next frame
     LD r0, [pace]
     CMP r0, 0
     JEQ @image
@@ -52,8 +54,16 @@ update:
     CALL ray_frame
     CALL light_frame
     CALL cast_all
-    LD r0, [mcount]
-    CMP r0, PACE_MCOLS
+    CALL spr_frame
+    LD r0, [ncast]                  ; the estimate of this image's cost
+    MUL r0, PACE_W_CAST
+    LD r1, [mcount]
+    MUL r1, PACE_W_MASK
+    ADD r0, r1
+    LD r1, [spr_rects]
+    MUL r1, PACE_W_RECT
+    ADD r0, r1
+    CMP r0, PACE_EST
     JB @draw
     LD r0, [dbg_flags]
     AND r0, FL_NOPACE
@@ -66,5 +76,9 @@ update:
     CALL floor_lines
     CALL draw_lamps
     CALL draw_walls
+    LDI r0, 0
+    CALL draw_masks
+    CALL draw_sprites
+    LDI r0, 1
     CALL draw_masks
     RET

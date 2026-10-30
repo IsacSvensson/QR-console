@@ -847,3 +847,33 @@ Abandoned: per-plane "segment" drawing of masked walls (projected end points, in
 would replace; quadrant-specialised casting code in RAM - the DDA loop is already 7 instructions, it would save
 only the step loads (~4 cycles per ray).
 Revisit if: M28 sprites push paced images over 25 000 per frame (then split drawing finer: walls / sprites).
+
+## D-043 - NADIR M28: rect sprites, per-cell prop tables, precise projection, a fitted pacing estimate
+Date: 2026-10-30 - Milestone: M28
+Decision:
+- **Rect sprites compiled by a layered greedy cover** (`tools/sprites.ts`): per colour in an order, the rectangles
+  that cover the most of that colour's remaining pixels while touching only pixels of that colour or of colours
+  drawn later (never transparent ones); 12 orders tried (by count, by bounding box, seeded shuffles), the shortest
+  kept and verified pixel for pixel. The art is "rect-friendly"; the lists are 1-11 rectangles (limits 48/20/8).
+  LOD rectangles are stored in source pixels clipped to the source, so a LOD never grows a sprite below the floor
+  (first version did: caught by the two-VM occlusion test).
+- **Per-cell prop tables in xdata (a PVS, as in Doom's REJECT):** per cell 3 bytes of props that may be seen from it
+  and 3 bytes of props near it, 6 KB of xdata fetched with one COPY per image / per frame. Without them every prop
+  was projected each image (~3.5k cycles in the workshop even when hidden); with them a view without visible props
+  costs ~200 cycles more than M27. A cheap 5-bit cone test runs before the exact projection.
+- **Projection precision for the +-1 px oracle:** cos/sin in s1.12; products from four byte products, rounded, in
+  1/1024 cell; h with three rounded fraction bits; scale in 1/64 px with rounded edges ((v s + 32) >> 6, still exact
+  NN at integer scales). 8-bit cos/sin gave centre x within 1 px in 37 %, then 87 %, 99 %, now 100 % of 18 000+
+  drawn sprites.
+- **Wall heights with three fraction bits (col_h8)** for interpolation: the stride-4 scheme (D-042) halves twice and
+  the new replay put 1.2 % of columns outside +-max(1, h/64); with col_h8, 100 % (rounding the halving instead made
+  it worse: abandoned).
+- **Masked planes and sprites:** spr_hc[c] = nearest sprite per column; a masked column is drawn before the sprites
+  if its plane is behind them, else after (each column once).
+- **Pacing estimate** (DESIGN §3.11): 264 * rays cast + 160 * masked columns + 164 * sprite rectangles >= 8 000 ->
+  the image is drawn next frame. Weights from a least-squares fit over 19 196 frames without pacing; the threshold
+  measured so that no frame of the six replays exceeds 24 402 (9 000 left a 25 132 frame: the organic core's data
+  columns, which the estimate does not see). Paced share: 5 % of m26-fly, 43 % of the prop stress replay.
+Measured: sprite drawing max 2 275 cycles with eight sprites (criterion 5 000), sprite choice (spr_frame) max 4 627;
+gates per image: M26 max 42 288 / mean 17 876 (14 000 / 11 000), M27 max 42 288 (16 000) - still failing, flagged.
+Revisit if: M29's enemies (animated sprites, AI) need the selection cost down: then cache projections across frames.

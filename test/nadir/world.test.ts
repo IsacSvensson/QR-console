@@ -2,10 +2,13 @@
 // every frame of every replay, against DESIGN §3.10 and §5 as read by test/nadir/ref.ts.
 import { describe, expect, it } from 'vitest';
 import { VM, expandInputs, type ReplayFile } from '@qrc/vm';
-import { K, mapByte, readRefMap, refLight, solid, stepDoor, stepPlayer, type PlayerState } from './ref';
+import { K, mapByte, readRefMap, readRefSprites, refLight, solid, stepDoor, stepPlayer, type PlayerState } from './ref';
 import { REPLAYS, buildNadir, loadReplay, type Nadir } from './play';
 
 const map = readRefMap('nadir');
+const sprites = readRefSprites();
+const propSprite = map.props.map((p) => sprites.find((s) => s.char === p.s)!);
+const alive = (n: Nadir, vm: VM, i: number) => vm.read8(n.S('props') + 8 * i + 5);
 const W = map.grid[0]!.length;
 const H = map.grid.length;
 
@@ -22,13 +25,13 @@ const doorAt = (n: Nadir, vm: VM, i: number) => {
 };
 
 /** Runs a replay frame by frame; `each` gets the state before and after each frame. */
-function walk(n: Nadir, name: string, each: (f: number, vm: VM, held: number, pressed: number, before: { p: PlayerState; doors: ReturnType<typeof doorAt>[]; keys: number }) => void) {
+function walk(n: Nadir, name: string, each: (f: number, vm: VM, held: number, pressed: number, before: { p: PlayerState; doors: ReturnType<typeof doorAt>[]; keys: number; alive: number[]; med: number; ammo: number }) => void) {
   const rf: ReplayFile & { frames: number } = loadReplay(name);
   const inputs = expandInputs(rf.inputs, rf.frames);
   const vm = VM.fromCartridge(n.cart, { seed: rf.seed ?? 1 });
   vm.step(inputs[0]!); // init and the first frame (the start pose)
   for (let f = 1; f < rf.frames; f++) {
-    const before = { p: readPlayer(n, vm), doors: map.doors.map((_, i) => doorAt(n, vm, i)), keys: vm.read16(n.S('keys')) };
+    const before = { p: readPlayer(n, vm), doors: map.doors.map((_, i) => doorAt(n, vm, i)), keys: vm.read16(n.S('keys')), alive: map.props.map((_, i) => alive(n, vm, i)), med: vm.read16(n.S('picked_med')), ammo: vm.read16(n.S('picked_ammo')) };
     const held = inputs[f]!;
     const pressed = held & ~inputs[f - 1]!;
     vm.step(held);
@@ -67,6 +70,11 @@ describe('M27 world', () => {
     });
     expect(n.S('NUM_LAMPS')).toBe(map.lamps.length);
     map.lamps.forEach((l, i) => expect([0, 1, 2, 3].map((k) => vm.read8(n.S('lamps') + 4 * i + k))).toEqual([l.x, l.y, l.i, l.g]));
+    expect(n.S('NUM_PROPS')).toBe(map.props.length);
+    map.props.forEach((p, i) => {
+      const b = n.S('props') + 8 * i;
+      expect([vm.read16(b), vm.read16(b + 2), vm.read8(b + 4), vm.read8(b + 5)], `prop ${i}`).toEqual([Math.round(p.x * 256), Math.round(p.y * 256), sprites.indexOf(propSprite[i]!), 1]);
+    });
     console.log(`[world] ${cells} cells, ${map.doors.length} doors, ${map.keys.length} key, ${map.lamps.length} lamps match the source`);
   });
 
@@ -79,6 +87,7 @@ describe('M27 world', () => {
       let blockedX = 0;
       let dashes = 0;
       let opened = 0;
+      let picks = 0;
       const lockedRefused = new Set<number>();
       walk(n, name, (f, vm, held, pressed, before) => {
         frames++;
@@ -90,7 +99,9 @@ describe('M27 world', () => {
           if (c !== '+') return false;
           return before.doors[map.doors.findIndex((d) => d.x === cx && d.y === cy)]!.open === 256;
         };
-        const want = stepPlayer(before.p, held, pressed, tick, passable);
+        // blocking props (DESIGN §3.12): the box overlaps one if both axis distances are < P_RAD + its half-size
+        const propHit = (x: number, y: number) => map.props.some((p, i) => propSprite[i]!.block > 0 && Math.abs(x - Math.round(p.x * 256)) < K.P_RAD! + propSprite[i]!.block && Math.abs(y - Math.round(p.y * 256)) < K.P_RAD! + propSprite[i]!.block);
+        const want = stepPlayer(before.p, held, pressed, tick, passable, false, false, propHit);
         const got = readPlayer(n, vm);
         expect(got, `frame ${f + 1}`).toEqual(want);
         if (got.dashN === K.DASH_FRAMES! - 1) dashes++;
@@ -112,6 +123,23 @@ describe('M27 world', () => {
         expect(move, `frame ${f + 1}: moved ${move}`).toBeLessThanOrEqual(K.P_RAD!);
         if (got.x === before.p.x && want.x === before.p.x && held & 12) blockedX++;
         // keys, then the doors' state machine after the player moved
+        // pickups (DESIGN §3.12), after the move
+        let med = before.med;
+        let ammo = before.ammo;
+        map.props.forEach((p, i) => {
+          const sp = propSprite[i]!;
+          let want = before.alive[i]!;
+          if (want && sp.pick && Math.abs(got.x - Math.round(p.x * 256)) < K.P_RAD! + K.PICK_HALF! && Math.abs(got.y - Math.round(p.y * 256)) < K.P_RAD! + K.PICK_HALF!) {
+            want = 0;
+            if (sp.pick === 1) med++;
+            else ammo++;
+            picks++;
+          }
+          expect(alive(n, vm, i), `frame ${f + 1}: prop ${i} alive`).toBe(want);
+        });
+        expect([vm.read16(n.S('picked_med')), vm.read16(n.S('picked_ammo'))], `frame ${f + 1}: pickups`).toEqual([med, ammo]);
+        // the player never overlaps a blocking prop
+        expect(propHit(got.x, got.y), `frame ${f + 1}: inside a prop`).toBe(false);
         let keys = before.keys;
         for (const k of map.keys) if (Math.floor(x) === k.x && Math.floor(y) === k.y) keys |= k.bit;
         expect(vm.read16(n.S('keys')), `frame ${f + 1}: keys`).toBe(keys);
@@ -135,6 +163,8 @@ describe('M27 world', () => {
         expect(lockedRefused.size).toBe(1);
       }
       if (name === 'm27-walk') expect(dashes).toBeGreaterThanOrEqual(4);
+      if (name === 'm28-props') expect(picks).toBeGreaterThanOrEqual(1);
+      console.log(`[world] ${name}: ${picks} pickups`);
     });
 
   it('door timing: a door takes 256 / DOOR_SPEED frames to open and closes DOOR_WAIT frames after the player left (m27-doors)', async () => {

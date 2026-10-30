@@ -1,4 +1,5 @@
-; NADIR - the world (DESIGN §3.10): key triggers and the doors' state machine, once per frame after the player.
+; NADIR - the world (DESIGN §3.10, §3.12): key triggers, pickups and the doors' state machine, once per frame after
+; the player.
 .code
 
 ; Once: the door table from ROM (map.gen.asm).
@@ -7,6 +8,11 @@ world_init:
     LDI r1, 0
     LDI r2, door_init
     LDI r3, NUM_DOORS * DOOR_SIZE
+    SYS COPY
+    LDI r0, props
+    LDI r1, 0
+    LDI r2, prop_init
+    LDI r3, NUM_PROPS * PROP_SIZE
     SYS COPY
     RET
 
@@ -33,6 +39,54 @@ world:
     ADD r3, 4
     JMP @key
 @doors:
+    ; ---- pickups (DESIGN §3.12): within P_RAD + PICK_HALF of the player on both axes
+    LDB r6, [pnear]
+    LDB r0, [pnear + 1]
+    OR r6, r0
+    LDB r0, [pnear + 2]
+    OR r6, r0
+    JZ @doors2
+    LDI r6, props
+@pick:
+    CMP r6, props + NUM_PROPS * PROP_SIZE
+    JAE @doors2
+    LDI r7, pnear
+    CALL in_set
+    JZ @np
+    LD r0, [cam_x]
+    LD r1, [r6 + P_X]
+    SUB r0, r1
+    ADD r0, P_RAD + PICK_HALF - 1
+    CMP r0, 2 * (P_RAD + PICK_HALF) - 1
+    JAE @np
+    LDB r0, [r6 + P_ALIVE]
+    CMP r0, 0
+    JEQ @np
+    LDB r5, [r6 + P_TYPE]
+    SHL r5, 4
+    LDB r5, [r5 + spr_type + 3]     ; pick kind
+    CMP r5, 0
+    JEQ @np
+    LD r0, [cam_y]
+    LD r1, [r6 + P_Y]
+    SUB r0, r1
+    ADD r0, P_RAD + PICK_HALF - 1
+    CMP r0, 2 * (P_RAD + PICK_HALF) - 1
+    JAE @np
+    LDI r0, 0
+    STB [r6 + P_ALIVE], r0
+    LDI r1, picked_med
+    CMP r5, 1
+    JEQ @cnt
+    LDI r1, picked_ammo
+@cnt:
+    LD r0, [r1]
+    ADD r0, 1
+    ST [r1], r0
+@np:
+    ADD r6, PROP_SIZE
+    JMP @pick
+@doors2:
     LDI r6, doors
 @door:
     CMP r6, doors + NUM_DOORS * DOOR_SIZE

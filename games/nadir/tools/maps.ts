@@ -9,6 +9,7 @@ import { PNG } from 'pngjs';
 import { PALETTE } from '@qrc/vm';
 import { k } from './design';
 import { COLANG, ANGLES } from './tables';
+import { readSprites } from './sprites';
 import { readMaterials } from './textures';
 import { GAME_DIR, byteLines, isMain, wordLines } from './util';
 
@@ -35,6 +36,12 @@ export interface KeyTrigger {
   y: number;
   bit: number;
 }
+export interface Prop {
+  x: number;
+  y: number;
+  /** sprite char (art/sprites.txt) */
+  s: string;
+}
 export interface GameMap {
   name: string;
   W: number;
@@ -46,11 +53,12 @@ export interface GameMap {
   poses: Pose[];
   doors: Door[];
   keys: KeyTrigger[];
+  props: Prop[];
 }
 
 export function readMap(name = 'nadir'): GameMap {
   const lines = readFileSync(join(GAME_DIR, 'levels', `${name}.map`), 'utf8').split(/\r?\n/);
-  const m: GameMap = { name: '', W: k('MAP_W'), H: k('MAP_H'), grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [] };
+  const m: GameMap = { name: '', W: k('MAP_W'), H: k('MAP_H'), grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [] };
   let part = '';
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!.trim();
@@ -58,7 +66,7 @@ export function readMap(name = 'nadir'): GameMap {
     if (!line || line.startsWith('#')) continue;
     const [kw, ...args] = line.split(/\s+/);
     if (kw === 'name') m.name = args.join(' ');
-    else if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys'].includes(kw!)) part = kw!;
+    else if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props'].includes(kw!)) part = kw!;
     else if (part === 'grid') {
       if (line.length !== m.W) throw new Error(`${where}: grid row has ${line.length} cells, expected ${m.W}`);
       m.grid.push(line);
@@ -71,6 +79,8 @@ export function readMap(name = 'nadir'): GameMap {
     } else if (part === 'doors') {
       const [x, y, key] = [kw, ...args].map(Number);
       m.doors.push({ x: x!, y: y!, key: key! });
+    } else if (part === 'props') {
+      m.props.push({ x: Number(kw), y: Number(args[0]), s: args[1]! });
     } else if (part === 'keys') {
       const [x, y, bit] = [kw, ...args].map(Number);
       m.keys.push({ x: x!, y: y!, bit: bit! });
@@ -250,8 +260,80 @@ export function checkMap(m: GameMap) {
   for (const t of m.keys) if (solidAt(m, t.x, t.y) || t.bit < 1 || t.bit > 128 || (t.bit & (t.bit - 1))) throw new Error(`${m.name}: bad key trigger at ${t.x},${t.y}`);
   const sight = longestSight(m);
   if (sight.d > k('MAX_SIGHT')) throw new Error(`${m.name}: a sight line of ${sight.d.toFixed(2)} cells from ${sight.x},${sight.y} at ${sight.deg.toFixed(1)} deg (MAX_SIGHT ${k('MAX_SIGHT')})`);
+  const sprites = readSprites();
+  if (m.props.length > 24) throw new Error(`${m.name}: at most 24 props`);
+  for (const p of m.props) {
+    const sp = sprites.find((s) => s.char === p.s);
+    if (!sp) throw new Error(`${m.name}: unknown sprite '${p.s}' at ${p.x},${p.y}`);
+    if (solidAt(m, Math.floor(p.x), Math.floor(p.y))) throw new Error(`${m.name}: prop in a wall at ${p.x},${p.y}`);
+    const half = sp.block / 256;
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const)
+      if (half && solidAt(m, Math.floor(p.x + dx * half), Math.floor(p.y + dy * half))) throw new Error(`${m.name}: the box of the prop at ${p.x},${p.y} reaches into a wall`);
+    for (const q of m.poses) if (half && Math.abs(q.x - p.x) < half + 0.25 && Math.abs(q.y - p.y) < half + 0.25) throw new Error(`${m.name}: pose ${q.name} inside the prop at ${p.x},${p.y}`);
+  }
   for (const l of m.lamps) if (solidAt(m, l.x, l.y)) throw new Error(`${m.name}: lamp in a wall at ${l.x},${l.y}`);
   for (const p of m.poses) if (solidAt(m, Math.floor(p.x), Math.floor(p.y))) throw new Error(`${m.name}: pose ${p.name} in a wall`);
+}
+
+/** True if the segment a-b crosses no wall cell (thin cells are see-through: doors count as open). */
+function segClear(m: GameMap, ax: number, ay: number, bx: number, by: number, masked: Set<string>): boolean {
+  let x = Math.floor(ax);
+  let y = Math.floor(ay);
+  const ex = Math.floor(bx);
+  const ey = Math.floor(by);
+  const dx = bx - ax;
+  const dy = by - ay;
+  const sx = dx < 0 ? -1 : 1;
+  const sy = dy < 0 ? -1 : 1;
+  const tdx = dx === 0 ? Infinity : Math.abs(1 / dx);
+  const tdy = dy === 0 ? Infinity : Math.abs(1 / dy);
+  let tx = dx === 0 ? Infinity : (dx < 0 ? ax - x : x + 1 - ax) * tdx;
+  let ty = dy === 0 ? Infinity : (dy < 0 ? ay - y : y + 1 - ay) * tdy;
+  for (;;) {
+    if (wallAt(m, x, y, masked)) return false;
+    if ((x === ex && y === ey) || Math.min(tx, ty) > 1) return true;
+    if (tx < ty) {
+      x += sx;
+      tx += tdx;
+    } else {
+      y += sy;
+      ty += tdy;
+    }
+  }
+}
+
+/**
+ * DESIGN §3.12: per cell the props that may be seen from somewhere in it (a clear line from one of 6 x 6 points of
+ * the cell to one of 5 points of the prop's footprint, within SPR_FAR + 1 cell; doors count as open, masked walls as
+ * see-through) and the props near it (footprint within one cell of it: collision and pickups). 3 bytes each.
+ */
+export function propSets(m: GameMap): { vis: number[][]; near: number[][] } {
+  const masked = maskedChars();
+  const sprites = readSprites();
+  const far = k('SPR_FAR') / 256 + 1;
+  const vis = Array.from({ length: m.W * m.H }, () => [0, 0, 0]);
+  const near = Array.from({ length: m.W * m.H }, () => [0, 0, 0]);
+  m.props.forEach((p, i) => {
+    const sp = sprites.find((s) => s.char === p.s)!;
+    const hw = (sp.w * Math.round(((sp.height / 100) * 2048) / sp.h)) / 2048 / 2;
+    const reach = Math.max(sp.block, k('PICK_HALF')) / 256 + 1;
+    const pts = [[p.x, p.y], [p.x - hw, p.y], [p.x + hw, p.y], [p.x, p.y - hw], [p.x, p.y + hw]];
+    for (let cy = 0; cy < m.H; cy++)
+      for (let cx = 0; cx < m.W; cx++) {
+        if (wallAt(m, cx, cy, masked) || (thinAt(m, cx, cy, masked) && m.grid[cy]![cx] !== '+')) continue;
+        const c = cy * m.W + cx;
+        if (p.x + reach > cx && p.x - reach < cx + 1 && p.y + reach > cy && p.y - reach < cy + 1) near[c]![i >> 3]! |= 1 << (i & 7);
+        let seen = false;
+        for (let a = 0; a < 6 && !seen; a++)
+          for (let b = 0; b < 6 && !seen; b++) {
+            const ax = cx + 0.02 + (a * 0.96) / 5;
+            const ay = cy + 0.02 + (b * 0.96) / 5;
+            for (const [px, py] of pts) if (Math.hypot(px! - ax, py! - ay) <= far && segClear(m, ax, ay, px!, py!, masked)) seen = true;
+          }
+        if (seen) vis[c]![i >> 3]! |= 1 << (i & 7);
+      }
+  });
+  return { vis, near };
 }
 
 export function mapAsm(m: GameMap): string {
@@ -278,6 +360,7 @@ export function mapAsm(m: GameMap): string {
     `NUM_POSES = ${m.poses.length}`,
     `NUM_DOORS = ${m.doors.length}`,
     `NUM_KEYS = ${m.keys.length}`,
+    `NUM_PROPS = ${m.props.length}`,
     ...m.poses.map((p, i) => `POSE_${p.name.toUpperCase()} = ${i + 1}`),
     '',
     '.data',
@@ -287,6 +370,9 @@ export function mapAsm(m: GameMap): string {
     '; doors (DESIGN §3.10), copied to the RAM door table by init: cell, open, state, timer, orientation, key, material',
     'door_init:',
     ...m.doors.flatMap((d) => [`    .word ${d.y * m.W + d.x}, 0`, `    .byte 0, 0, ${thinOrient(m, d.x, d.y)}, ${d.key}, ${d.key ? 'MAT_LOCKEDDOOR' : 'MAT_DOOR'}, 0, 0, 0, 0, 0, 0, 0`]),
+    '; props (DESIGN §3.12), copied to the RAM prop table by init: x, y (u8.8), sprite type, alive',
+    'prop_init:',
+    ...m.props.map((p) => `    .word ${fix(p.x)}, ${fix(p.y)}\n    .byte ${readSprites().findIndex((s) => s.char === p.s)}, 1, 0, 0`),
     '; key triggers: cell, key bit',
     'key_tab:',
     ...m.keys.map((t) => `    .word ${t.y * m.W + t.x}, ${t.bit}`),
@@ -302,6 +388,12 @@ export function mapAsm(m: GameMap): string {
     ...byteLines(light, 32),
     'zmap_x:',
     ...byteLines(zones, 32),
+    '; per cell (DESIGN §3.12): 3 bytes of props that may be seen from it, 3 bytes of props near it; fetched with COPY',
+    'pvs_x:',
+    ...(() => {
+      const ps = propSets(m);
+      return byteLines(ps.vis.flatMap((v, c) => [...v, ...ps.near[c]!]), 24);
+    })(),
     '',
   ].join('\n');
 }
@@ -337,6 +429,7 @@ export function mapPng(m: GameMap, scale = 8): Buffer {
       if (ch === '.' && m.zones[cy]![cx] === 3) put(cx * scale + scale / 2, cy * scale + scale / 2, 8);
     }
   for (const l of m.lamps) for (let y = 2; y < scale - 2; y++) for (let x = 2; x < scale - 2; x++) put(l.x * scale + x, l.y * scale + y, l.group ? 6 : 14);
+  for (const p of m.props) for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) put(Math.round(p.x * scale) + x, Math.round(p.y * scale) + y, 9);
   for (const p of m.poses) {
     const a = (p.deg * Math.PI) / 180;
     for (let s = 0; s < scale * 1.5; s++) put(Math.round(p.x * scale + Math.cos(a) * s), Math.round(p.y * scale + Math.sin(a) * s), 13);

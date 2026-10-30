@@ -99,7 +99,7 @@ poses
 start 3.5 3.0 90
 shaft 3.5 7.0 90
 grate 4.3 10.2 0
-workshop 7.0 8.0 45
+workshop 9.5 11.2 300
 lowwall 10.0 15.2 270
 ws_door 14.4 12.0 90
 dark 17.0 11.5 0
@@ -109,5 +109,31 @@ sec_door 21.0 12.4 0
 core 25.0 11.0 60
 railing 27.3 18.0 270
 south 11.0 18.0 0
-close_wall 6.25 7.5 180
+close_wall 6.25 12.0 180
 grazing 3.27 13.5 268
+storeroom 6.5 9.5 337
+barrels 12.5 8.4 15
+props
+# x y sprite (cell units; the sprite stands at that point, art/sprites.txt)
+13.5 7.5 B
+14.4 7.6 B
+14.4 8.6 B
+13.6 9.7 X
+6.6 7.5 X
+7.7 7.4 X
+10.5 7.4 L
+11.6 7.3 P
+11.3 10.4 M
+9.0 7.4 X
+14.4 10.6 B
+12.6 11.6 A
+19.6 2.6 T
+24.5 2.6 T
+28.3 7.4 T
+19.6 7.5 M
+27.6 5.2 A
+30.4 10.6 P
+30.4 13.6 P
+29.5 19.4 L
+12.5 18.55 X
+15.4 18.6 B

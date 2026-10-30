@@ -106,7 +106,8 @@ export const ROUTES: Record<string, Route> = {
       b.walkTo(7.0, 12.0);
       b.turnTo(330);
       b.pushWall(); // the pillar
-      b.turnTo(90);
+      b.walkTo(9.5, 10.5);
+      b.walkTo(9.5, 12.4);
       b.walkTo(10.5, 12.5);
       b.turnTo(90);
       b.pushWall(); // the low wall
@@ -196,6 +197,40 @@ export const ROUTES: Record<string, Route> = {
       b.walkTo(6.6, 14.5);
       b.walkTo(11.0, 14.6);
       b.turnTo(250);
+      b.wait(20);
+    },
+  },
+  /**
+   * M28 sprites: the workshop's props from the south and from its west side (nine in view, the nearest eight
+   * drawn: crates, barrels, a lamp, a pipe, pickups), sweeps across them, picks up the medkit, then close to the
+   * barrels where they are drawn large.
+   */
+  'm28-props': {
+    seed: 6,
+    run(b) {
+      b.walkTo(3.5, 4.4);
+      b.walkTo(3.5, 7.0);
+      b.walkTo(3.6, 13.5);
+      b.walkTo(6.5, 14.5);
+      b.walkTo(10.5, 14.6);
+      b.turnTo(270);
+      b.wait(30);
+      b.turnTo(245, true);
+      b.turnTo(295, true);
+      b.turnTo(270);
+      b.walkTo(6.5, 14.5);
+      b.walkTo(6.5, 9.5);
+      b.turnTo(337); // nine props in view: the nearest eight are drawn
+      b.wait(30);
+      b.turnTo(305, true);
+      b.turnTo(10, true);
+      b.walkTo(9.5, 10.5);
+      b.walkTo(11.3, 10.4); // the medkit
+      b.walkTo(12.5, 8.4);
+      b.turnTo(0);
+      b.wait(20);
+      b.spin(-1, true);
+      b.turnTo(200);
       b.wait(20);
     },
   },

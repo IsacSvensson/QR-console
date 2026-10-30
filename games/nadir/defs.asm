@@ -11,6 +11,7 @@ FL_NOVEC    = 8             ; no face-vector details
 FL_NOFLOOR  = 16            ; no floor seams, light pools or ceiling glow
 FL_NOWIDE   = 32            ; interpolation from neighbours 1 away only (cast every even column, M26)
 FL_NOPACE   = 64            ; never split an image over two frames (DESIGN §3.11)
+FL_NOSPR    = 128           ; no sprites (the occlusion test)
 
 ; ---- doors (DESIGN §3.10): the door table entry -------------------------------------------------------
 D_CELL      = 0             ; map index (word)
@@ -21,6 +22,13 @@ D_ORIENT    = 6             ; 1: the plane x = cx + 1/2, 0: y = cy + 1/2
 D_KEY       = 7             ; key bit, 0 = none
 D_MAT       = 8             ; material drawn (door or locked door)
 DOOR_SIZE   = 16
+
+; ---- props (DESIGN §3.12): the prop table entry ---------------------------------------------------------
+P_X         = 0             ; u8.8
+P_Y         = 2
+P_TYPE      = 4             ; sprite type (sprites.gen.asm)
+P_ALIVE     = 5             ; 0 once picked up
+PROP_SIZE   = 8
 
 ; ---- quadrant record (ray.asm): one per quadrant of the ray angle --------------------------------------
 Q_STEPX     = 0             ; +1 / -1 (map index step for an x step)
@@ -48,6 +56,13 @@ Q_SIZE      = 32            ; (fields from 8 on: ray.asm)
 .var opt_nobob              ; 1: no head bob
 .var keys                   ; key bits held
 .var doors, 16 * DOOR_SIZE  ; the door table
+.var props, 24 * PROP_SIZE  ; the prop table
+.var picked_med             ; pickups collected
+.var picked_ammo
+.var pvs_img, 3             ; props that may be seen from the image's camera cell (DESIGN §3.12)
+.var pnear, 3               ; props near the player's cell (collision, pickups)
+.var bk_x                   ; blocked: the box centre being tested
+.var bk_y
 .var dbg_pose               ; test hook: n > 0 sets the player to pose n (map.gen.asm), at rest, then 0
 .var dbg_flags              ; test hook: FL_* render flags
 .var dbg_sentinel           ; test hook: colour of the CLS before drawing (0 normally)
@@ -68,10 +83,13 @@ Q_SIZE      = 32            ; (fields from 8 on: ray.asm)
 .var rcam_a
 .var rcam_c8
 .var rcam_s8
+.var rcam_c12               ; cos and sin of rcam_a, s1.12
+.var rcam_s12
 .var rbob
 .var rtick
 .var pace                   ; 1: the rays of this image are cast, it is drawn next frame
 .var mcount                 ; columns with a masked plane in this image
+.var ncast                  ; rays cast for this image
 .var quad, 4 * Q_SIZE       ; quadrant records
 .var group_lit, 4           ; per flicker group: 1 if lit this frame
 .var mat_cur, 2 * (NUM_MATS + 1)   ; per material id: address of its current mat_ent entry
@@ -85,7 +103,7 @@ Q_SIZE      = 32            ; (fields from 8 on: ray.asm)
 ; ---- column buffers (DESIGN §3.8; the tests read them) -------------------------------------------------
 ; Two layers with the same layout: the solid wall, then LAYER bytes on the first masked plane (DESIGN §3.10), so
 ; the same code fills either layer with its index moved by LAYER.
-LAYER = 12 * COLS
+LAYER = 14 * COLS
 .var colbuf, 2 * LAYER
 col_h     = colbuf          ; wall height in px (inverse depth: F256 / perpendicular distance)
 col_face  = col_h + 2 * COLS    ; cell * 4 + side (masked layer: -1 = no masked plane)
@@ -94,6 +112,7 @@ col_uf    = col_front + 2 * COLS ; texture u as a 0.16 fraction (already mirrore
 col_u     = col_uf + 2 * COLS   ; texel column 0..31
 col_mat   = col_u + COLS        ; material id
 col_lvl   = col_mat + COLS      ; light level 0..7
+col_h8    = col_lvl + COLS      ; 8 h (three fraction bits: interpolation)
 col_mh    = col_h + LAYER       ; the masked layer
 col_mface = col_face + LAYER
 col_mfront = col_front + LAYER
