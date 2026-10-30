@@ -16,7 +16,7 @@ SR_TOP   = 16
 SR_LOD   = 18
 SR_TYPE  = 20                       ; address of its spr_type entry
 SR_CELL  = 22                       ; its map cell (light)
-SR_SIZE  = 24
+SR_SIZE  = 58                       ; (boxes keep their corners from byte 24 on: boxes.asm)
 SPR_CAND = 24                       ; candidates at most (all props)
 
 .var spr_cn                         ; candidates this image
@@ -67,6 +67,14 @@ in_set:
 spr_frame:
     LDI r0, spr_hc
     LDI r1, 0
+    LDI r2, 2 * COLS
+    SYS FILL
+    LDI r0, col_bh                  ; the nearest box side per column (tests)
+    LDI r1, 0
+    LDI r2, 2 * COLS
+    SYS FILL
+    LDI r0, col_bface
+    LDI r1, 255
     LDI r2, 2 * COLS
     SYS FILL
     LDI r0, 0
@@ -146,6 +154,29 @@ spr_frame:
     LD r1, [rcam_s12]
     CALL smul12
     ADD r7, r0                      ; z in 1/1024 cell
+    LDB r2, [r6 + P_TYPE]           ; a box (DESIGN §3.12): its corners decide, not its centre
+    SHL r2, 4
+    LDB r2, [r2 + spr_type + 15]
+    CMP r2, 0
+    JEQ @bill
+    CMP r7, -4 * 256
+    JLT @next
+    CMP r7, 4 * SPR_FAR
+    JGT @next
+    MOV r0, r5
+    LD r1, [rcam_c12]
+    CALL smul12
+    PUSH r0
+    MOV r0, r4
+    LD r1, [rcam_s12]
+    CALL smul12
+    POP r1
+    SUB r1, r0
+    CALL box_frame
+    CMP r0, 0
+    JEQ @next
+    JMP @accept
+@bill:
     CMP r7, 4 * SPR_NEAR
     JLT @next
     CMP r7, 4 * SPR_FAR
@@ -247,6 +278,7 @@ spr_frame:
     LDI r1, 2
 @lod:
     ST [r5 + SR_LOD], r1
+@accept:
     LD r0, [spr_cn]
     ADD r0, 1
     ST [spr_cn], r0
@@ -351,7 +383,7 @@ spr_frame:
     JMP @scol
 @done:
     RET
-; r0 = rectangles of the drawn sprites at their LODs. Clobbers r1-r4.
+; r0 = rectangles of the drawn sprites at their LODs (a box: its cost in rectangles). Clobbers r1-r4.
 @count:
     LDI r0, 0
     LD r1, [spr_o0]
@@ -361,10 +393,17 @@ spr_frame:
     CMP r1, r2
     JAE @cdone
     LD r2, [r1 + spr_ord]
+    LD r4, [r2 + SR_TYPE]
+    LDB r3, [r4 + 15]
+    CMP r3, 0
+    JEQ @cb
+    LD r2, [r2 + SR_S]              ; a box: its cost in rectangles (boxes.asm)
+    JMP @ca
+@cb:
     LD r3, [r2 + SR_LOD]
-    LD r2, [r2 + SR_TYPE]
-    ADD r2, r3
-    LDB r2, [r2 + 12]
+    ADD r4, r3
+    LDB r2, [r4 + 12]
+@ca:
     ADD r0, r2
     ADD r1, 2
     JMP @cl
@@ -475,6 +514,13 @@ draw_sprites:
     JAE @end
     ST [sd_rec], r6
     LD r5, [r6 + spr_ord]
+    LD r0, [r5 + SR_TYPE]
+    LDB r0, [r0 + 15]
+    CMP r0, 0
+    JEQ @bill
+    CALL draw_box                   ; a 3D box (boxes.asm)
+    JMP @nextspr
+@bill:
     ; ---- light: the prop's cell, the fog of the column under its centre at its h (DESIGN §3.12)
     LD r2, [r5 + SR_CELL]
     CALL span_light

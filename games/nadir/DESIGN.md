@@ -391,6 +391,32 @@ sprite bakom ett galler och en annan framför ritar gallret före båda: dokumen
 **Ljus.** Spritens cell ger spannljuset (§3.5); nivån = clamp_tab[fogtabellen för kolumnen under mitten
 (cx / 2, klämd) vid spritens h + spannljuset]; färg via zonens skuggtabell (emissiva färger lyser).
 
+**3D-lådor (M28b, D-044).** Föremål som är kantiga sedda uppifrån (lådor, konsoler) är riktiga axelparallella
+lådor i stället för billboards; runda (tunnor, rör, lampor) och plockbara förblir billboards. En lådtyp
+(`sprite <tecken> <namn> box`, raden `box <sida> <lock> <linje> <stil>`) har kvadratiskt fotavtryck ±block (samma
+som kollisionens halvlåda), höjd i procent av väggen (< 50: under ögat, så locket syns) och K = round(höjd · 256 / 100).
+- *Hörn.* Vid urvalet transformeras de fyra hörnen (−a, −a), (+a, −a), (+a, +a), (−a, +a) till kamerarymd (z, lat i
+  1/1024 cell: mittens produkter som spritarna plus ±a · cos, ±a · sin) och projiceras: x i 1/16 px =
+  1024 + lat · h8 / 512, h8 = 8 · F256 / z med avrundat bråk (pinnad 256 px utanför bild om |lat| ≥ 8z). z för
+  sortering = lådans mitt; skärmlådan = hörnens x och golv-/lockrader; ett hörn bakom `SPR_NEAR` → hela skärmen.
+  Kostnad i budgeten och pacingen (§3.11): 4 + ⌊bredd / 6⌋ rektanglar, en konsol (skärmarna: en andra fyllning)
+  4 + 2 · ⌊bredd / 6⌋.
+- *Sidor.* Synlig är västsidan om kamerans x < lådans väst, östsidan om x > öst, likadant nord/syd (högst två). En sida
+  klipps mot z ≥ `SPR_NEAR` och mot linjerna |lat| = 7,5z, projiceras, och fylls i provkolumnerna vars mitt
+  (32c + 16, 1/16 px) ligger i [xa, xb): h (åttondelar) är exakt i första och sista kolumnen (32-bitars a · b / c) och
+  stegas linjärt däremellan (h är linjärt i skärm-x på ett plan); kolumnen ritas där h > `col_h[c]` från överkanten
+  `hor + round(h · (128 − K) / 256)` till golvet `hor + h − h / 2` (väggarnas golvlinje). Färg: sidans materialfärg
+  med kolumnens ljusnivå enligt väggarnas regel (§3.5: lådcellens spannljus, kolumnens dimma och kon vid h), väst- och
+  östsidor en nivå mörkare.
+- *Detaljer* (bara när största hörn-h ≥ `BOX_DETAIL` och sidan inte klippts): en låda får ram (övre kant, båda ändar)
+  och kryss i linjefärgen, klippta till sidans synliga kolumner; en konsol får en emissiv skärm (20–80 % av bredden,
+  45–85 % av höjden).
+- *Lock* (samma villkor, inget hörn bakom): de fyra övre hörnen på skärmen fylls rad för rad mellan kanterna (x per
+  kant stegat i 1/64 px), klippt till lådans synliga kolumner, en nivå ljusare. Begränsning: en vägg som skär
+  lådans synliga spann i två delar klipper inte locket (sällsynt; dokumenterad).
+- *Test:* per kolumn sparas närmaste ritade lådsida (`col_bface` = prop · 4 + sida, `col_bh`, `col_btop`,
+  `col_blvl`) och jämförs med en flyttalsstråle mot lådans AABB (`ref.ts`, slab-test).
+
 **Blockerande props** är lådor ±halvlåda: spelarens låda (±`P_RAD`) får aldrig överlappa dem (strikt olikhet per
 axel, |spelare − prop| < `P_RAD` + halvlåda är överlapp); de ingår i kollisionens "passerbar" (§5 steg 5). **Plock:**
 efter spelarens rörelse plockas en levande plockbar prop vars avstånd per axel är < `P_RAD` + `PICK_HALF`; den
@@ -405,6 +431,7 @@ försvinner och räknas (`picked_med`, `picked_ammo`).
 | `SPR_LOD1_H` | 24 | sprites lägre än så (px) använder LOD 1 |
 | `SPR_LOD2_H` | 10 | sprites lägre än så använder LOD 2 |
 | `PICK_HALF` | 64 | plockradie per axel utöver spelarens låda (u8.8) |
+| `BOX_DETAIL` | 32 | lådor vars största hörn-h är lägre (px) ritas utan lock och linjer |
 
 ---
 
@@ -566,6 +593,11 @@ virvel och dubbla baskaggeslag. Lugnare drönare i utforskning, metallen när fi
 | Ljud | 100–300 |
 | **Totalt** | **15 200–26 500 (hårt tak 25 000)** |
 
+**Uppmätt i M28b** (3D-lådor, D-044): varje bildruta i de sex repriserna högst **24 866** (stressreprisen 23 306); all rekvisita högst 9 991 cykler
+per bildruta (tre lådor nära: sidor 3 060, ändpunktsdivisioner 1 717, lock 1 459, linjer 1 209; kravet 5 000 nås
+inte, `nadir-gate`), billboards ensamma under 5 000. En låda kostar ~55 cykler per synlig kolumn plus ~600 för lock
+och linjer (under `BOX_DETAIL` bara sidorna).
+
 **Uppmätt i M28** (sex repriser, 21 380 bildrutor, D-043): per bildruta högst **24 402** (medel 14 800–17 600) med
 pacing; per bild högst 42 288, medel 17 900–26 800 (grindarna nås fortfarande inte). Spritarna: ritningen högst
 2 275 cykler per bildruta med åtta spritar (kravet 5 000), urvalet (projektion, sortering, budget) högst 4 627.
@@ -592,7 +624,7 @@ tillstånd 6–8 KB + tillgångar, stackreserv 512 B (inga variabler över 0xFE0
 
 ```
 games/nadir/  nadir.asm defs.asm math.asm ray.asm walls.asm floor.asm light.asm (M26)
-              player.asm world.asm (M27; ersatte M26:s camera.asm) sprites.asm (M28)
+              player.asm world.asm (M27; ersatte M26:s camera.asm) sprites.asm boxes.asm (M28)
               weapon.asm enemies.asm fx.asm hud.asm screens.asm sound.asm (M29–M32)
               *.gen.asm (genererat), art/, levels/, tools/, replays/
 test/nadir/   ref.ts (oberoende kartläsare, flyttalsraycaster, reglerna i detta dokument) och testerna

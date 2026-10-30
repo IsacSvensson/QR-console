@@ -48,7 +48,7 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 
 - [ ] M26 Renderer prototype (risk gate) — built and verified; **cycle gate fails (19.2k / 15.6k vs 14k / 11k), human decision, D-040**
 - [ ] M27 Player, collision, doors, masked walls (feel build) — built and verified; **cycle gate fails (33.8k per image vs 16k), D-042**
-- [x] M28 Sprites and props (its own criteria pass; the M26/M27 gates stay red, see below)
+- [ ] M28 Sprites and props — built and verified; since the 3D boxes (M28b, D-044) **prop drawing in the stress replay fails (9 991 vs 5 000 cycles per frame)**; billboards alone pass
 - [ ] M29 Weapon, combat, the first enemy
 - [ ] M30 Atmosphere, effects, the second enemy (budget gate)
 - [ ] M31 The vertical slice and the game around it
@@ -56,6 +56,12 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 
 ## Current work
 
+Part 4: M28b done (D-044), on the human's "the objects are two-dimensional, especially the boxes": crates and
+consoles are real axis-aligned 3D boxes (flat-shaded sides with per-column light by the walls' rule, lid, crate
+frame and cross brace, console screens); round props and pickups stay billboards (barrel with cylinder shading).
+Tested automatically against a ray/box oracle in every column of every image of six replays: side 99.91-100 %,
+h, top and light 100 %; occlusion (two VMs) clean; every frame of the six replays <= 24 866 cycles (stress replay 23 306). Measured: drawing all props up to
+9 991 cycles per frame (criterion 5 000: red in `nadir-gate`). New poses crate, crate_near, console in the sheet.
 Part 4: M28 done (D-043): rect sprites (a layered greedy compiler, LOD 0-2, every list = NN upscaling at 1x-4x),
 19+3 props and pickups in the level, projection within 1 px of floating point in every image of six replays, LOD
 budget, far-to-near order, column occlusion against walls and masked planes (two-VM test), blocking props and
@@ -137,10 +143,14 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 ## Blocked / needs human
 
-- **NADIR cycle gates (D-040, D-042, D-043):** per image (rays + drawing) the whole level costs (M28) max 42 288 /
-  mean 17 900-26 800 cycles (M27: max 33 753 / mean 17 000-18 800) against M26's 14 000 / 11 000 and M27's 16 000 (`nadir-gate`, red as specified). The hard
+- **NADIR cycle gates (D-040, D-042, D-043, D-044):** per image (rays + drawing) the whole level costs (M28b) max
+  46 613 / mean 18 000-31 100 cycles (M28: max 42 288 / mean 17 900-26 800) (M27: max 33 753 / mean 17 000-18 800) against M26's 14 000 / 11 000 and M27's 16 000 (`nadir-gate`, red as specified). The hard
   25 000 per frame is met by adaptive pacing (mask-heavy views draw at 30 images/s). Per the human's "proceed per your
   recommendations": the gate is re-derived after M28-M29 with measured sprite and logic costs; floor layer kept.
+- **NADIR M28 prop-drawing criterion (D-044):** with 3D boxes, drawing the props of the stress replay costs up to
+  9 991 cycles per frame (three crates close by) against 5 000; the frame stays <= 24 866 in every replay (hard 25 000 holds), the
+  billboards alone pass. Kept red in `nadir-gate`. Options: accept (my recommendation: boxes look right and the frame
+  budget holds), drop lid/lines up close, or go back to billboard crates.
 - **NADIR M27 feel test (manual, PLAN Manual acceptance 2):** scan `demo/nadir.gif`, try S2 on a phone (B walks,
   double tap = side step); say if S1 should be the default. Not verified by me (no device).
 

@@ -9,23 +9,24 @@ SPR_MEDKIT = 5
 SPR_AMMO = 6
 
 .data
-; per type (16 bytes): width, height, K, pick, block (word), LOD 0/1/2 rectangle lists (words), their counts
+; per type (16 bytes): width, height, K, pick, block (word), LOD 0/1/2 rectangle lists (words), their counts, 0;
+; a box: face colour, lid colour, height * 256 / 100, pick, block (its half footprint), line colour, style, 0 ..., 1
 spr_type:
     .byte 12, 16, 58, 0
     .word 77, spr_barrel_0, spr_barrel_1, spr_barrel_2
-    .byte 8, 8, 3, 0
-    .byte 16, 14, 61, 0
-    .word 102, spr_crate_0, spr_crate_1, spr_crate_2
-    .byte 9, 7, 3, 0
+    .byte 9, 10, 3, 0
+    .byte 4, 9, 108, 0
+    .word 102
+    .byte 1, 0, 0, 0, 0, 0, 0, 0, 0, 1
     .byte 6, 24, 85, 0
     .word 38, spr_pipe_0, spr_pipe_1, spr_pipe_2
     .byte 7, 4, 4, 0
     .byte 6, 24, 60, 0
     .word 38, spr_floorlamp_0, spr_floorlamp_1, spr_floorlamp_2
     .byte 7, 5, 4, 0
-    .byte 14, 16, 61, 0
-    .word 90, spr_console_0, spr_console_1, spr_console_2
-    .byte 8, 4, 5, 0
+    .byte 2, 3, 118, 0
+    .word 90
+    .byte 0, 1, 0, 0, 0, 0, 0, 0, 0, 1
     .byte 10, 7, 47, 1
     .word 0, spr_medkit_0, spr_medkit_1, spr_medkit_2
     .byte 5, 5, 3, 0
@@ -34,27 +35,17 @@ spr_type:
     .byte 11, 4, 1, 0
 ; rectangle lists: x0, y0, x1, y1 (exclusive, source pixels, clipped to the source), colour; 255 ends a list
 spr_barrel_0:
-    .byte 0, 1, 12, 15, 1, 2, 0, 10, 16, 1, 1, 15, 11, 16, 1
-    .byte 3, 1, 8, 15, 4, 8, 1, 11, 15, 9, 1, 3, 11, 4, 0
-    .byte 1, 12, 11, 13, 0, 4, 6, 8, 10, 14, 255
+    .byte 1, 1, 11, 16, 4, 2, 0, 10, 1, 4, 3, 0, 9, 16, 9
+    .byte 0, 1, 1, 15, 1, 11, 1, 12, 15, 1, 5, 0, 7, 16, 14
+    .byte 1, 3, 11, 4, 0, 1, 12, 11, 13, 0, 4, 6, 8, 9, 6
+    .byte 255
 spr_barrel_1:
-    .byte 0, 2, 12, 16, 1, 0, 0, 10, 2, 1, 4, 2, 10, 14, 0
-    .byte 2, 2, 4, 4, 0, 2, 12, 4, 14, 0, 4, 4, 8, 12, 4
-    .byte 8, 4, 10, 12, 9, 4, 6, 8, 10, 14, 255
+    .byte 2, 0, 10, 16, 4, 0, 14, 12, 16, 4, 0, 2, 2, 14, 1
+    .byte 10, 2, 12, 14, 1, 2, 2, 10, 4, 0, 2, 12, 10, 14, 0
+    .byte 4, 4, 8, 12, 9, 4, 0, 8, 2, 9, 4, 14, 8, 16, 9
+    .byte 4, 6, 8, 10, 6, 255
 spr_barrel_2:
-    .byte 0, 0, 12, 16, 1, 4, 0, 8, 16, 4, 8, 0, 12, 12, 9
-    .byte 255
-spr_crate_0:
-    .byte 1, 1, 15, 13, 7, 2, 2, 14, 12, 4, 5, 2, 6, 12, 1
-    .byte 10, 2, 11, 12, 1, 2, 6, 14, 8, 0, 0, 0, 16, 1, 0
-    .byte 0, 13, 16, 14, 0, 0, 1, 1, 13, 0, 15, 1, 16, 13, 0
-    .byte 255
-spr_crate_1:
-    .byte 0, 0, 16, 14, 0, 2, 2, 14, 6, 4, 2, 8, 14, 12, 4
-    .byte 4, 2, 6, 6, 1, 10, 2, 12, 6, 1, 4, 8, 6, 12, 1
-    .byte 10, 8, 12, 12, 1, 255
-spr_crate_2:
-    .byte 0, 0, 16, 14, 0, 0, 8, 16, 12, 4, 4, 0, 12, 4, 4
+    .byte 0, 0, 12, 16, 4, 4, 0, 8, 16, 9, 4, 4, 8, 8, 6
     .byte 255
 spr_pipe_0:
     .byte 1, 0, 5, 24, 0, 0, 0, 6, 2, 0, 0, 22, 6, 24, 0
@@ -76,16 +67,6 @@ spr_floorlamp_1:
 spr_floorlamp_2:
     .byte 0, 8, 4, 20, 3, 0, 20, 6, 24, 0, 4, 0, 6, 4, 30
     .byte 0, 0, 4, 4, 31, 255
-spr_console_0:
-    .byte 0, 2, 14, 16, 0, 1, 0, 13, 2, 0, 1, 12, 13, 15, 2
-    .byte 1, 2, 13, 9, 2, 2, 3, 12, 8, 17, 2, 10, 12, 12, 3
-    .byte 2, 4, 10, 5, 29, 2, 6, 10, 7, 29, 255
-spr_console_1:
-    .byte 0, 0, 14, 16, 0, 2, 2, 12, 8, 17, 2, 12, 12, 14, 2
-    .byte 2, 10, 12, 12, 3, 255
-spr_console_2:
-    .byte 0, 0, 14, 16, 0, 4, 0, 12, 8, 17, 0, 4, 4, 8, 17
-    .byte 0, 12, 12, 16, 2, 4, 8, 12, 12, 3, 255
 spr_medkit_0:
     .byte 0, 1, 10, 7, 7, 1, 1, 9, 6, 15, 4, 1, 6, 6, 6
     .byte 2, 3, 8, 4, 6, 3, 0, 7, 1, 0, 255

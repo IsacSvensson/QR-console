@@ -877,3 +877,32 @@ Decision:
 Measured: sprite drawing max 2 275 cycles with eight sprites (criterion 5 000), sprite choice (spr_frame) max 4 627;
 gates per image: M26 max 42 288 / mean 17 876 (14 000 / 11 000), M27 max 42 288 (16 000) - still failing, flagged.
 Revisit if: M29's enemies (animated sprites, AI) need the selection cost down: then cache projections across frames.
+
+## D-044 - NADIR M28b: crates and consoles are real 3D boxes (flat-shaded), billboards stay for round props
+Date: 2026-10-30 - Milestone: M28 (follow-up, before M29)
+Context: the human did not like the 2D props, "especially the boxes": a billboard crate always shows the same face.
+Decision:
+- **Axis-aligned boxes for angular props** (crate, console); round props (barrel, pipe, lamp) and pickups stay
+  billboards, which is the correct classic choice for rotationally symmetric objects; the barrel art got cylinder
+  shading. Footprint = the collision box, so collision and the per-cell tables are unchanged.
+- **Flat-shaded sides with line details, not textured:** a textured side (perspective u, one DIV and a compiled
+  texture column per column) was estimated at 250-300 cycles per column against ~55 for a flat column; a box near
+  the camera covers the whole screen. Each side gets its column's light by the walls' rule (W/E one level darker),
+  crates a frame and cross brace (LINE), consoles an emissive screen, the lid a lighter colour (scanlines).
+- **Exact where tested:** h exact at both ends of a side (32-bit a*b/c), stepped in 1/64 px between (h is linear
+  in screen x on a plane); the top edge with one rounding (hor + h (128 - K) / 256); corners projected once per image
+  and cached in the record (bug found by the oracle: a corner behind the near plane aborted the loop and left stale
+  projections of the others). Oracle (ref.ts, slab test per column): side 99.91-100 %, h and light 100 %, top
+  +-1 px 100 % in all six replays (40 590 compared columns in m28-props).
+- **LOD and cost accounting:** boxes whose largest corner h < BOX_DETAIL (32 px) get no lid and no lines; a box
+  hidden behind walls in every column of its screen box is skipped; a box counts 4 + width/6 rectangles in the
+  budget and in the pacing estimate (no new weight), a console 4 + 2 width/6 (its screens are a second fill: with
+  the crate weight m27-doors had a 25 693-cycle frame in the control room).
+- Known limitation: a wall that splits a box's visible columns in two does not clip the lid (rare; documented).
+Measured: every frame of the six replays <= 24 866 (stress replay 23 306; the hard 25 000 holds), billboards alone <= 5 000; **all props incl.
+boxes max 9 991 cycles per frame** (three crates close by in the storeroom: sides 3 060, @hat divisions 1 717,
+lid 1 459, lines 1 209). The PLAN M28 criterion (prop drawing <= 5 000) is therefore kept as specified in
+`gate.test.ts` and fails, flagged in PROGRESS; the green suite asserts the billboards' share (the criterion's subject
+before D-044). Abandoned: per-column Bresenham stepping of h8 (11 instructions; fixed point is 1).
+Revisit if: the human prefers the 5 000 budget over 3D boxes (then: no lid/lines near, or billboard crates), or
+M29's budget needs the cycles (then: merge equal neighbouring columns, cheaper @hat via per-column ray tables).

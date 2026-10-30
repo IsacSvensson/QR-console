@@ -3,8 +3,8 @@
 // cost of drawing them in the stress replay.
 import { describe, expect, it } from 'vitest';
 import { VM, expandInputs } from '@qrc/vm';
-import { K, T, readRefMap, readRefSprites, refK, refLod } from './ref';
-import { REPLAYS, buildNadir, loadReplay, runReplay, type Nadir } from './play';
+import { K, T, readRefMap, readRefSprites, refBoxK, refK, refLod } from './ref';
+import { REPLAYS, buildNadir, loadReplay, propCosts, runReplay, type Nadir } from './play';
 
 const map = readRefMap('nadir');
 const sprites = readRefSprites();
@@ -34,6 +34,8 @@ interface Rec {
   top: number;
   lod: number;
   type: number;
+  /** a box: its largest corner h (boxes.asm SR_HMAX) */
+  hmax: number;
 }
 const s16 = (v: number) => (v << 16) >> 16;
 function records(n: Nadir, vm: VM): { cand: Rec[]; drawn: Rec[] } {
@@ -51,6 +53,7 @@ function records(n: Nadir, vm: VM): { cand: Rec[]; drawn: Rec[] } {
     top: s16(vm.read16(a + 16)),
     lod: vm.read16(a + 18),
     type: (vm.read16(a + 20) - n.S('spr_type')) / 16,
+    hmax: vm.read16(a + 56),
   });
   const ord = Array.from({ length: cn }, (_, i) => rd(vm.read16(n.S('spr_ord') + 2 * i)));
   return { cand: ord, drawn: ord.slice(o0) };
@@ -64,6 +67,12 @@ describe('M28 sprites', () => {
     const counts: string[] = [];
     sprites.forEach((sp, t) => {
       const e = n.S('spr_type') + 16 * t;
+      if (sp.box) {
+        // a 3D box (DESIGN §3.12): colours, height, footprint, line colour, style, the box flag; no rectangles
+        expect([vm.read8(e), vm.read8(e + 1), vm.read8(e + 2), vm.read8(e + 3), vm.read16(e + 4), vm.read8(e + 6), vm.read8(e + 7), vm.read8(e + 15)], sp.name).toEqual([sp.box.face, sp.box.lid, refBoxK(sp), sp.pick, sp.block, sp.box.line, sp.box.style, 1]);
+        return;
+      }
+      expect(vm.read8(e + 15), sp.name).toBe(0);
       expect([vm.read8(e), vm.read8(e + 1), vm.read8(e + 2), vm.read8(e + 3), vm.read16(e + 4)], sp.name).toEqual([sp.w, sp.h, refK(sp), sp.pick, sp.block]);
       for (let k = 0; k < 3; k++) {
         const src = refLod(sp.px, k);
@@ -117,8 +126,11 @@ describe('M28 sprites', () => {
         for (let i = 1; i < cand.length; i++) expect(cand[i]!.z, `frame ${f + 1}: order`).toBeLessThanOrEqual(cand[i - 1]!.z);
         expect(drawn.length).toBe(Math.min(cand.length, K.SPR_MAX!));
         // LOD by height, then the budget: demote the farthest non-LOD-2 one until the rectangles fit
-        const lods = drawn.map((r) => (r.hgt >= K.SPR_LOD1_H! ? 0 : r.hgt >= K.SPR_LOD2_H! ? 1 : 2));
-        const cnt = (i: number) => vm.read8(n.S('spr_type') + 16 * drawn[i]!.type + 12 + lods[i]!);
+        // (a box starts at LOD 0 and counts 4 + wid / 6 rectangles, a console 4 + 2 (wid / 6), whatever its LOD: DESIGN §3.12)
+        const isBox = (r: Rec) => !!sprites[r.type]!.box;
+        const boxCost = (r: Rec) => 4 + Math.trunc(r.wid / 6) * (sprites[r.type]!.box!.style === 1 ? 2 : 1);
+        const lods = drawn.map((r) => (isBox(r) || r.hgt >= K.SPR_LOD1_H! ? 0 : r.hgt >= K.SPR_LOD2_H! ? 1 : 2));
+        const cnt = (i: number) => (isBox(drawn[i]!) ? boxCost(drawn[i]!) : vm.read8(n.S('spr_type') + 16 * drawn[i]!.type + 12 + lods[i]!));
         for (;;) {
           if (drawn.reduce((s, _, i) => s + cnt(i), 0) <= K.SPR_RECTS!) break;
           const j = lods.findIndex((l) => l < 2);
@@ -128,6 +140,10 @@ describe('M28 sprites', () => {
         expect(drawn.map((r) => r.lod), `frame ${f + 1}: LODs`).toEqual(lods);
         // projection against floating point (DESIGN §3.12)
         for (const r of drawn) {
+          if (isBox(r)) {
+            expect(r.s, `frame ${f + 1}: a box's cost in rectangles`).toBe(boxCost(r));
+            continue; // boxes: boxes.test.ts
+          }
           drawnN++;
           const p = map.props[r.prop]!;
           const sp = sprites.find((s) => s.char === p.s)!;
@@ -149,6 +165,7 @@ describe('M28 sprites', () => {
         map.props.forEach((p, i) => {
           if (vm.read8(n.S('props') + 8 * i + 5) === 0) return;
           const sp = sprites.find((s) => s.char === p.s)!;
+          if (sp.box) return; // boxes: boxes.test.ts (every box side the oracle sees is drawn)
           const dx = Math.round(p.x * 256) - cx0;
           const dy = Math.round(p.y * 256) - cy0;
           const z = dx * Math.cos(th) + dy * Math.sin(th);
@@ -194,7 +211,7 @@ describe('M28 sprites', () => {
         const x = i & 127;
         const y = i >> 7;
         const colH = a.read16(n.S('col_h') + 2 * (x >> 1));
-        if (!drawn.some((r) => x >= r.left && x < r.left + r.wid && y >= r.top && y < r.top + r.hgt && r.h > colH)) bad++;
+        if (!drawn.some((r) => x >= r.left && x < r.left + r.wid && y >= r.top && y < r.top + r.hgt && (sprites[r.type]!.box ? r.hmax : r.h) > colH)) bad++;
       }
       for (const r of drawn) sprPx += Math.max(0, r.wid) * Math.max(0, r.hgt);
     }
@@ -204,40 +221,12 @@ describe('M28 sprites', () => {
     expect(sprPx).toBeGreaterThan(0);
   });
 
-  it('stress (m28-props, eight sprites drawn): drawing them costs <= 5 000 cycles per frame; the frame <= 25 000', async () => {
+  it('stress (m28-props, eight sprites drawn): drawing the billboards costs <= 5 000 cycles per frame; the frame <= 25 000 (all props incl. 3D boxes: gate.test.ts)', async () => {
     const n = await buildNadir();
-    let maxDraw = 0;
-    let maxSel = 0;
-    let maxFrame = 0;
-    let eight = 0;
-    const entries = [n.S('draw_sprites'), n.S('spr_frame')];
-    runReplay(n, 'm28-props', undefined, (vm) => {
-      const ret = [-1, -1];
-      const cyc = [0, 0];
-      vm.tracer = (pc) => {
-        for (let k = 0; k < 2; k++) {
-          if (pc === entries[k]) ret[k] = vm.read16(vm.sp);
-          else if (pc === ret[k]) ret[k] = -1;
-          if (ret[k] >= 0) cyc[k]! += vm.mem[pc] !== 0x20 ? 1 : 8 + (vm.mem[pc + 2] === 17 ? Math.ceil(vm.regs[3]! / 8) : vm.mem[pc + 2] === 18 ? Math.ceil(vm.regs[2]! / 8) : 0);
-        }
-      };
-      const step = vm.step.bind(vm);
-      vm.step = (b: number) => {
-        cyc[0] = 0;
-        cyc[1] = 0;
-        const out = step(b);
-        if (vm.frame > 1) {
-          maxDraw = Math.max(maxDraw, cyc[0]!);
-          maxSel = Math.max(maxSel, cyc[1]!);
-          maxFrame = Math.max(maxFrame, vm.cyclesLastFrame);
-          if (vm.read16(n.S('spr_cn')) - vm.read16(n.S('spr_o0')) / 2 >= 8 && vm.read16(n.S('pace')) === 0) eight++;
-        }
-        return out;
-      };
-    });
-    console.log(`[stress] m28-props: drawing sprites max ${maxDraw} cycles per frame, choosing them (spr_frame) max ${maxSel}, frame max ${maxFrame}; ${eight} frames drew eight sprites`);
-    expect(eight).toBeGreaterThan(0);
-    expect(maxDraw).toBeLessThanOrEqual(5_000);
-    expect(maxFrame).toBeLessThanOrEqual(25_000);
+    const m = propCosts(n);
+    console.log(`[stress] m28-props: drawing billboards max ${m.maxBill}, all props incl. 3D boxes max ${m.maxDraw} cycles per frame, choosing them (spr_frame) max ${m.maxSel}, frame max ${m.maxFrame}; ${m.eight} frames drew eight sprites`);
+    expect(m.eight).toBeGreaterThan(0);
+    expect(m.maxBill).toBeLessThanOrEqual(5_000);
+    expect(m.maxFrame).toBeLessThanOrEqual(25_000);
   });
 });

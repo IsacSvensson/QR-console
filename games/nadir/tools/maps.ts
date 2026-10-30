@@ -315,7 +315,7 @@ export function propSets(m: GameMap): { vis: number[][]; near: number[][] } {
   const near = Array.from({ length: m.W * m.H }, () => [0, 0, 0]);
   m.props.forEach((p, i) => {
     const sp = sprites.find((s) => s.char === p.s)!;
-    const hw = (sp.w * Math.round(((sp.height / 100) * 2048) / sp.h)) / 2048 / 2;
+    const hw = sp.box ? (sp.block / 256) * Math.SQRT2 : (sp.w * Math.round(((sp.height / 100) * 2048) / sp.h)) / 2048 / 2;
     const reach = Math.max(sp.block, k('PICK_HALF')) / 256 + 1;
     const pts = [[p.x, p.y], [p.x - hw, p.y], [p.x + hw, p.y], [p.x, p.y - hw], [p.x, p.y + hw]];
     for (let cy = 0; cy < m.H; cy++)

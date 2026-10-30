@@ -60,3 +60,41 @@ export function runReplay(n: Nadir, name: string, onFrame?: (f: number, vm: VM) 
 
 /** Every recorded replay of NADIR (games/nadir/replays, tools/routes.ts). */
 export const REPLAYS = ['m26-fly', 'm27-walk', 'm27-doors', 'm27-masks', 'm27-tour', 'm28-props'];
+
+/**
+ * The stress replay m28-props (PLAN M28): per frame the cycles of drawing the props (draw_sprites with its callees),
+ * of that without the 3D boxes (draw_box), of choosing them (spr_frame) and of the frame; frames that drew eight.
+ */
+export function propCosts(n: Nadir) {
+  let maxDraw = 0;
+  let maxBill = 0;
+  let maxSel = 0;
+  let maxFrame = 0;
+  let eight = 0;
+  const entries = [n.S('draw_sprites'), n.S('spr_frame'), n.S('draw_box')];
+  runReplay(n, 'm28-props', undefined, (vm) => {
+    const ret = [-1, -1, -1];
+    const cyc = [0, 0, 0];
+    vm.tracer = (pc) => {
+      for (let k = 0; k < 3; k++) {
+        if (pc === entries[k]) ret[k] = vm.read16(vm.sp);
+        else if (pc === ret[k]) ret[k] = -1;
+        if (ret[k] >= 0) cyc[k]! += vm.mem[pc] !== 0x20 ? 1 : 8 + (vm.mem[pc + 2] === 17 ? Math.ceil(vm.regs[3]! / 8) : vm.mem[pc + 2] === 18 ? Math.ceil(vm.regs[2]! / 8) : 0);
+      }
+    };
+    const step = vm.step.bind(vm);
+    vm.step = (b: number) => {
+      cyc.fill(0);
+      const out = step(b);
+      if (vm.frame > 1) {
+        maxDraw = Math.max(maxDraw, cyc[0]!);
+        maxBill = Math.max(maxBill, cyc[0]! - cyc[2]!);
+        maxSel = Math.max(maxSel, cyc[1]!);
+        maxFrame = Math.max(maxFrame, vm.cyclesLastFrame);
+        if (vm.read16(n.S('spr_cn')) - vm.read16(n.S('spr_o0')) / 2 >= 8 && vm.read16(n.S('pace')) === 0) eight++;
+      }
+      return out;
+    };
+  });
+  return { maxDraw, maxBill, maxSel, maxFrame, eight };
+}

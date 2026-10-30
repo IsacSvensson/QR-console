@@ -216,8 +216,9 @@ export function castRef(m: RefMap, x: number, y: number, a: number, c: number, o
   }
 }
 
-/** DESIGN §3.5: the light level of a column drawn h px tall, in front of `front`, at column c, frame tick. */
-export function refLevel(m: RefMap, light: ReturnType<typeof refLight>, front: number, h: number, c: number, tick: number): number {
+/** DESIGN §3.5: the light level of a column drawn h px tall, in front of `front`, at column c, frame tick (`extra`
+ * is added before the clamp: a box's W and E sides, DESIGN §3.12). */
+export function refLevel(m: RefMap, light: ReturnType<typeof refLight>, front: number, h: number, c: number, tick: number, extra = 0): number {
   const W = m.grid[0]!.length;
   const fx = front % W;
   const fy = Math.floor(front / W);
@@ -227,7 +228,7 @@ export function refLevel(m: RefMap, light: ReturnType<typeof refLight>, front: n
   const lit = FLICKER[L.g]![(tick >> K.FLICK_SHIFT!) & 31] === '1';
   const lightv = Math.max(L.s, lit ? L.f : 0);
   const cone = q < K.FL_RANGE_Q! ? CONE[c]! : 0;
-  return Math.max(0, Math.min(7, fog + AMB[m.zones[fy]![fx]!]! - lightv - cone));
+  return Math.max(0, Math.min(7, fog + AMB[m.zones[fy]![fx]!]! - lightv - cone + extra));
 }
 
 // ---- the player (DESIGN §5) ------------------------------------------------------------------------------------
@@ -365,6 +366,8 @@ export interface RefSprite {
   block: number;
   pick: number;
   px: number[][];
+  /** a 3D box (DESIGN §3.12): colours and style; no pixels */
+  box?: { face: number; lid: number; line: number; style: number };
 }
 
 /** art/sprites.txt, read on its own */
@@ -374,10 +377,11 @@ export function readRefSprites(): RefSprite[] {
   const lines = readFileSync(join(GAME_DIR, 'art', 'sprites.txt'), 'utf8').split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i]!.trim().split(/\s+/);
-    if (t[0] === 'sprite') {
+    if (t[0] === 'sprite' && t[3] === 'box') out.push({ char: t[1]!, name: t[2]!, w: 0, h: 0, height: 0, block: 0, pick: 0, px: [], box: { face: 0, lid: 0, line: 0, style: 0 } });
+    else if (t[0] === 'sprite') {
       out.push({ char: t[1]!, name: t[2]!, w: Number(t[3]), h: Number(t[4]), height: 0, block: 0, pick: 0, px: [] });
       legend = new Map();
-    } else if (t[0] === 'height') out[out.length - 1]!.height = Number(t[1]);
+    } else if (t[0] === 'box') out[out.length - 1]!.box = { face: parseInt(t[1]!, 10), lid: parseInt(t[2]!, 10), line: parseInt(t[3]!, 10), style: Number(t[4]) }; else if (t[0] === 'height') out[out.length - 1]!.height = Number(t[1]);
     else if (t[0] === 'block') out[out.length - 1]!.block = Number(t[1]);
     else if (t[0] === 'pick') out[out.length - 1]!.pick = Number(t[1]);
     else if (t[0] === 'legend') for (let k = 1; k + 1 < t.length; k += 2) legend.set(t[k]!, t[k + 1] === 't' ? T : parseInt(t[k + 1]!, 10) + (t[k + 1]!.endsWith('!') ? 16 : 0));
@@ -409,6 +413,39 @@ export function refLod(px: number[][], k: number): number[][] {
     out.push(row);
   }
   return out;
+}
+
+/** DESIGN §3.12: a box's height in 1/256 of the wall height */
+export const refBoxK = (s: RefSprite) => Math.round((s.height * 256) / 100);
+
+/**
+ * DESIGN §3.12: a ray from (ox, oy) along (dx, dy) against the box of half size a around (bx, by) (slab test). Returns the
+ * entry parameter t, the side entered (0 W, 1 E, 2 N, 3 S) and how far the entry point lies from the nearest vertical
+ * edge (cells), or null if the ray misses (then `edge` of the closest approach is not computed: null).
+ */
+export function boxRay(ox: number, oy: number, dx: number, dy: number, bx: number, by: number, a: number): { t: number; side: number; edge: number } | null {
+  let t0 = -Infinity;
+  let t1 = Infinity;
+  let side = -1;
+  for (const [o, d, lo, hi, s0] of [[ox, dx, bx - a, bx + a, 0], [oy, dy, by - a, by + a, 2]] as const) {
+    if (Math.abs(d) < 1e-12) {
+      if (o < lo || o > hi) return null;
+      continue;
+    }
+    const ta = (lo - o) / d;
+    const tb = (hi - o) / d;
+    const near = Math.min(ta, tb);
+    if (near > t0) {
+      t0 = near;
+      side = s0 + (d > 0 ? 0 : 1);
+    }
+    t1 = Math.min(t1, Math.max(ta, tb));
+  }
+  if (t0 > t1 || t0 <= 0) return null;
+  const px = ox + t0 * dx;
+  const py = oy + t0 * dy;
+  const along = side < 2 ? py - (by - a) : px - (bx - a);
+  return { t: t0, side, edge: Math.min(along, 2 * a - along) };
 }
 
 /** DESIGN §3.12: K of a sprite */

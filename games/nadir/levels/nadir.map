@@ -113,6 +113,9 @@ close_wall 6.25 12.0 180
 grazing 3.27 13.5 268
 storeroom 6.5 9.5 337
 barrels 12.5 8.4 15
+crate 12.2 11.0 320
+crate_near 13.0 10.7 290
+console 21.2 4.2 225
 props
 # x y sprite (cell units; the sprite stands at that point, art/sprites.txt)
 13.5 7.5 B

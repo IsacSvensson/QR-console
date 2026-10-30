@@ -18,6 +18,7 @@
 .include "walls.asm"
 .include "floor.asm"
 .include "sprites.asm"
+.include "boxes.asm"
 .code
 
 init:

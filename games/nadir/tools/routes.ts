@@ -226,6 +226,17 @@ export const ROUTES: Record<string, Route> = {
       b.turnTo(10, true);
       b.walkTo(9.5, 10.5);
       b.walkTo(11.3, 10.4); // the medkit
+      b.walkTo(12.2, 11.0); // M28b: a crate (a 3D box) from two sides and from close by
+      b.turnTo(320);
+      b.wait(15);
+      b.walkTo(13.0, 10.7);
+      b.turnTo(290);
+      b.wait(10);
+      b.turnTo(250);
+      b.wait(10);
+      b.turnTo(345);
+      b.wait(10);
+      b.walkTo(11.3, 10.4);
       b.walkTo(12.5, 8.4);
       b.turnTo(0);
       b.wait(20);

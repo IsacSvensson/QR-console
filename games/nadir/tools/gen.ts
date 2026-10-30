@@ -20,7 +20,7 @@ export function generated(): Record<string, string | Buffer> {
     'floor.gen.asm': floorAsm(),
     'map.gen.asm': mapAsm(map),
     'sprites.gen.asm': spritesAsm(sprites),
-    'art/sprites.png': spritesPng(sprites),
+    'art/sprites.png': spritesPng(sprites.filter((s) => !s.box)),
     'art/textures.png': previewPng(mats),
     'levels/nadir.png': mapPng(map),
   };

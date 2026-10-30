@@ -20,8 +20,10 @@ export interface Sprite {
   height: number;
   block: number;
   pick: number;
-  /** colour 0..31 or TRANSPARENT per pixel, [y][x] */
+  /** colour 0..31 or TRANSPARENT per pixel, [y][x] (empty for a box) */
   px: number[][];
+  /** a 3D box (DESIGN §3.12): face, lid and line colours, style 0 crate / 1 console */
+  box?: { face: number; lid: number; line: number; style: number };
 }
 export interface Rect {
   x0: number;
@@ -50,8 +52,10 @@ export function readSprites(text = readFileSync(join(GAME_DIR, 'art', 'sprites.t
     if (!line || line.startsWith('#')) continue;
     const [kw, ...a] = line.split(/\s+/);
     if (kw === 'sprite') {
-      cur = { id: out.length, char: a[0]!, name: a[1]!, w: Number(a[2]), h: Number(a[3]), height: 0, block: 0, pick: 0, px: [] };
+      const isBox = a[2] === 'box';
+      cur = { id: out.length, char: a[0]!, name: a[1]!, w: isBox ? 0 : Number(a[2]), h: isBox ? 0 : Number(a[3]), height: 0, block: 0, pick: 0, px: [] };
       if (!/^[A-Z]$/.test(cur.char) || cur.w > 16 || cur.h > 24) throw new Error(`${where}: sprite needs a capital letter and at most 16 x 24 pixels`);
+      if (isBox) cur.box = { face: 0, lid: 0, line: 0, style: 0 };
       out.push(cur);
       legend = new Map();
       continue;
@@ -60,6 +64,10 @@ export function readSprites(text = readFileSync(join(GAME_DIR, 'art', 'sprites.t
     if (kw === 'height') cur.height = Number(a[0]);
     else if (kw === 'block') cur.block = Number(a[0]);
     else if (kw === 'pick') cur.pick = Number(a[0]);
+    else if (kw === 'box') {
+      if (!cur.box) throw new Error(`${where}: 'box' in a sprite that is not a box`);
+      cur.box = { face: colour(a[0]!, where), lid: colour(a[1]!, where), line: colour(a[2]!, where), style: Number(a[3]) };
+    }
     else if (kw === 'legend') for (let k = 0; k + 1 < a.length; k += 2) legend.set(a[k]!, colour(a[k + 1]!, where));
     else if (kw === 'rows') {
       for (i++; lines[i]!.trim() !== 'end'; i++) {
@@ -72,6 +80,8 @@ export function readSprites(text = readFileSync(join(GAME_DIR, 'art', 'sprites.t
         }));
       }
       if (cur.px.length !== cur.h) throw new Error(`${where}: ${cur.name} has ${cur.px.length} rows, expected ${cur.h}`);
+    } else if (kw === 'end') {
+      // end of a box (rows blocks consume their own end)
     } else throw new Error(`${where}: unknown keyword '${kw}'`);
   }
   return out;
@@ -191,6 +201,10 @@ export interface CompiledSprite extends Sprite {
 
 export function compileAll(sprites = readSprites()): CompiledSprite[] {
   return sprites.map((sp) => {
+    if (sp.box) {
+      if (!sp.block || sp.height >= 50) throw new Error(`${sp.name}: a box needs a footprint (block) and must be lower than the eye (height < 50)`);
+      return { ...sp, k: Math.round((sp.height * 256) / 100), lods: [] };
+    }
     const lods = [0, 1, 2].map((k) => compile(lodPixels(sp.px, k), sp.id + 1));
     lods.forEach((l, k) => {
       if (l.length > LOD_LIMITS[k]!) throw new Error(`${sp.name}: LOD ${k} has ${l.length} rectangles (limit ${LOD_LIMITS[k]})`);
@@ -211,9 +225,14 @@ export function spritesAsm(all = compileAll()): string {
     ...all.map((s) => `SPR_${s.name.toUpperCase()} = ${s.id}`),
     '',
     '.data',
-    '; per type (16 bytes): width, height, K, pick, block (word), LOD 0/1/2 rectangle lists (words), their counts',
+    '; per type (16 bytes): width, height, K, pick, block (word), LOD 0/1/2 rectangle lists (words), their counts, 0;',
+    '; a box: face colour, lid colour, height * 256 / 100, pick, block (its half footprint), line colour, style, 0 ..., 1',
     'spr_type:',
-    ...all.flatMap((s) => [`    .byte ${s.w}, ${s.h}, ${s.k}, ${s.pick}`, `    .word ${s.block}, spr_${s.name}_0, spr_${s.name}_1, spr_${s.name}_2`, `    .byte ${s.lods.map((l) => l.length).join(', ')}, 0`]),
+    ...all.flatMap((s) =>
+      s.box
+        ? [`    .byte ${s.box.face}, ${s.box.lid}, ${s.k}, ${s.pick}`, `    .word ${s.block}`, `    .byte ${s.box.line}, ${s.box.style}, 0, 0, 0, 0, 0, 0, 0, 1`]
+        : [`    .byte ${s.w}, ${s.h}, ${s.k}, ${s.pick}`, `    .word ${s.block}, spr_${s.name}_0, spr_${s.name}_1, spr_${s.name}_2`, `    .byte ${s.lods.map((l) => l.length).join(', ')}, 0`],
+    ),
     '; rectangle lists: x0, y0, x1, y1 (exclusive, source pixels, clipped to the source), colour; 255 ends a list',
     ...all.flatMap((s) => s.lods.flatMap((l, k) => [`spr_${s.name}_${k}:`, ...byteLines([...l.flatMap((r) => sourceRect(r, k, s.w, s.h)), 255], 15)])),
     '',
@@ -222,7 +241,7 @@ export function spritesAsm(all = compileAll()): string {
 }
 
 /** Preview: per sprite the source and each LOD as its rectangles draw it, 4x (transparent = grey). */
-export function spritesPng(all = compileAll(), scale = 4): Buffer {
+export function spritesPng(all = compileAll().filter((s) => !s.box), scale = 4): Buffer {
   const cellW = 16 * scale + 4;
   const cellH = 24 * scale + 4;
   const W = cellW * 4 + 4;
@@ -251,6 +270,6 @@ export function spritesPng(all = compileAll(), scale = 4): Buffer {
 if (isMain(import.meta.url)) {
   const all = compileAll();
   writeFileSync(join(GAME_DIR, 'sprites.gen.asm'), spritesAsm(all));
-  writeFileSync(join(GAME_DIR, 'art', 'sprites.png'), spritesPng(all));
-  for (const s of all) console.log(`${s.name.padEnd(10)} ${s.w}x${s.h} K ${s.k}: rectangles LOD0 ${s.lods[0]!.length}, LOD1 ${s.lods[1]!.length}, LOD2 ${s.lods[2]!.length}`);
+  writeFileSync(join(GAME_DIR, 'art', 'sprites.png'), spritesPng(all.filter((s) => !s.box)));
+  for (const s of all.filter((x) => !x.box)) console.log(`${s.name.padEnd(10)} ${s.w}x${s.h} K ${s.k}: rectangles LOD0 ${s.lods[0]!.length}, LOD1 ${s.lods[1]!.length}, LOD2 ${s.lods[2]!.length}`);
 }
