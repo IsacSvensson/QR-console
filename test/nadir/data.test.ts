@@ -9,7 +9,7 @@ import { buildNadir, loadReplay } from './play';
 
 const JUMPS = new Set<number>([OPCODES.JMP, OPCODES.CALL, OPCODES.JZ, OPCODES.JNZ, OPCODES.JLT, OPCODES.JGE, OPCODES.JGT, OPCODES.JLE, OPCODES.JB, OPCODES.JAE]);
 
-describe('M26 data and ROM', () => {
+describe('M26-M27 data and ROM', () => {
   it('every generated file equals what the generators write from DESIGN.md, art/ and levels/', () => {
     for (const [file, data] of Object.entries(generated())) {
       const committed = readFileSync(join(GAME_DIR, file));
@@ -23,24 +23,26 @@ describe('M26 data and ROM', () => {
 
   it('static ROM check: every code word is an instruction, every immediate jump lands on an instruction in the code; the code compiled for RAM too', async () => {
     const n = await buildNadir();
-    const check = (code: Uint8Array, base: number, what: string, jumpsAllowed: boolean) => {
+    // jumpsTo: undefined = any jump into the ROM code; a number = straight-line code that may only JMP there
+    const check = (code: Uint8Array, base: number, what: string, jumpsTo?: number) => {
       for (let p = what === 'ROM' ? 4 : 0; p < code.length; p += 4) {
         const op = code[p]!;
         expect(op, `${what} 0x${(base + p).toString(16)}: opcode 0x${op.toString(16)}`).toBeLessThanOrEqual(OPCODES.SYS);
         const I = code[p + 1]! & 0x80;
         if (JUMPS.has(op) && (I || op !== OPCODES.JMP && op !== OPCODES.CALL)) {
-          expect(jumpsAllowed, `${what}: a jump in straight-line code`).toBe(true);
           const t = code[p + 2]! | (code[p + 3]! << 8);
-          expect(t % 4 === 0 && t >= 4 && t < code.length, `${what} 0x${(base + p).toString(16)}: jump to 0x${t.toString(16)}`).toBe(true);
+          if (jumpsTo !== undefined) expect(op === OPCODES.JMP && t === jumpsTo, `${what} 0x${(base + p).toString(16)}: a jump in straight-line code`).toBe(true);
+          else expect(t % 4 === 0 && t >= 4 && t < code.length, `${what} 0x${(base + p).toString(16)}: jump to 0x${t.toString(16)}`).toBe(true);
         }
       }
     };
-    check(n.cart.sections.code, 0, 'ROM', true);
-    // the compiled texture columns (xdata, copied to coderam) are straight-line code ending in RET
+    check(n.cart.sections.code, 0, 'ROM');
+    // the compiled texture columns (xdata, copied to coderam) are straight-line code ending in RET; the stubs of
+    // nocompile materials jump to col_data (DESIGN §3.6)
     const x = n.cart.sections.xdata!;
     const start = n.S('code_x') - 0x10000;
     const code = x.subarray(start, start + n.S('CODE_BYTES'));
-    check(code, n.S('coderam'), 'compiled columns', false);
+    check(code, n.S('coderam'), 'compiled columns', n.S('col_data'));
     expect(code[code.length - 4]).toBe(OPCODES.RET);
   });
 
@@ -48,14 +50,14 @@ describe('M26 data and ROM', () => {
     const n = await buildNadir();
     const vars = [...n.asm.symbols].filter(([k]) => n.asm.symbolKinds.get(k) === 'var');
     const top = Math.max(...vars.map(([k, v]) => v + (k === 'coderam' ? n.S('CODE_BYTES') : 0)));
-    const rf = loadReplay('m26-fly');
+    const rf = loadReplay('m27-masks');
     const inputs = expandInputs(rf.inputs, rf.frames);
-    const vm = VM.fromCartridge(n.cart, { seed: 1 });
+    const vm = VM.fromCartridge(n.cart, { seed: rf.seed ?? 1 });
     let minSp = 0x10000;
     vm.tracer = () => {
       if (vm.sp !== 0 && vm.sp < minSp) minSp = vm.sp;
     };
-    for (let f = 0; f < 400; f++) vm.step(inputs[f]!);
+    for (let f = 0; f < rf.frames; f++) vm.step(inputs[f]!);
     const s = n.cart.sections;
     const rom = s.code.length + s.rodata.length + s.sound.length;
     console.log(`[size] nadir: ROM ${rom} B (code ${s.code.length}, data ${s.rodata.length}), xdata ${s.xdata?.length ?? 0} B, cartridge ${n.bytes.length} B; RAM variables up to 0x${top.toString(16)}; deepest stack ${0x10000 - minSp} B`);

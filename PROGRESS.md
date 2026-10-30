@@ -2,11 +2,11 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M26 — NADIR renderer prototype (PLAN.md Part 4)
+**Current milestone:** M28 — NADIR sprites and props (PLAN.md Part 4)
 **Status:** Parts 1–3 complete (one flaky Part 1 acceptance test, see *Blocked / needs human*); they await the
 human's manual acceptance. Part 4 (NADIR, a first-person shooter) planned and approved 2026-10-29: design in
 `games/nadir/DESIGN.md`, milestones M26–M32 in PLAN.md.
-**Last updated:** 2026-10-29
+**Last updated:** 2026-10-30
 
 ## Milestones
 
@@ -47,7 +47,7 @@ Part 3 — BO'S SKATEÄVENTYR (design: `games/bo/DESIGN.md`)
 Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 
 - [ ] M26 Renderer prototype (risk gate) — built and verified; **cycle gate fails (19.2k / 15.6k vs 14k / 11k), human decision, D-040**
-- [ ] M27 Player, collision, doors, masked walls (feel build)
+- [ ] M27 Player, collision, doors, masked walls (feel build) — built and verified; **cycle gate fails (33.8k per image vs 16k), D-042**
 - [ ] M28 Sprites and props
 - [ ] M29 Weapon, combat, the first enemy
 - [ ] M30 Atmosphere, effects, the second enemy (budget gate)
@@ -56,6 +56,14 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 
 ## Current work
 
+Part 4: M27 built (D-042): the whole level `levels/nadir.map` (elevator, shaft, workshop, dark corridor, control
+room with the red key, security door, core, south corridor), the player (S2 controls, double-tap side step,
+accelerating turns, wall sliding, head bob, S1 flag), sliding doors with keys, masked walls (grate, window,
+railing, low wall) as centre planes, wide coplanar interpolation, adaptive pacing (max 22 824 per frame). Every
+cell/door/key/lamp in RAM matches the source; the player, collision and doors match a DESIGN model in every frame of
+five replays; walls, doors and masked planes match the oracle (faces >= 99.7 %); masked walls are see-through
+(two VMs, 0 of 880 564 pixels differ); `demo/nadir.gif` verified; contact sheet games/nadir/m27-sheet.png. Music
+direction noted (DESIGN §8: original thrash-style metal, no copy of an existing song).
 Part 4 (PLAN.md Part 4): planned 2026-10-29 (D-039). M26 built (D-040): the hybrid raycaster with VM hacks (code
 compiled per texture column and run from RAM, one DIV per ray, half-step tables with XOR folding, floor records in
 xdata fetched with COPY, line-ellipse light pools); every column of the 2 723-frame fly-through matches the
@@ -124,10 +132,12 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
 
 ## Blocked / needs human
 
-- **NADIR M26 cycle gate (D-040):** the full prototype costs max 19 153 / mean 15 624 cycles per frame against the
-  gate's 14 000 / 11 000 (hard project limit 25 000 is met). Options: re-derive the gate after M28-M29 measure
-  sprites and logic, adaptive pacing (30 images/s in heavy frames), or cutting the floor layer. Meanwhile M27
-  continues on the default build.
+- **NADIR cycle gates (D-040, D-042):** per image (rays + drawing) the whole level costs max 33 753 / mean
+  17 000-18 800 cycles against M26's 14 000 / 11 000 and M27's 16 000 (`nadir-gate`, red as specified). The hard
+  25 000 per frame is met by adaptive pacing (mask-heavy views draw at 30 images/s). Per the human's "proceed per your
+  recommendations": the gate is re-derived after M28-M29 with measured sprite and logic costs; floor layer kept.
+- **NADIR M27 feel test (manual, PLAN Manual acceptance 2):** scan `demo/nadir.gif`, try S2 on a phone (B walks,
+  double tap = side step); say if S1 should be the default. Not verified by me (no device).
 
 - **`npm run test:e2e:offline` (M10) is flaky: 3 of 8 runs pass.** Every failure is one browser-initiated
   `GET /sw.js` (the service-worker update check on reload) reaching the server ~2 s after going offline; the

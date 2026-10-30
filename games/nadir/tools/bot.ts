@@ -1,13 +1,17 @@
-// A bot that records NADIR's replays. It plays the real cartridge frame by frame, reads the camera from RAM and
+// A bot that records NADIR's replays. It plays the real cartridge frame by frame, reads the player from RAM and
 // presses buttons to carry out a route (routes.ts says what to do, not which frames), so replays can be recorded
-// again when the controls are tuned. Output: run-length replay files.
+// again when the controls are tuned. Output: run-length replay files. It never double taps LEFT or RIGHT by
+// accident (DESIGN §5): a new press of a direction within DTAP_FRAMES of the last one is held back.
 import { BUTTONS, type VM } from '@qrc/vm';
+import { k } from './design';
 
 export const B = { L: BUTTONS.LEFT, R: BUTTONS.RIGHT, U: BUTTONS.UP, D: BUTTONS.DOWN, A: BUTTONS.A, B: BUTTONS.B } as const;
 const ANG = 4096;
 
 export class Bot {
   readonly inputs: number[] = [];
+  /** frame of the last press of LEFT and RIGHT */
+  private lastPress: Record<number, number> = { [BUTTONS.LEFT]: -100, [BUTTONS.RIGHT]: -100 };
   constructor(
     readonly vm: VM,
     readonly S: (name: string) => number,
@@ -24,7 +28,14 @@ export class Bot {
     return this.vm.read16(this.S('cam_a'));
   }
 
-  step(buttons = 0) {
+  step(buttons = 0, dash = false) {
+    const prev = this.inputs[this.inputs.length - 1] ?? 0;
+    const f = this.inputs.length;
+    for (const d of [B.L, B.R]) {
+      if (!(buttons & d) || prev & d) continue;
+      if (!dash && f - this.lastPress[d]! <= k('DTAP_FRAMES') + 1) buttons &= ~d;
+      else this.lastPress[d] = f;
+    }
     this.vm.step(buttons);
     this.inputs.push(buttons);
     if (this.vm.fault) throw new Error(`VM fault at frame ${this.inputs.length}: ${this.vm.fault}`);
@@ -37,31 +48,32 @@ export class Bot {
   private diff(target: number) {
     return ((((target - this.a) % ANG) + ANG + ANG / 2) % ANG) - ANG / 2;
   }
-  /** Turns to `deg` (0 = east, 90 = south). `slow` taps the button so every press is the slowest turn step. */
+  /** Turns to `deg` (0 = east, 90 = south) by holding LEFT or RIGHT while the next frame's turn does not overshoot. */
   turnTo(deg: number, slow = false) {
     const target = Math.round((deg * ANG) / 360) & (ANG - 1);
-    for (let n = 0; n < 2000; n++) {
+    for (let n = 0; n < 4000; n++) {
       const d = this.diff(target);
-      if (Math.abs(d) <= 8) return;
+      if (Math.abs(d) <= 8) {
+        this.wait(1);
+        return;
+      }
       const btn = d < 0 ? B.L : B.R;
-      // close to the target: single taps (the first frame of a turn is the smallest step)
-      if (slow || Math.abs(d) < 60) {
-        this.step(btn);
-        this.step(0);
-      } else this.step(btn);
+      const held = this.inputs[this.inputs.length - 1] === btn;
+      const kk = held ? this.vm.read16(this.S('turn_k')) : 0;
+      const next = Math.min(k('TURN_MAX'), k('TURN_MIN') + k('TURN_ACC') * kk);
+      if (next > Math.abs(d) + 8 || (slow && held)) this.step(0);
+      else this.step(btn);
     }
     throw new Error(`turnTo ${deg}: did not converge`);
   }
-  /** Turns a full circle: `dir` 1 right, -1 left. */
+  /** Turns a full circle: `dir` 1 right, -1 left; `slow` holds 5 frames of every 12 (the turn never accelerates). */
   spin(dir: 1 | -1, slow = false) {
     const start = this.a;
     let turned = 0;
     let last = start;
+    let i = 0;
     while (turned < ANG) {
-      if (slow) {
-        this.step(dir > 0 ? B.R : B.L);
-        this.step(0);
-      } else this.step(dir > 0 ? B.R : B.L);
+      this.step(!slow || i++ % 12 < 5 ? (dir > 0 ? B.R : B.L) : 0);
       const d = (((this.a - last) * dir) % ANG + ANG) % ANG;
       turned += d;
       last = this.a;
@@ -82,9 +94,30 @@ export class Bot {
     }
     throw new Error(`walkTo ${x},${y}: stuck at ${this.x.toFixed(2)},${this.y.toFixed(2)}`);
   }
-  /** Strafes right (dir 1) or left (-1) for n frames. */
-  strafe(dir: 1 | -1, n: number) {
-    for (let i = 0; i < n; i++) this.step(B.B | (dir > 0 ? B.R : B.L));
+  /** A side step (DESIGN §5): a double tap right (dir 1) or left (-1), then waits until it is over. */
+  dash(dir: 1 | -1) {
+    const b = dir > 0 ? B.R : B.L;
+    this.wait(k('DTAP_FRAMES') + 2);
+    this.step(b, true);
+    this.step(0);
+    this.step(b, true);
+    this.wait(k('DASH_FRAMES') + 2);
+  }
+  /** Walks straight ahead (UP, or B with `withB`) for n frames, then stops. */
+  forward(n: number, withB = false) {
+    for (let i = 0; i < n; i++) this.step(withB ? B.B : B.U);
+    this.wait(6);
+  }
+  /** Walks forward until blocked (no movement for a few frames): pushes against a wall. */
+  pushWall(max = 200) {
+    let still = 0;
+    for (let i = 0; i < max && still < 4; i++) {
+      const x = this.x;
+      const y = this.y;
+      this.step(B.U);
+      still = x === this.x && y === this.y ? still + 1 : 0;
+    }
+    this.wait(6);
   }
   replayFile(seed: number) {
     const runs: [number, number][] = [];

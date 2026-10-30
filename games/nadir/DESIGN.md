@@ -231,7 +231,7 @@ nivå  = klämd(fog + amb(zon) − ljus − kägla − blixt, 0, 7)
 
 ### 3.7 Golv och tak
 
-- **Bakgrund:** ett `MAP` med 16 × 17 tiles från zonens tileset, ritat på y = bob − 8: rad 0–8 tak, rad 9–16
+- **Bakgrund:** ett `MAP` med 16 × 18 tiles från zonens tileset, ritat på y = bob − 8: rad 0–8 tak, rad 9–17
   golv. Varje tilerad är en ditherad (Bayer 4 × 4) gradient mellan två steg i zonens tak- respektive golvramp,
   mörkast vid horisonten (långt bort) och ljusast vid bildens kant (nära). Alla tiles är helt täckande.
 - **Perspektivfogar:** golvets rutnätslinjer (x = k och y = k) inom 6 celler, ritade med `LINE` före väggarna
@@ -268,6 +268,77 @@ sorteras med sprites på sitt djup. Vapen, overlay och HUD sist.
 | `init` | kopiera tillgångar xdata → RAM, packa upp banan |
 | Per bildruta | kamera, flimmer, strålar och kolumner, sprites, AI, partiklar, ljud |
 | Vid händelser | dörrlägen, checkpoint (`COPY` av tillståndsblocket), zonbyte, färggradering |
+
+### 3.10 Kartan, dörrar och maskade väggar (M27)
+
+**Kartbyte** (en byte per cell i RAM, index y · 32 + x):
+
+| Byte | Betydelse |
+|---|---|
+| 0 | golv |
+| 1–31 | solid vägg av material id (ordningen i `art/textures.txt`) |
+| `0x40 \| i` | dörr i (0–15) i dörrtabellen |
+| `0x80 \| o · 0x20 \| m` | maskad tunn vägg av material m; o = orientering |
+
+**Tunna celler** (dörrar och maskade väggar) har ett plan genom cellens mitt. Orienteringen härleds av generatorn:
+väggar (för en maskad cell även andra tunna celler) i norr och söder och golv i väster och öster ger planet
+x = cx + ½ (o = 1), väggar i väster och öster och golv i norr och söder ger y = cy + ½ (o = 0); annat är fel. En
+dörr kräver väggar på båda sidor (karmen, material F, ritas som vanliga väggar).
+
+**Strålen** går in i en tunn cell genom vilken sida som helst. Med sideX/sideY = avståndet till nästa x- och
+y-korsning efter steget in i cellen och dX/dY deltan är planets träffavstånd för o = 1 `tp = sideX − dX/2`
+(heltal, dX/2 avrundat nedåt) och för o = 0 `tp = sideY − dY/2`. Planet träffas om tp ligger inom cellen:
+`t_in ≤ tp < sideY` (o = 1) respektive `t_in ≤ tp < sideX` (o = 0), där t_in är avståndet där strålen gick in i
+cellen. Annars fortsätter strålen. Ytan får sidan för planets axel (som en x- respektive y-träff), cellen framför
+är cellen före planet längs den axeln (cellindex − stegX respektive − stegY), texturens u räknas som för en vanlig
+yta i träffpunkten.
+
+- **Dörrar** skjuts i sidled längs planet. `open` = 0–256 (andel av cellbredden i u8.8). Strålen passerar där
+  träffpunktens bråkdel längs planet är mindre än `open`, annars träffar den dörren med u av `bråkdel − open`
+  (dörrbladet glider ut ur bilden). Material: `D` dörr, `E` låst dörr (röd lampa) så länge nyckeln saknas.
+- **Maskade väggar** (`G` galler, `W` fönster, `L` räcke, `K` låg vägg): materialet har genomskinliga texlar
+  (`t` i teckenförklaringen). Strålen registrerar det **första** maskade planet (yta, h, u, material, cellen
+  framför) och fortsätter till en solid vägg; ett andra maskat plan längs samma stråle ignoreras (banregel: inga
+  två i följd i sikte). Maskade kolumner har ingen grundfärg: bara de täckande spannen ritas, efter alla väggar,
+  med samma ljusregel (cellen framför planet). En udda kolumn interpoleras bara om båda grannarna har samma
+  maskade yta (eller ingen), och då interpoleras även det maskade lagret.
+
+**Dörrtabell** (16 byte per dörr i RAM): cell (ord), `open` (ord), läge, timer, orientering, nyckelbit, material.
+Varje bildruta, efter spelaren, för varje dörr (dörrens mittpunkt (cx + ½, cy + ½), *nära* = spelarens position
+inom `DOOR_REACH` från mittpunkten i både x och y (strikt mindre), *tillåten* = nyckelbit 0 eller nyckeln finns):
+
+| Läge | Regel |
+|---|---|
+| 0 STÄNGD | nära och tillåten → ÖPPNAR |
+| 1 ÖPPNAR | open += `DOOR_SPEED`; vid open ≥ 256: open = 256, ÖPPEN, timer = `DOOR_WAIT` |
+| 2 ÖPPEN | nära → timer = `DOOR_WAIT`, annars timer − 1; timer 0 → STÄNGER |
+| 3 STÄNGER | nära och tillåten → ÖPPNAR; annars open −= `DOOR_SPEED`; vid open ≤ 0: open = 0, STÄNGD |
+
+Ett lägesbyte till ÖPPNAR flyttar inte dörren i samma bildruta. En dörr öppnas alltså på 256 / `DOOR_SPEED`
+bildrutor efter att den börjat röra sig. Spelaren kan bara gå in i en dörrcell som är helt öppen (open = 256), och
+eftersom `DOOR_REACH` är större än spelarens halva låda plus en halv cell kan dörren inte stänga på spelaren.
+**Nycklar:** står spelaren i en nyckelcell (`keys` i banfilen) sätts nyckelbiten.
+
+| Konstant | Värde | Betydelse |
+|---|---|---|
+| `DOOR_SPEED` | 8 | dörrens rörelse per bildruta (u8.8): 32 bildrutor att öppna |
+| `DOOR_WAIT` | 90 | bildrutor en öppen dörr väntar efter att spelaren gått |
+| `DOOR_REACH` | 384 | avstånd (u8.8, per axel) från dörrens mitt som öppnar den: 1,5 celler |
+
+### 3.11 Adaptiv pacing (M27)
+
+En bild kostar strålar (fas 1) plus ritning (fas 2). Båda faserna är var för sig under ~18 000 cykler, men
+tillsammans kan de gå över 25 000 när strålarna möter många maskade plan (mätt i M27: alla bildrutor över 25 000
+hade minst 8 maskade kolumner, bildrutor utan maskade plan högst 21 510). Därför: räknar strålarna i fas 1 minst
+`PACE_MCOLS` maskade kolumner (varje inspelat maskat plan, kastat eller interpolerat, räknas) ritas bilden i
+**nästa** bildruta i stället. Den bildrutan kör spelarens logik och sedan bara ritningen; skärmen visar föregående
+bild under tiden (framebuffern ligger kvar). Bilden ritas från **bildens kamera** (`rcam_x`, `rcam_y`, `rcam_a`,
+`rbob`, `rtick`: kameran och bildrutan när strålarna kastades), inte spelarens nya position. Spelets logik går
+alltid i 60 bildrutor/s; bara bildtakten sjunker till 30/s i sådana vyer. `FL_NOPACE` stänger av pacingen.
+
+| Konstant | Värde | Betydelse |
+|---|---|---|
+| `PACE_MCOLS` | 8 | så många maskade kolumner gör att bilden ritas i nästa bildruta |
 
 ---
 
@@ -314,17 +385,55 @@ skaderiktning i kanten, vinjett som ram.
 
 ## 5. Kontroller och spelaren (M27)
 
-| Knapp | Funktion (förslag S2) |
+| Knapp | Funktion (S2, standard) |
 |---|---|
-| UPP / NED | gå framåt / bakåt |
-| VÄNSTER / HÖGER | vrid; ett tryck = fin vridning, håll = accelererar på ~12 bildrutor |
-| A | skjut (håll = repetera) |
-| B (håll) | gå framåt, så att en touchspelare kan gå med högertummen och styra med vänstertummen |
-| dubbeltryck VÄNSTER/HÖGER | snabbt sidosteg |
-| dörrar, brytare | öppnas när man går in i dem |
+| UPP / B (håll) | gå framåt (B så att en touchspelare går med högertummen och styr med vänstertummen) |
+| NED | gå bakåt |
+| VÄNSTER / HÖGER | vrid; ett tryck = fin vridning, håll = accelererar |
+| dubbeltryck VÄNSTER/HÖGER | snabbt sidosteg åt det hållet |
+| A | skjut (M29) |
+| dörrar, nycklar | öppnas och plockas när man går in i dem |
 
-Alternativ S1 (B = strafe-modifierare) som val på titelskärmen om det ryms. Spelaren: 100 HP, kollisionscirkel
-r = 0,25 cell med väggglidning, huvudbob som kan stängas av. Exakta kurvor och hastigheter fastställs i M27.
+**S1** (RAM-flaggan `ctl_s1` = 1, väljs på titelskärmen i M31): B är strafe-modifierare: B + VÄNSTER/HÖGER går i
+sidled med `WALK_MAX` i stället för att vrida, B ensam gör inget; UPP går framåt.
+
+**Spelaren, per bildruta i denna ordning** (positioner u8.8, vinkel u12; cos/sin s.8 = ⌊S(a) / 64⌋ med
+S(a) = tecken · round(|sin((a + ½) · 2π / 4096)| · 16384), dvs. halvstegstabellen sin_h; cos a = sin(a + 1024)):
+
+1. **Dubbeltryck:** när VÄNSTER (HÖGER) trycks ned denna bildruta (`BTNP`), inget sidosteg pågår och (i S1) B inte
+   hålls: om förra registrerade trycket var samma riktning högst `DTAP_FRAMES` bildrutor tidigare startar ett
+   sidosteg (`DASH_FRAMES` bildrutor åt det hållet) och trycket glöms, annars registreras trycket (riktning, bildruta).
+2. **Vridning** (inte under sidosteg, inte i S1 med B): hålls VÄNSTER eller HÖGER (VÄNSTER vinner) i k:te bildrutan
+   i följd åt samma håll (k räknas till högst 14, då är vridningen redan `TURN_MAX`) vrids `min(TURN_MAX, TURN_MIN + TURN_ACC · (k − 1))` enheter (höger = ökande vinkel).
+   Annars, och under sidosteg, nollställs k.
+3. **Gång:** målfarten är `WALK_MAX` om UPP (eller i S2 B) hålls, annars −`BACK_MAX` om NED hålls, annars 0.
+   Farten v närmar sig målet med högst `WALK_ACC` per bildruta.
+4. **Förflyttning:** framåt v, i sidled l = ±`DASH_V` under sidosteg (+ = höger), i S1 med B ±`WALK_MAX`.
+   dx = (v · cos − l · sin) >> 8, dy = (v · sin + l · cos) >> 8 (aritmetiskt skift). Sidostegets räknare minskar.
+5. **Kollision med väggglidning:** först x: om lådan ±`P_RAD` runt (x + dx, y) bara rör passerbara celler flyttas
+   x, sedan samma för y med det nya x. Passerbar = golv eller en helt öppen dörr (open = 256). Lådans hörn är
+   x ± `P_RAD` och y ± `P_RAD` (inklusive); lådan innesluter cirkeln med radien `P_RAD`, så cirkeln överlappar
+   aldrig en solid cell. Största förflyttningen per bildruta är √(20² + 40²) ≈ 45 < `P_RAD`.
+6. **Huvudbob:** fasen ökar med |v|; står spelaren still (v = 0) och bob-indexet (fas >> `BOB_SHIFT`) & 7 inte är 0
+   ökar fasen med 2^`BOB_SHIFT` tills det är det. bob = `bob_tab[(fas >> BOB_SHIFT) & 15]`,
+   `bob_tab[i] = round(BOB_AMP · sin(2π i / 16))`; RAM-flaggan `opt_nobob` = 1 håller bob på 0.
+
+| Konstant | Värde | Betydelse |
+|---|---|---|
+| `P_RAD` | 64 | spelarens halva låda och cirkelns radie (0,25 cell) |
+| `WALK_MAX` | 20 | fart framåt per bildruta (u8.8): 4,7 celler/s |
+| `BACK_MAX` | 12 | fart bakåt |
+| `WALK_ACC` | 4 | fartändring per bildruta: full fart på 5 bildrutor |
+| `TURN_MIN` | 6 | vridning första bildrutan (0,5°) |
+| `TURN_ACC` | 3 | ökning per hållen bildruta |
+| `TURN_MAX` | 42 | största vridning per bildruta (3,7°), nås efter 13 bildrutor |
+| `DTAP_FRAMES` | 10 | största avstånd i bildrutor mellan två tryck i ett dubbeltryck |
+| `DASH_V` | 40 | sidostegets fart per bildruta |
+| `DASH_FRAMES` | 8 | sidostegets längd: 1,25 celler |
+| `BOB_AMP` | 2 | bobbens amplitud i px |
+| `BOB_SHIFT` | 5 | fassteg per bob-index |
+
+Spelaren har 100 HP (M29).
 
 ---
 
@@ -341,14 +450,20 @@ r = 0,25 cell med väggglidning, huvudbob som kan stängas av. Exakta kurvor och
 
 ## 7. Banan (M27, M31)
 
-Hissen (start) → Schaktgången (berg och stål, natriumljus, första skräcken bakom ett galler) → Verkstaden
-(pelare, lådor, explosiva tunnor) → Kontrollrummet (cyanterminaler, rött nyckelkort) → Säkerhetsdörren → Kärnan
-(organiska väggar, Spottare, reningsbrytaren) → tillbaka till hissen medan larmet går → seger: hissfärd och
-statistik. Två hemligheter, tre checkpoints, ~15 fiender. Detaljer i `LEVEL.md`.
+`levels/nadir.map` (översikt `levels/nadir.png`): **hissen** (start, stål) → **schaktgången** (berg och stålribbor,
+natriumljus, ett galler in mot verkstaden) → **verkstaden** (pelare, lådor, en låg vägg, flimrande lampa) →
+**den mörka gången** (zon 3, ledningar) → **kontrollrummet** (cyanterminaler, ett fönster in i ett serverskåp,
+**rött nyckelkort**) → **säkerhetsdörren** (låst, röd lampa tills kortet finns) → **kärnan** (organiska väggar,
+räcke, lila) → **sydgången** tillbaka till verkstaden. Fem dörrar, en nyckel, tolv lampor, fyra zoner.
+Spelets fortsättning (seger via hissen, fiender, föremål) kommer i M29–M31 och beskrivs i `LEVEL.md`.
 
-**Banregler (kontrolleras av generatorn):** solid kant runt hela kartan; ingen fri siktlinje längre än
-`MAX_SIGHT` celler från någon gåbar cells mittpunkt (256 riktningar). Det begränsar strålarnas kostnad utan
-stegräknare i DDA-loopen.
+**Banfilens format:** `grid` (`.` golv, `+` dörr, versal = material), `zones` (en siffra per cell), `doors`
+(`x y nyckelbit`, exakt cellerna med `+`, i dörrtabellens ordning), `keys` (`x y bit`), `lamps` (`x y styrka
+grupp`), `poses` (`namn x y grader`).
+
+**Banregler (kontrolleras av generatorn):** solid kant runt hela kartan; tunna celler enligt §3.10; ingen fri
+siktlinje längre än `MAX_SIGHT` celler från någon golvcells mittpunkt (256 riktningar), genom maskade celler och
+dörrar (som om de vore öppna). Det begränsar strålarnas kostnad utan stegräknare i DDA-loopen.
 
 ---
 
@@ -357,6 +472,13 @@ stegräknare i DDA-loopen.
 Fyrkant 0: musikmotiv och omgivningsdrönare. Fyrkant 1: vapnets kropp, fiendeläten, hotsignal. Brus: skottets
 knall, explosioner, dörrar, fotsteg. Prioritet: eget vapen > fiendeanfall > smärta/död > dörr > omgivning;
 effekterna bokför kanal och längd så att musiken återupptas.
+
+**Musikens riktning** (önskemål från människan, M27): stressande metal i andan av 80-talets thrash — men **egen**
+musik, ingen kopia av någon befintlig låt (riff och melodier i t.ex. *Master of Puppets* är upphovsrättsskyddade).
+Kännetecken som ska bära: snabbt tempo (~190–210 BPM), palm-mutade sextondelar på en låg grundton i fyrkant 0
+("gitarren", korta hårda toner med kort volymklang), kromatiska nedgångar och tritonus-steg, staccato-ackordslag
+som bryter mönstret, taktbyten inför refrängdelar; fyrkant 1 som stämma/solostötar när vapnet är tyst; bruset som
+virvel och dubbla baskaggeslag. Lugnare drönare i utforskning, metallen när fiender är larmade (M29–M32).
 
 ---
 
@@ -376,6 +498,12 @@ effekterna bokför kanal och längd så att musiken återupptas.
 | Ljud | 100–300 |
 | **Totalt** | **15 200–26 500 (hårt tak 25 000)** |
 
+**Uppmätt i M27** (hela banan, fem repriser, 16 000 bildrutor, D-042): per **bildruta** högst **22 824** (taket 25 000
+hålls tack vare adaptiv pacing, §3.11), medel 15 400–17 600. Per **bild** (strålar + ritning, även när de delas på
+två bildrutor) högst 33 753, medel 17 000–18 800: grindarna 14 000 / 11 000 (M26) och 16 000 (M27) nås inte. Dyrast
+är vyer genom maskade väggar (låga väggen och gallret på nära håll). Utan masker högst 21 510 per bild. ROM 15,4 KB
+(kod 7,3 KB), xdata 41,7 KB (kompilerade kolumner 16,2 KB), kassett 20,2 KB, RAM till 0xEB0D, största stackdjup 16 B.
+
 **Uppmätt i M26** (flygturen, 2 723 bildrutor, D-040): hela 3D-vyn max **19 153**, medel **15 624** cykler per
 bildruta (grinden 14 000 / 11 000 nås inte; projektets tak 25 000 hålls). Utan golvlagret 16 270 / 13 688, utan
 interpolering 20 597 / 17 458. ROM 11,7 KB, xdata 37 KB (texturer 2,9 KB, kompilerade kolumner 13,8 KB,
@@ -389,23 +517,32 @@ tillstånd 6–8 KB + tillgångar, stackreserv 512 B (inga variabler över 0xFE0
 ## 10. Filer och verktyg
 
 ```
-games/nadir/  nadir.asm defs.asm math.asm ray.asm walls.asm floor.asm light.asm camera.asm (M26)
-              player.asm world.asm sprites.asm weapon.asm enemies.asm fx.asm hud.asm screens.asm sound.asm (M27–M32)
+games/nadir/  nadir.asm defs.asm math.asm ray.asm walls.asm floor.asm light.asm (M26)
+              player.asm world.asm (M27; ersatte M26:s camera.asm)
+              sprites.asm weapon.asm enemies.asm fx.asm hud.asm screens.asm sound.asm (M28–M32)
               *.gen.asm (genererat), art/, levels/, tools/, replays/
 test/nadir/   ref.ts (oberoende kartläsare, flyttalsraycaster, reglerna i detta dokument) och testerna
 ```
 
 `npm run nadir:gen` skriver all genererad data, `npm run nadir:record` spelar in bot-repriser, `npm run
 test:nadir` kör testerna. Utvecklingsverktyg: `tools/shot.ts` (bild från en kameraposition), `tools/sheet.ts`
-(kontaktark), `tools/profile.ts` (cykler per fil och rutin), `tools/cycles.ts` (dyraste bildrutorna).
+(kontaktark `m27-sheet.png`), `tools/profile.ts` (cykler per fil och rutin; `--flags 64` stänger av pacingen så
+att en position mäts som en hel bild).
 
 ---
 
-## 11. Prototypen (M26)
+## 11. Prototypen (M26) och känslobygget (M27)
 
-![Kontaktark: de tio kamerapositionerna i prototypbanan, ritade av VM:en](m26-sheet.png)
+![Kontaktark: banans femton kamerapositioner, ritade av VM:en](m27-sheet.png)
 
-Banan `levels/proto.map`: en lång korridor, ett rum med pelare, natriumlampor och en flimrande lampa, en mörk zon
+M27: hela banan (§7) med spelaren (§5), dörrar och maskade väggar (§3.10). Kontaktarket ovan visar banans
+kamerapositioner: hissdörren, schaktet, gallret, verkstaden, låga väggen, dörrarna, den mörka gången,
+kontrollrummet, fönstret, säkerhetsdörren, kärnan, räcket, sydgången, en vägg på en kvarts cells avstånd och
+en strykvinkel.
+
+![Kontaktark från M26: prototypbanans tio kamerapositioner (banan finns inte längre)](m26-sheet.png)
+
+M26:s bana `levels/proto.map` (ersatt i M27 av `levels/nadir.map`; flygturen spelades in på nytt där): en lång korridor, ett rum med pelare, natriumlampor och en flimrande lampa, en mörk zon
 med emissiva paneler, en materialvägg. Kameran styrs med UPP/NED (gå), VÄNSTER/HÖGER (vrid) och B (strafe, bara i
 prototypen). Testkroken `dbg_pose` sätter kameran till en namngiven position ur banfilen; `dbg_flags` slår av och
 på renderarens lager för A/B-mätningar.

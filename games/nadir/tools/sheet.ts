@@ -1,5 +1,5 @@
-// Writes the contact sheet games/nadir/m26-sheet.png: every camera pose of levels/proto.map as the VM draws it,
-// scale 2, in the order of the map's `poses` (5 per row). For review as an image (PLAN.md M26).
+// Writes the contact sheet games/nadir/m27-sheet.png: every camera pose of levels/nadir.map as the VM draws it,
+// scale 2, in the order of the map's `poses` (5 per row). For review as an image (PLAN.md M26-M27).
 // Run: npx tsx games/nadir/tools/sheet.ts
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -11,7 +11,7 @@ import { GAME_DIR } from './util';
 
 const S = 2;
 const PER_ROW = 5;
-const poses = readMap('proto').poses;
+const poses = readMap('nadir').poses;
 const g = await loadGame(1);
 g.vm.step(0);
 const cell = 128 * S + 4;
@@ -34,5 +34,5 @@ poses.forEach((p, i) => {
     }
   console.log(`${p.name}: ${g.vm.cyclesLastFrame} cycles`);
 });
-writeFileSync(join(GAME_DIR, 'm26-sheet.png'), PNG.sync.write(png));
-console.log('wrote games/nadir/m26-sheet.png');
+writeFileSync(join(GAME_DIR, 'm27-sheet.png'), PNG.sync.write(png));
+console.log('wrote games/nadir/m27-sheet.png');

@@ -11,6 +11,8 @@ import { GAME_DIR, byteLines, isMain, rng } from './util';
 
 export const TEX = 32;
 export const EMISSIVE = 16;
+/** colour index of a transparent texel (masked materials, DESIGN §3.10): never drawn */
+export const TRANSPARENT = 32;
 
 export interface Band {
   v: number;
@@ -29,10 +31,15 @@ export interface Material {
   legend: Map<string, number>;
   seams: number[];
   animShift: number;
+  /** a thin see-through wall (DESIGN §3.10) */
+  masked: boolean;
+  /** LOD 0 columns as data behind 8-byte stubs instead of compiled code (saves RAM, DESIGN §3.6) */
+  nocompile: boolean;
   frames: Frame[];
 }
 
 function parseColour(s: string, where: string): number {
+  if (s === 't') return TRANSPARENT;
   const m = /^(\d+)(!?)$/.exec(s);
   if (!m || Number(m[1]) > 15) throw new Error(`${where}: bad colour '${s}'`);
   return Number(m[1]) + (m[2] ? EMISSIVE : 0);
@@ -51,7 +58,7 @@ export function readMaterials(text = readFileSync(join(GAME_DIR, 'art', 'texture
     if (!line || line.startsWith('#')) continue;
     const [kw, ...args] = line.split(/\s+/);
     if (kw === 'material') {
-      cur = { id: mats.length + 1, char: args[0]!, name: args[1]!, legend: new Map(), seams: [], animShift: 0, frames: [] };
+      cur = { id: mats.length + 1, char: args[0]!, name: args[1]!, legend: new Map(), seams: [], animShift: 0, masked: false, nocompile: false, frames: [] };
       if (!/^[A-Z]$/.test(cur.char)) throw new Error(`${where}: map char must be one capital letter`);
       mats.push(cur);
       bands = [];
@@ -68,6 +75,10 @@ export function readMaterials(text = readFileSync(join(GAME_DIR, 'art', 'texture
       bands.push({ v, u0: args[1] === undefined ? 0 : Number(args[1]), u1: args[2] === undefined ? TEX : Number(args[2]) });
     } else if (kw === 'seam') {
       cur.seams.push(Number(args[0]));
+    } else if (kw === 'masked') {
+      cur.masked = true;
+    } else if (kw === 'nocompile') {
+      cur.nocompile = true;
     } else if (kw === 'anim') {
       cur.animShift = Number(args[0]);
     } else if (kw === 'frame') {
@@ -94,6 +105,9 @@ export function readMaterials(text = readFileSync(join(GAME_DIR, 'art', 'texture
     } else throw new Error(`${where}: unknown keyword '${kw}'`);
   }
   for (const m of mats) {
+    const hasT = m.frames.some((f) => f.rows.some((r) => r.includes(TRANSPARENT)));
+    if (hasT !== m.masked) throw new Error(`${m.name}: transparent texels exactly in masked materials`);
+    if (m.masked && (m.seams.length || m.frames.some((f) => f.bands.length))) throw new Error(`${m.name}: a masked material has no bands or seams`);
     if (m.frames.length === 0) throw new Error(`${m.name}: no rows`);
     if ((m.frames.length & (m.frames.length - 1)) !== 0) throw new Error(`${m.name}: frame count must be a power of two`);
   }
@@ -193,7 +207,7 @@ export function lod(t: number[][], k: number): number[][] {
       const count = new Map<number, number>();
       for (let v = 0; v < b; v++) for (let u = 0; u < b; u++) count.set(t[bv * b + v]![bu * b + u]!, (count.get(t[bv * b + v]![bu * b + u]!) ?? 0) + 1);
       const sorted = [...count].sort((x, y) => y[1] - x[1] || x[0] - y[0]);
-      const em = sorted.filter(([c]) => c >= EMISSIVE);
+      const em = sorted.filter(([c]) => c >= EMISSIVE && c !== TRANSPARENT);
       if (em.length && em.reduce((s, [, n]) => s + n, 0) * 4 >= b * b) return em[0]![0];
       return sorted[0]![0];
     }),
@@ -201,7 +215,7 @@ export function lod(t: number[][], k: number): number[][] {
 }
 
 /** One column of an LOD texture (n rows) as base colour + detail runs in 1/32 units. */
-export function encodeColumn(col: number[]): Column {
+export function encodeColumn(col: number[], masked = false): Column {
   const n = col.length;
   const unit = TEX / n;
   const runs: Run[] = [];
@@ -211,6 +225,8 @@ export function encodeColumn(col: number[]): Column {
     runs.push({ v0: v * unit, v1: e * unit, c: col[v]! });
     v = e;
   }
+  // a masked column has no base: every opaque run is drawn, transparent ones are skipped
+  if (masked) return { base: TRANSPARENT, runs: runs.filter((r) => r.c !== TRANSPARENT) };
   let best: Column | null = null;
   for (const c of new Set(col)) {
     const rest = runs.filter((r) => r.c !== c);
@@ -226,7 +242,8 @@ export function encodeColumn(col: number[]): Column {
  * table, r7 = top; clobbers r1, r3, r4. A run costs 11 instructions + one RECTFILL (no loads, no loop).
  */
 export function compileColumn(c: Column): string[] {
-  const L = ['    MOV r1, r7', '    MOV r3, r5', `    LDB r4, [r6 + ${c.base}]`, '    SYS RECTFILL'];
+  // a masked column (DESIGN §3.10) has no base: only its opaque runs
+  const L = c.base === TRANSPARENT ? [] : ['    MOV r1, r7', '    MOV r3, r5', `    LDB r4, [r6 + ${c.base}]`, '    SYS RECTFILL'];
   for (const r of c.runs) {
     if (r.v0 === 0) L.push('    MOV r1, r7');
     else L.push('    MOV r1, r5', `    MUL r1, ${r.v0}`, '    SHR r1, 5', '    ADD r1, r7');
@@ -309,20 +326,24 @@ export function encode(mats: Material[]): Encoded {
         lodOffs.push(blob.length);
         let sum = 0;
         for (let u = 0; u < TEX >> k; u++) {
-          const full = encodeColumn(t.map((row) => row[u]!));
+          const full = encodeColumn(t.map((row) => row[u]!), m.masked);
           // LOD 2 (walls under LOD2_H px) is the base colour only: detail there is under a pixel or two and fogged
-          const c = k === 2 ? { base: full.base, runs: [] } : full;
+          // (masked materials keep their runs: there is no base to fall back on)
+          const c = k === 2 && !m.masked ? { base: full.base, runs: [] } : full;
           sum += c.runs.length;
           cols.push(c);
           const key = colBytes(c).join(',');
           if (k === 0) {
-            if (!code.has(key)) {
-              const lines = compileColumn(c);
-              code.set(key, codeBytes);
+            // a compiled column, or for a nocompile material a stub: LDI r1, <its column data>; JMP col_data
+            const ckey = m.nocompile ? `stub ${key}` : key;
+            if (!code.has(ckey)) {
+              const lines = m.nocompile ? [`    LDI r1, texram + {${key}}`, '    JMP col_data'] : compileColumn(c);
+              if (m.nocompile && !colData.has(key)) colData.set(key, -1);
+              code.set(ckey, codeBytes);
               codeLines.push(`    ; column ${key}`, ...lines);
               codeBytes += lines.length * 4;
             }
-            pending.push({ at: blob.length, key, code: true });
+            pending.push({ at: blob.length, key: ckey, code: true });
           } else {
             pending.push({ at: blob.length, key });
             if (!colData.has(key)) colData.set(key, -1);
@@ -344,6 +365,7 @@ export function encode(mats: Material[]): Encoded {
     blob[p.at] = p.code ? { ptr: code.get(p.key)!, code: true } : { ptr: colData.get(p.key)! };
     blob[p.at + 1] = -1; // second byte of the word
   }
+  for (let i = 0; i < codeLines.length; i++) codeLines[i] = codeLines[i]!.replace(/\{([\d,]+)\}/, (_, key: string) => String(colData.get(key)!));
   for (const e of entries) {
     e.feat = blob.length;
     for (const f of (e as { feats?: Feature[] }).feats!) blob.push(f.type, f.a, f.b, f.c, f.colour);
@@ -360,6 +382,7 @@ export function texturesAsm(mats = readMaterials()): string {
     `TEX_BYTES = ${enc.blob.length}`,
     `CODE_BYTES = ${enc.codeBytes}`,
     ...mats.map((m) => `MAT_${m.name.toUpperCase()} = ${m.id}`),
+    `TRANSPARENT = ${TRANSPARENT}`,
     '',
     '.data',
     '; per material id (index 0 unused): first entry, animation mask, animation shift',

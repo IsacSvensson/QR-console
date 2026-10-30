@@ -9,9 +9,9 @@ draw_bg:
     MUL r1, BG_ZONE_BYTES
     ADD r1, bgram - 32              ; tile 1 is the first tile of the zone
     LDI r2, 16
-    LDI r3, BG_ROWS
+    LDI r3, BG_MAP_ROWS
     LDI r4, 0
-    LD r5, [bob]
+    LD r5, [rbob]
     SUB r5, 8
     SYS MAP
     RET
@@ -30,7 +30,7 @@ floor_lines:
     JZ @go
     RET
 @go:
-    LD r2, [cam_a]
+    LD r2, [rcam_a]
     SHR r2, 2
     SHL r2, 4
     LDI r1, floor_x >> 16
@@ -41,8 +41,8 @@ floor_lines:
     LDI r0, frec
     LDI r3, 16
     SYS COPY                        ; 10 cycles: random access into a 16 KB table in xdata
-    LD r4, [cam_x]
-    LD r5, [cam_y]
+    LD r4, [rcam_x]
+    LD r5, [rcam_y]
     LD r0, [frec]
     CMP r0, 0
     JEQ @axes
@@ -100,7 +100,7 @@ floor_lines:
 @maxok:
     CMP r1, 0
     JLT @skip
-    LD r5, [bob]
+    LD r5, [rbob]
     ADD r3, r5
     LDI r1, FL_YF
     ADD r1, r5
@@ -211,12 +211,12 @@ draw_lamps:
     LDB r0, [r6 + lamps]            ; cell x
     SHL r0, 8
     ADD r0, 128
-    LD r1, [cam_x]
+    LD r1, [rcam_x]
     SUB r0, r1                      ; dx, u8.8 signed
     LDB r1, [r6 + lamps + 1]
     SHL r1, 8
     ADD r1, 128
-    LD r2, [cam_y]
+    LD r2, [rcam_y]
     SUB r1, r2                      ; dy
     ; within 8 cells?
     MOV r2, r0
@@ -230,7 +230,7 @@ draw_lamps:
     PUSH r1
     PUSH r0
     ; depth z = dx cos + dy sin
-    LD r1, [cam_c8]
+    LD r1, [rcam_c8]
     CALL smul8
     MOV r5, r0
     POP r0
@@ -238,18 +238,18 @@ draw_lamps:
     PUSH r1
     PUSH r0
     MOV r0, r1
-    LD r1, [cam_s8]
+    LD r1, [rcam_s8]
     CALL smul8
     ADD r5, r0                      ; z
     CMP r5, 160                     ; nearer than 0.6 cells (or behind): skip
     JLT @drop
     ; lat = dy cos - dx sin
     POP r0
-    LD r1, [cam_s8]
+    LD r1, [rcam_s8]
     CALL smul8
     MOV r6, r0
     POP r0
-    LD r1, [cam_c8]
+    LD r1, [rcam_c8]
     CALL smul8
     SUB r0, r6                      ; lat
     ; h = F256 / z, x = 64 + lat * h / 256
@@ -301,7 +301,7 @@ draw_lamps:
     ST [lp_y], r7                   ; floor y under the lamp
     LD r0, [lp_hh]
     NEG r0
-    LD r1, [tick]
+    LD r1, [rtick]
     AND r1, 1
     ADD r0, r1                      ; rows alternate with the frame: the pool shimmers like a lamp
     ST [lp_r], r0

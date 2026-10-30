@@ -18,6 +18,21 @@ LOD2_H = 20
 FEAT_H = 24
 FLICK_SHIFT = 2
 LEVELS = 8
+DOOR_SPEED = 8
+DOOR_WAIT = 90
+DOOR_REACH = 384
+P_RAD = 64
+WALK_MAX = 20
+BACK_MAX = 12
+WALK_ACC = 4
+TURN_MIN = 6
+TURN_ACC = 3
+TURN_MAX = 42
+DTAP_FRAMES = 10
+DASH_V = 40
+DASH_FRAMES = 8
+BOB_SHIFT = 5
+PACE_MCOLS = 8
 FOG_BIAS = 16
 
 .data
@@ -333,6 +348,10 @@ cone_tab:
     .byte 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2
     .byte 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
     .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; head bob by phase index (DESIGN §5)
+bob_tab:
+    .word 0, 1, 1, 2, 2, 2, 1, 1, 0, 65535, 65535, 65534
+    .word 65534, 65534, 65535, 65535
 ; flicker patterns: 4 groups x 32 steps, 1 = lit
 flick_tab:
     .byte 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1

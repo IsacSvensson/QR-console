@@ -57,3 +57,6 @@ export function runReplay(n: Nadir, name: string, onFrame?: (f: number, vm: VM) 
   }
   return { vm, rf, max, mean: sum / (rf.frames - 1), hashMismatch, expectedFrames: expected.length };
 }
+
+/** Every recorded replay of NADIR (games/nadir/replays, tools/routes.ts). */
+export const REPLAYS = ['m26-fly', 'm27-walk', 'm27-doors', 'm27-masks', 'm27-tour'];

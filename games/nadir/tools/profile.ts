@@ -88,7 +88,7 @@ if (isMain(import.meta.url)) {
     console.log(report(profileFrames(g, Array.from({ length: rf.frames - 1 }, (_, f) => () => g.vm.step(inputs[f + 1]!)))));
   } else {
     const names = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--flags');
-    const poses = readMap('proto').poses.map((p, i) => ({ ...p, n: i + 1 })).filter((p) => !names.length || names.includes(p.name));
+    const poses = readMap('nadir').poses.map((p, i) => ({ ...p, n: i + 1 })).filter((p) => !names.length || names.includes(p.name));
     g.vm.step(0);
     console.log(report(profileFrames(g, poses.map((p) => () => atPose(g, p.n, flags)))));
   }

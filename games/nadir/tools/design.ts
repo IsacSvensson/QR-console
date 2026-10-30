@@ -14,16 +14,16 @@ function section(start: string, end: string): string {
   return design.slice(a, b);
 }
 
-/** §3.3: NAME -> value. */
+/** The constant tables (§3.3, §3.10, §5): NAME -> value. */
 export const K: Record<string, number> = (() => {
   const out: Record<string, number> = {};
-  for (const m of section('### 3.3', '### 3.4').matchAll(/^\| `([A-Z_0-9]+)` \| (-?\d+) \|/gm)) out[m[1]!] = Number(m[2]);
+  for (const m of design.matchAll(/^\| `([A-Z_0-9]+)` \| (-?\d+) \|/gm)) out[m[1]!] = Number(m[2]);
   return out;
 })();
 
 export function k(name: string): number {
   const v = K[name];
-  if (v === undefined) throw new Error(`DESIGN.md §3.3: no constant ${name}`);
+  if (v === undefined) throw new Error(`DESIGN.md: no constant ${name}`);
   return v;
 }
 

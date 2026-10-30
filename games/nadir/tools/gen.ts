@@ -10,7 +10,7 @@ import { GAME_DIR, isMain } from './util';
 
 export function generated(): Record<string, string | Buffer> {
   const mats = readMaterials();
-  const map = readMap('proto');
+  const map = readMap('nadir');
   return {
     'tables.gen.asm': tablesAsm(),
     'textures.gen.asm': texturesAsm(mats),
@@ -18,7 +18,7 @@ export function generated(): Record<string, string | Buffer> {
     'floor.gen.asm': floorAsm(),
     'map.gen.asm': mapAsm(map),
     'art/textures.png': previewPng(mats),
-    'levels/proto.png': mapPng(map),
+    'levels/nadir.png': mapPng(map),
   };
 }
 

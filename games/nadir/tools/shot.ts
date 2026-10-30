@@ -10,7 +10,7 @@ const args = process.argv.slice(2);
 const fi = args.indexOf('--flags');
 const flags = fi >= 0 ? Number(args[fi + 1]) : 0;
 const names = args.filter((a, i) => !a.startsWith('--') && i !== fi + 1);
-const poses = readMap('proto').poses;
+const poses = readMap('nadir').poses;
 const g = await loadGame(1);
 g.vm.step(0); // init
 mkdirSync('.tmp/nadir', { recursive: true });

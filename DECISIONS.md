@@ -807,3 +807,43 @@ size; `test/games` builds games with their `.include` resolver and compares xdat
 with a top-level replay.json (NADIR) is covered by `npm run test:games`. Breakout and Pong are unchanged (same
 sections, same hashes); no runtime change (`git diff 932e534 -- packages/vm packages/cartridge packages/transport
 packages/qr apps` is empty).
+
+## D-042 - NADIR M27: the gate decision, adaptive pacing, thin cells, wide interpolation, and what they measured
+Date: 2026-10-30 - Milestone: M27
+Decision:
+- **The M26 gate decision** (the human: "proceed per your recommendations"): the gate stays as specified and red
+  (`npm run test:nadir`'s `nadir-gate` project); it is re-derived after M28-M29 from measured sprite and logic
+  costs; the floor layer stays; adaptive pacing is the safety valve. Both gates are now measured **per image**
+  (rays + drawing, also when split over two frames), so pacing can never make a gate pass.
+- **Adaptive pacing** (DESIGN §3.11): an image whose rays recorded >= 8 masked columns is drawn in the next frame
+  from the camera of its rays (`rcam_*`, `rbob`, `rtick`); game logic still runs every frame. Measured over the five
+  replays (16 000 frames): every frame above 25 000 had >= 8 masked columns, frames without masked planes peak at
+  21 510, the cast phase alone at 17 774 and the draw phase at 17 924. With pacing: max 22 824 per frame (was
+  33 462). 13 % of the frames of these mask-heavy replays are in paced images (30 images/s there).
+- **Thin cells** (DESIGN §3.10): doors and masked walls are a plane through the cell centre, handled off the
+  7-instruction DDA loop (one `CMP r0, 0x40 / JAE` per hit). Doors slide (`open` in a table, the ray passes where
+  the hit's fraction < open); door frames are ordinary wall cells (material F), no per-face lookup. The first
+  masked plane per ray is recorded in a second layer of the column buffers at +LAYER bytes with the same layout,
+  written by a copy of the hit routine with LAYER folded into its addresses (no pointer juggling).
+- **Masked texture columns are compiled too**, without a base colour (only opaque runs): masked materials dedup to
+  a handful of columns, so the RAM cost is small. **`nocompile` materials** (organic) keep LOD 0 as data behind
+  8-byte RAM stubs `LDI r1, data / JMP col_data`, so the wall code is unchanged (a CALL into RAM either way):
+  compiling every material would have needed 27 KB of RAM.
+- **Wide, coplanar interpolation:** every 4th column is cast, column 4k + 2 interpolated from 2 away, then the odd
+  columns; besides "same face", coplanar faces of different cells interpolate the position along the plane
+  (A' = mirrored cell index * 256 + uf / 256) and check the middle cell (a wall of the same kind with an empty cell
+  in front). A/B over m26-fly: mean 16 507 vs 16 965 per frame with FL_NOWIDE (the M26 scheme), -2.7 %. A general
+  routine first cost ~130 cycles per column and made it slower; the fast path for one face (~45) is what pays.
+- **Player and world** follow DESIGN §5 / §3.10 exactly (the tests compare every RAM field of the player and every
+  door every frame with a model written from DESIGN). The bot never double taps by accident: a new press of LEFT or
+  RIGHT within DTAP_FRAMES is held back.
+- **The level** passes MAX_SIGHT 13 through masked walls and open doors only after several layout changes (window
+  moved to a server closet, a pillar row in the core, a crate, staggered door rows): any window between two big
+  rooms makes sight lines of 17-27 cells.
+Measured (per frame / per image): see DESIGN §9. Gates: M26 max 33 462, mean 17 045 per image (14 000 / 11 000);
+M27 max 33 753 per image (16 000). Both fail; flagged in PROGRESS.
+Abandoned: per-plane "segment" drawing of masked walls (projected end points, interpolation in screen space) -
+16-bit precision of h * u products and near-plane clipping make it as expensive as the per-column records it
+would replace; quadrant-specialised casting code in RAM - the DDA loop is already 7 instructions, it would save
+only the step loads (~4 cycles per ray).
+Revisit if: M28 sprites push paced images over 25 000 per frame (then split drawing finer: walls / sprites).
