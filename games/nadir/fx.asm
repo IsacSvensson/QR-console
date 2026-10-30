@@ -118,6 +118,10 @@ fx_timers:
 ; r0 = damage, r1, r2 = where it came from (u8.8): the player's health, the flash, its direction, the shake.
 ; Clobbers r0-r6.
 hurt:
+    PUSH r0
+    LDI r0, SFX_HURT
+    CALL play_sfx
+    POP r0
     LD r3, [hp]
     SUB r3, r0
     ST [hp], r3
@@ -255,6 +259,8 @@ expl_dmg:
 explode:
     LDI r0, 1
     ST [lg_heavy], r0               ; the image waits a frame (DESIGN §3.11)
+    LDI r0, SFX_BOOM
+    CALL play_sfx
     LD r0, [booms]
     ADD r0, 1
     ST [booms], r0
@@ -527,6 +533,8 @@ fx_frame:
     LD r6, [fx_p]
     LDI r0, 0
     STB [r6 + AC_LIFE], r0
+    LDI r0, SFX_SPLASH
+    CALL play_sfx
     CALL splash
     JMP @acx
 @acl:
@@ -628,6 +636,8 @@ fx_frame:
 ; r5 = enemy (a Spottare): an acid ball from it at the player's position now (DESIGN §6.10), the first free slot.
 ; Clobbers r0-r4, r6.
 spit:
+    LDI r0, SFX_SPIT
+    CALL play_sfx
     LDI r6, acids
 @f:
     CMP r6, acids + ACID_MAX * AC_SIZE

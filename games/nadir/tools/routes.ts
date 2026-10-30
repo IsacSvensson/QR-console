@@ -313,6 +313,12 @@ export const ROUTES: Record<string, Route> = {
       b.wait(40);
       b.fightOn = true;
       b.wait(200);
+      // M32a: every round fired (A held: shots and reloads), then A once more on an empty weapon (DESIGN §8.1)
+      b.fightOn = false;
+      while (b.read('w_mag') + b.read('w_res') > 0) b.step(B.A);
+      b.wait(30);
+      b.step(B.A);
+      b.wait(30);
     },
   },
   'm27-tour': {

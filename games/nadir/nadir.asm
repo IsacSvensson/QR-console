@@ -9,6 +9,7 @@
 .include "map.gen.asm"
 .include "sprites.gen.asm"
 .include "weapon.gen.asm"
+.include "music.gen.asm"
 .include "floor.gen.asm"
 .include "defs.asm"
 .include "math.asm"
@@ -24,6 +25,7 @@
 .include "weapon.asm"
 .include "game.asm"
 .include "fx.asm"
+.include "sound.asm"
 .code
 
 init:
@@ -48,6 +50,7 @@ update:
     SYS BTNP
     ST [btnp], r0
     CALL game_frame
+    CALL music_step                 ; the sound after the logic (DESIGN §8.2)
     LD r0, [lg_heavy]               ; a shot or an explosion this frame: no rendering step, the image waits
     CMP r0, 0
     JEQ @pace

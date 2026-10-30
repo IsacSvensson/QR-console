@@ -995,3 +995,33 @@ projection to ~30-32 KB and are applied as the content lands; step 5 (losses) on
 Abandoned: more `nocompile` materials for RAM (locked door, railing, low wall: -450 B RAM, frames up to 26 182).
 Revisit if: M31's measured ROM exceeds the projection's upper bound, or the human prefers a loss from step 5 over
 the overlay work of step 2.
+
+## D-047 - NADIR M32a: sound before M31, an exact sequencer, priorities by channel
+Date: 2026-10-30 - Milestone: M32a (M32's sound part, before M31)
+Decision:
+- **Order:** the human asked to do the sound first ("Kan vi inte köra ljud först"); M32's sound criteria are met
+  now (PLAN note), the art pass, guide, report and e2e scan stay in M32 after M31. VICTORY is written and tested
+  directly; it is heard in a replay from M31's victory sequence on.
+- **Exact rules (DESIGN §8):** every effect owns its channel for its length with a priority (own weapon 4, enemy
+  attacks 3, pain/death 2, doors/pickups/steps/cue 1); the sequencer plays three voices on the three channels and
+  skips a note's SOUND while an effect owns the channel (the music keeps its time, as in Bo). So a model in
+  `sound.test.ts`, with its own reader of `art/music.txt` and of DESIGN's effect table, predicts every music
+  command and every threat cue of every frame of nine replays exactly; effects (game events) are taken from the
+  stream and checked against their definition and priority. Effects use a sweep != 0, the music 0: the stream
+  tells them apart.
+- **Music in xdata (M30 cut list step 1):** 4-byte notes (Hz, step, klang << 4 | volume) with end markers, one
+  COPY of 4 B when a note starts; no RAM window needed. Tempo by rounding sixteenth positions down (4/5 frames at
+  200 BPM), so voices stay in sync exactly.
+- **The score** is original (E minor: palm-muted sixteenths, an A# tritone, chromatic falls, stabs, gallops,
+  double bass), written as text (`art/music.txt`); STRID loops in 9.6 s, the drone in 16 s.
+- **The track choice and the threat cue** count awake enemies at the end of the frame's logic (`music_step`
+  counts itself, ~60 cycles): the enemy step's `n_awake` misses states the weapon sets later and a restart.
+- **The shot's body plays on channel 0** (over the guitar): on channel 1 it masked every pain and death sound of
+  the hit (the same frame, a lower priority), which the "every effect heard" test found.
+- `tools/listen.ts` renders the commands to WAV with the web player's semantics (demo/nadir-music.wav, -sfx,
+  -play) so the human can judge the music without a phone; the stress route ends by emptying the weapon (the
+  empty click).
+Measured: every frame of the nine replays <= 24 815 cycles (sound ~100-250 per frame); ROM 31.7 KB of 32
+(+1.5 KB: sequencer, hooks, 26 effect definitions), xdata 50.9 KB, cartridge 33.0 KB, RAM to 0xF71D.
+Revisit if: the human wants another style or length of music (the score is text), or M31 needs the ROM (the
+effect hooks could move to an event table).

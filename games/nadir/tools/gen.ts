@@ -8,6 +8,7 @@ import { spritesAsm, spritesPng, compileAll } from './sprites';
 import { tablesAsm } from './tables';
 import { previewPng, readMaterials, texturesAsm } from './textures';
 import { GAME_DIR, isMain } from './util';
+import { musicAsm } from './music';
 import { weaponAsm } from './weapon';
 
 export function generated(): Record<string, string | Buffer> {
@@ -22,6 +23,7 @@ export function generated(): Record<string, string | Buffer> {
     'map.gen.asm': mapAsm(map),
     'sprites.gen.asm': spritesAsm(sprites),
     'weapon.gen.asm': weaponAsm(),
+    'music.gen.asm': musicAsm(),
     'art/sprites.png': spritesPng(sprites.filter((s) => !s.box)),
     'art/textures.png': previewPng(mats),
     'levels/nadir.png': mapPng(map),

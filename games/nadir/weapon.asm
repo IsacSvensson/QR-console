@@ -59,6 +59,10 @@ weapon_frame:
     ST [w_flash], r0
     LDI r0, 1
     ST [noise], r0
+    LDI r0, SFX_SHOT
+    CALL play_sfx
+    LDI r0, SFX_SHOTB
+    CALL play_sfx
     JMP shoot
 @noa:
     LD r0, [w_mag]
@@ -66,9 +70,15 @@ weapon_frame:
     JNE @ret
     LD r0, [w_res]
     CMP r0, 0
-    JEQ @ret
+    JEQ @empty
     LDI r1, W_LOAD
     JMP @set
+@empty:                             ; A pressed with no rounds at all: a click (DESIGN §8.1)
+    LD r0, [btnp]
+    AND r0, BTN_A
+    JZ @ret
+    LDI r0, SFX_EMPTY
+    JMP play_sfx
 @fire:
     CMP r0, FIRE_FRAMES
     JB @ret
@@ -95,7 +105,20 @@ weapon_frame:
     SUB r2, r0
     ST [w_res], r2
     LDI r1, W_READY
-@set:
+@set:                               ; r1 = the new state; its effect (DESIGN §8.1)
+    LDI r0, SFX_PUMP
+    CMP r1, W_PUMP
+    JEQ @snd
+    LDI r0, SFX_RELOAD
+    CMP r1, W_LOAD
+    JEQ @snd
+    LD r0, [w_state]
+    CMP r0, W_LOAD
+    JNE @st
+    LDI r0, SFX_LOADED
+@snd:
+    CALL play_sfx
+@st:
     ST [w_state], r1
     LDI r0, 0
     ST [w_t], r0

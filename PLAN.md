@@ -592,6 +592,9 @@ milestone adds to it and never removes earlier checks.
   `DECISIONS.md`; a projection over a limit (ROM 32 KB, RAM below 0xFE00, cartridge 40 KB) applies DESIGN's cut list
   and is flagged for a human
 
+_Order (human decision, 2026-10-30): M32's sound part is done before M31, as **M32a** (effects, ambience, threat
+cue, motifs, sequencer; same criteria as below). The rest of M32 follows M31._
+
 ## M31 — The vertical slice and the game around it
 
 - The final level and `LEVEL.md`, the title screen with an attract-mode fly-through, death and checkpoint restart,

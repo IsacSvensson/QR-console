@@ -33,8 +33,13 @@ world:
     JNE @nextkey
     LD r0, [r3 + key_tab + 2]
     LD r1, [keys]
+    AND r0, r1
+    JNZ @nextkey                    ; held already
+    LD r0, [r3 + key_tab + 2]
     OR r1, r0
     ST [keys], r1
+    LDI r0, SFX_KEY
+    CALL play_sfx
 @nextkey:
     ADD r3, 4
     JMP @key
@@ -98,11 +103,14 @@ world:
 @take:
     LDI r0, 0
     STB [r6 + P_ALIVE], r0
+    LDI r0, SFX_MED
     LDI r1, picked_med
     CMP r5, 1
     JEQ @cnt
+    LDI r0, SFX_AMMO
     LDI r1, picked_ammo
 @cnt:
+    CALL play_sfx
     LD r0, [r1]
     ADD r0, 1
     ST [r1], r0
@@ -159,6 +167,8 @@ world:
     JEQ @next
     LDI r0, 1
     STB [r6 + D_STATE], r0
+    LDI r0, SFX_DOOROPEN
+    CALL play_sfx
     JMP @next
 @opening:
     LD r1, [r6 + D_OPEN]
@@ -182,6 +192,10 @@ world:
     JNZ @settimer
     LDI r1, 3
     STB [r6 + D_STATE], r1
+    PUSH r0
+    LDI r0, SFX_DOORSHUT
+    CALL play_sfx
+    POP r0
 @settimer:
     STB [r6 + D_TIMER], r0
     JMP @next

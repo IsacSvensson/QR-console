@@ -1,0 +1,52 @@
+# NADIR - the music (DESIGN.md §8.2). Original: written for this game, no existing song's riff or melody.
+# tools/music.ts turns it into music.gen.asm (the notes in xdata).
+#
+# track NAME tempo BPM [next NAME]   a track; without `next` every voice loops, with it voice 0 switches to that
+#                                    track at its end and voices 1, 2 stop
+# vN vol V [pm P] [acc A]: tokens    voice N (= channel N) of the last track, appended; V/P/A = volume normal,
+#                                    palm-muted, accented
+# pat NAME: tokens                   a reusable phrase; $NAME inserts it
+# tokens: NOTE[/LEN][mark]           NOTE = C D E F G A B, # for sharp, octave digit (E2 = 82 Hz); - = rest;
+#                                    drums (noise, voice 2): K kick, S snare, H hat, R rumble (long low noise)
+#                                    LEN in sixteenths (default 1); mark ' = palm mute (sounds 2 frames, volume P),
+#                                    > = accent (volume A); ( ... )xN repeats
+# A sixteenth lasts 3600 / (4 BPM) frames; positions are rounded down, so at 200 BPM steps alternate 4 and 5.
+
+# ---- STRID: thrash in E minor, palm-muted sixteenths, a tritone (A#), chromatic descents, stabs, gallops
+pat riffA: E2' E2' E2' E2' E2' E2' G2> E2' E2' E2' A#2> E2' E2' E2' A2> G2>
+pat riffB: E2' E2' E2' E2' E2' E2' G2> E2' E2' E2' F2> E2' F#2> F2> E2> D#2>
+pat gallop: (E2/2' E2' E2')x3 G2/2> A#2/2>
+pat stabs: E3/2> -/2 E3/2> -/2 D3> - D3> - C3/2> A#2/2>
+pat run: E3> D#3> D3> C#3> C3> B2> A#2> A2> G#2> G2> F#2> F2> E2' E2' E2' E2'
+pat beat: K - K - S - K - K - K - S - K K
+pat dbl: K K K K S K K K K K K K S K K K
+pat fill: S S S S S S S S K S K S K K S S
+
+track FIGHT tempo 200
+v0 vol 10 pm 7 acc 13: $riffA $riffA $riffB $riffB $gallop $gallop $stabs $run
+v1 vol 7 acc 9: -/64 B3/4> A#3/4 A3/4 G3/4 E4/2> -/2 D4/2> -/2 A#3/8 B3/2> -/2 B3/2> -/2 A3> - A3> - G3/2> E3/2> -/16
+v2 vol 9 acc 11: $beat $beat $beat $beat $dbl $dbl $beat $fill
+
+# ---- DRÖNARE: exploration, slow and low, a tritone drop, far pings, a rumble
+track DRONE tempo 60
+v0 vol 3: E2/16 F2/16 E2/16 A#1/16
+v1 vol 2: -/12 B4/2 -/18 A#4/2 -/30
+v2 vol 2: R/8 -/24 R/8 -/24
+
+# ---- START: the motif at the start and after a restart, then the drone
+track START tempo 200 next DRONE
+v0 vol 10 acc 13: E2/2> E2/2> G2/2> A2/2> A#2/4> B2/4> E2/8>
+v1 vol 7: E3/2 E3/2 G3/2 A3/2 A#3/4 B3/4 E4/8
+v2 vol 9: K S K S K K S S K/16
+
+# ---- DÖD: a slow chromatic fall over a tritone, then silence
+track DEATH tempo 90 next NONE
+v0 vol 9: E3/4 D#3/4 D3/4 C#3/8 C3/12
+v1 vol 6: A#3/4 A3/4 G#3/4 G3/8 F#3/12
+v2 vol 8: K/4 -/12 K/16
+
+# ---- SEGER: E major, rising (played by the victory sequence, M31)
+track VICTORY tempo 160 next NONE
+v0 vol 10 acc 13: E2/2> E2/2> B2/2> E3/2> D3/4> E3/12>
+v1 vol 8: G#3/2 B3/2 E4/2 G#4/2 F#4/4 G#4/12
+v2 vol 9: K S K S S S S S K/16

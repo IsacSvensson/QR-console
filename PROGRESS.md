@@ -52,10 +52,19 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 - [x] M29 Weapon, combat, the first enemy (D-045; the M26/M27/M28 cycle gates stay red, see below)
 - [x] M30 Atmosphere, effects, the second enemy (D-046) — **budget gate: projected ROM 36-38 KB > 32 KB, cut list applies, flagged below**
 - [ ] M31 The vertical slice and the game around it
-- [ ] M32 Sound, polish, delivery
+- [x] M32a Sound (M32's sound part, done before M31 on the human's request, D-047)
+- [ ] M32 Polish, delivery (the rest of M32)
 
 ## Current work
 
+Part 4: M32a done (D-047), sound before M31 on the human's request: 26 effects with channel priorities (weapon,
+enemies, acid, explosions, doors, pickups, footsteps), an original thrash score (`art/music.txt`: STRID, drone,
+START, DEATH, VICTORY) played from xdata by a three-voice sequencer, the threat cue by distance. Tested
+automatically: a model with its own score reader predicts every music note and threat cue of every frame of nine
+replays exactly; every effect is heard; effects interrupt the music and it resumes; VICTORY directly (heard in a
+replay from M31). Measured: every frame <= 24 815 cycles; ROM 31.7 KB of 32. To listen: `demo/nadir-music.wav`,
+`demo/nadir-sfx.wav`, `demo/nadir-play.wav` (rendered with the web player's semantics). Not verified: how it sounds
+on a phone.
 Part 4: M30 done (D-046): dynamic lights (explosions, acid balls) in the light rule of walls, masked planes and
 boxes; vignette; damage flash and direction marker; screen shake; 24 particles; explosive barrels with chain
 reactions; the Spottare (keeps its distance, aims, spits) and acid balls with splash damage. Tested automatically:

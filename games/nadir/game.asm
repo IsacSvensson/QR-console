@@ -12,6 +12,7 @@ game_reset:
     CALL world_init
     CALL enemies_init
     CALL fx_reset
+    CALL sound_reset
     LDI r0, 0
     ST [keys], r0
     ST [picked_med], r0
@@ -83,6 +84,10 @@ game_frame:
     JGE @live
     LDI r0, DEATH_FRAMES
     ST [dead], r0
+    LDI r0, SFX_PDEATH
+    CALL play_sfx
+    LDI r0, MUS_DEATH
+    CALL set_music
     JMP world
 @live:
     CALL weapon_frame

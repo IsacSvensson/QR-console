@@ -211,8 +211,17 @@ player:
     JZ @bobset
     LDI r0, 1 << BOB_SHIFT
 @adv:
+    MOV r2, r1
     ADD r1, r0
     ST [bob_ph], r1
+    XOR r2, r1                      ; the phase passed a half period (index 0 or 8): a footstep while walking
+    SHR r2, BOB_SHIFT + 3
+    JZ @bobset
+    LD r2, [walk_v]
+    CMP r2, 0
+    JEQ @bobset
+    LDI r0, SFX_STEP
+    CALL play_sfx
 @bobset:
     LDI r0, 0
     LD r1, [opt_nobob]

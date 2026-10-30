@@ -801,18 +801,90 @@ dörrar (som om de vore öppna). Det begränsar strålarnas kostnad utan stegrä
 
 ---
 
-## 8. Ljud (M29–M32)
+## 8. Ljud (M32a, före M31 på människans begäran)
 
-Fyrkant 0: musikmotiv och omgivningsdrönare. Fyrkant 1: vapnets kropp, fiendeläten, hotsignal. Brus: skottets
-knall, explosioner, dörrar, fotsteg. Prioritet: eget vapen > fiendeanfall > smärta/död > dörr > omgivning;
-effekterna bokför kanal och längd så att musiken återupptas.
+Fyrkant 0: musikens "gitarr" och drönaren, skottets kropp. Fyrkant 1: vapnets mekanik (pump, omladdning),
+fiendeläten, hotsignal, plock, musikens stämma.
+Brus (kanal 2): skottets knall, explosioner, dörrar, fotsteg, musikens trummor.
 
 **Musikens riktning** (önskemål från människan, M27): stressande metal i andan av 80-talets thrash — men **egen**
 musik, ingen kopia av någon befintlig låt (riff och melodier i t.ex. *Master of Puppets* är upphovsrättsskyddade).
 Kännetecken som ska bära: snabbt tempo (~190–210 BPM), palm-mutade sextondelar på en låg grundton i fyrkant 0
-("gitarren", korta hårda toner med kort volymklang), kromatiska nedgångar och tritonus-steg, staccato-ackordslag
-som bryter mönstret, taktbyten inför refrängdelar; fyrkant 1 som stämma/solostötar när vapnet är tyst; bruset som
-virvel och dubbla baskaggeslag. Lugnare drönare i utforskning, metallen när fiender är larmade (M29–M32).
+("gitarren", korta hårda toner), kromatiska nedgångar och tritonus-steg, staccato-ackordslag som bryter mönstret;
+fyrkant 1 som stämma/solostötar; bruset som virvel och dubbla baskaggeslag. Lugn drönare i utforskning, metallen
+när fiender är vakna.
+
+### 8.1 Effekter och prioritet
+
+En effekt spelas med `SFX` och tar sin kanal i sin längd: `snd_busy[k]` = längden, `snd_prio[k]` = dess prioritet.
+Den spelas bara om kanalen är ledig (`snd_busy` = 0) eller dess prioritet är minst den spelandes; annars hoppas den
+över. Prioritet: eget vapen (och dess explosioner) 4 > fiendeanfall och spelarens skada 3 > smärta/död 2 > dörrar,
+plock, fotsteg, hotsignal 1. Alla effekter har svep ≠ 0, musiken svep 0 (så skiljs de åt i ljudströmmen).
+
+| Effekt | Kanal | Hz | Rutor | Vol | Svep | Prio | När |
+|---|---:|---:|---:|---:|---:|---:|---|
+| SHOT | 2 | 320 | 14 | 15 | -16 | 4 | vapnet avfyras (knallen) |
+| SHOTB | 0 | 110 | 10 | 12 | -6 | 4 | vapnet avfyras (kroppen, över gitarren: kanal 1 är fri för träffens smärta/död) |
+| PUMP | 1 | 700 | 5 | 8 | -60 | 4 | vapnet går till PUMP |
+| RELOAD | 1 | 500 | 6 | 7 | 40 | 4 | omladdningen börjar |
+| LOADED | 2 | 2600 | 3 | 7 | -200 | 4 | omladdningen klar |
+| EMPTY | 2 | 3200 | 2 | 6 | -100 | 4 | A tryckt utan patroner |
+| BOOM | 2 | 120 | 40 | 15 | -2 | 4 | en tunna exploderar |
+| HURT | 1 | 200 | 8 | 12 | -20 | 3 | spelaren skadas |
+| PDEATH | 1 | 300 | 60 | 12 | -4 | 4 | spelaren dör |
+| KALERT | 1 | 220 | 16 | 10 | 30 | 3 | en Kryp vaknar (LARM) |
+| KLEAP | 1 | 330 | 10 | 11 | -20 | 3 | en Kryp hoppar (SPRÅNG) |
+| KPAIN | 1 | 520 | 8 | 9 | -50 | 2 | en Kryp i SMÄRTA |
+| KDEATH | 1 | 260 | 24 | 10 | -8 | 2 | en Kryp dör |
+| SALERT | 1 | 660 | 14 | 9 | -30 | 3 | en Spottare vaknar |
+| SAIM | 1 | 880 | 12 | 6 | 20 | 3 | en Spottare siktar |
+| SPIT | 2 | 1200 | 10 | 10 | -60 | 3 | en Spottare spottar |
+| SPAIN | 1 | 600 | 8 | 9 | -40 | 2 | en Spottare i SMÄRTA |
+| SDEATH | 1 | 180 | 28 | 10 | -5 | 2 | en Spottare dör |
+| SPLASH | 2 | 2200 | 10 | 8 | -90 | 2 | en syraboll stänker |
+| DOOROPEN | 2 | 400 | 30 | 6 | 4 | 1 | en dörr börjar öppnas |
+| DOORSHUT | 2 | 500 | 30 | 6 | -4 | 1 | en dörr börjar stängas |
+| MED | 1 | 660 | 10 | 9 | 40 | 1 | medkit plockat |
+| AMMO | 1 | 440 | 8 | 9 | 60 | 1 | ammunition plockad |
+| KEY | 1 | 880 | 16 | 9 | 30 | 1 | ett nyckelkort plockat |
+| STEP | 2 | 150 | 3 | 4 | -10 | 1 | fotsteg: huvudgungningens fas passerar en halvperiod medan spelaren går |
+| THREAT | 1 | 98 | 4 | 7 | -2 | 1 | hotsignalen (§8.3) |
+
+### 8.2 Musiken
+
+Spår: 0 TYST, 1 START, 2 DRÖNARE, 3 STRID, 4 DÖD, 5 SEGER (`art/music.txt`; `tools/music.ts` skriver dem till
+xdata). Ett spår är tre röster, en per kanal; en röst är en lista av toner (Hz, steg i bildrutor, klang i
+bildrutor 0–15 (0 = hela steget), volym) och slutar med en markör: **om** (rösten börjar om), **stopp** (rösten tystnar)
+eller **nästa** (spåret byts till spårets efterföljare). Varje ton kopieras från xdata när den börjar (en `COPY` på
+4 B).
+
+Varje bildruta, sist i logiken (`music_step`):
+1. **Val:** lever spelaren och spelas START, DRÖNARE eller STRID: med en vaken fiende (tillstånd 1–6 eller 8 efter
+   bildrutans hela logik, vapnet och en omstart inräknade) blir det STRID
+   och `mus_calm` = `MUS_CALM`; annars minskar `mus_calm` under STRID och vid 0 blir det DRÖNARE. Vid död: DÖD (en
+   gång, när `dead` sätts). `game_reset` (start och omstart): START. Ett spårbyte börjar alla röster från början.
+2. **Hotsignalen** (§8.3).
+3. **Rösterna**, kanal 0, 1, 2: när rösten har 0 rutor kvar läses nästa ton (markörer verkställs: om → från början;
+   stopp → tyst; nästa → spårbyte, sedan om från röst 0), och om tonen inte är en paus och kanalen inte är upptagen
+   spelas `SOUND` (kanal, Hz, klang eller steget, volym); sedan minskar rösten sina rutor med 1.
+4. **Kanalerna:** `snd_busy` minskar med 1 där den är > 0.
+
+En effekt som spelas i bildruta f med längd L tystar alltså musiken på sin kanal i bildrutorna f … f + L − 1, och
+musiken fortsätter i takt (den hörs igen från nästa ton som börjar efter det).
+
+### 8.3 Hotsignalen
+
+Så länge spelaren lever och en fiende är vaken: `thr_t` räknar ned; vid 0 spelas THREAT och `thr_t` = clamp(
+`THREAT_MIN` + `THREAT_K` · ⌊d / 256⌋, `THREAT_MIN`, `THREAT_MAX`), där d är den oktagonala normen (§6.3) från
+spelaren till den närmaste vakna fienden i den bildrutan. Utan vaken fiende är `thr_t` = 0 (den första vakna ger en
+signal direkt). Är kanal 1 upptagen av en högre effekt hörs signalen inte, men intervallet räknas ändå.
+
+| Konstant | Värde | Betydelse |
+|---|---|---|
+| `MUS_CALM` | 240 | bildrutor utan vaken fiende innan STRID blir DRÖNARE |
+| `THREAT_MIN` | 12 | hotsignalens kortaste intervall (bildrutor) |
+| `THREAT_K` | 6 | bildrutor per cells avstånd |
+| `THREAT_MAX` | 60 | hotsignalens längsta intervall |
 
 ---
 

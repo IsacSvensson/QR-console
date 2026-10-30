@@ -124,6 +124,7 @@ en_list:
 ; r5 = enemy, r0 = new state: enters it (timer and animation from the start). Clobbers r0.
 en_set:
     STB [r5 + E_ST], r0
+    CALL en_sound                   ; DESIGN §8.1
     LDI r0, 0
     STB [r5 + E_T], r0
     STB [r5 + E_AN], r0
