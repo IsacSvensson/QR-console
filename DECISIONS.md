@@ -909,3 +909,11 @@ M29's budget needs the cycles (then: merge equal neighbouring columns, cheaper @
 Human decision (2026-10-30): "proceed per your recommendations" on the M28 prop-drawing criterion: the 3D boxes and
 their cost (9 991 cycles per frame against 5 000) are accepted; the frame budget (25 000) is what binds. The gate
 test stays in `nadir-gate` as a measurement.
+Bug found by the human on a phone (2026-10-30): "a box turns transparent when I walk too close". Cause: the boxes
+used the sprites' near plane (SPR_NEAR = 0.25 cell) and the player stops 0.25 cell (P_RAD) from a side, so parts of
+the side nearest to the camera (z down to 0.21 within the field of view) were clipped away: a sweep along every
+side of every box at touching distance found 8 638 of 50 065 oracle columns missing. Fix: boxes clip against their
+own near plane BOX_NEAR = 0.125 cell; the clip is exact (a b / c) instead of sixteenths of the side (the error grows
+as 1/z up close); h is stepped in 1/32 px (h up to 788), fog index clamped at 512 again. The sweep is now a test
+(`boxes.test.ts`, "touching every box"): 0 columns missing. The replays never touched a box, so the per-image oracle
+could not catch it.

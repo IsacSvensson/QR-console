@@ -31,6 +31,8 @@ SR_HMAX = 56                        ; the largest corner h (px; 999 when a corne
 .var bx_side
 .var bx_fid                         ; face id: prop index * 4 + side
 .var bx_clip                        ; 1 if the side was clipped to the near plane
+.var bx_gp                          ; box_clipk: |gP| and |gP - gQ|
+.var bx_gd
 .var bx_pa                          ; the record + 4 corner of its end points
 .var bx_pb
 .var bx_az                          ; side end points in camera space (1/1024 cell)
@@ -130,7 +132,7 @@ box_frame:
     MOV r7, r5
     ADD r7, r4
     LD r0, [r7 + SR_C]
-    CMP r0, 4 * SPR_NEAR
+    CMP r0, 4 * BOX_NEAR
     JGE @front
     LDI r0, 1                       ; behind the near plane (the others are still projected: box_side uses them)
     ST [bx_beh], r0
@@ -256,7 +258,7 @@ box_frame:
     LDI r0, 0
     RET
 
-; r0 = z, r1 = lat (1/1024 cell, z >= 4 SPR_NEAR) -> r0 = screen x (1/16 px), r1 = h8 = 8 F256 / z (h with three
+; r0 = z, r1 = lat (1/1024 cell, z >= 4 BOX_NEAR) -> r0 = screen x (1/16 px), r1 = h8 = 8 F256 / z (h with three
 ; rounded fraction bits). Far off to a side (|lat| >= 8 z, beyond 83 degrees) x is pinned 256 px off the screen
 ; (box_side clips its sides before that). Clobbers r2-r4.
 proj:
@@ -546,10 +548,10 @@ box_side:
     LDI r0, 0
     ST [bx_clip], r0
     LD r0, [bx_az]
-    CMP r0, 4 * SPR_NEAR
+    CMP r0, 4 * BOX_NEAR
     JGE @aok
     LD r1, [bx_bz]
-    CMP r1, 4 * SPR_NEAR
+    CMP r1, 4 * BOX_NEAR
     JGE @ca
     RET                             ; wholly behind
 @ca:
@@ -558,7 +560,7 @@ box_side:
     CALL box_clip
 @aok:
     LD r0, [bx_bz]
-    CMP r0, 4 * SPR_NEAR
+    CMP r0, 4 * BOX_NEAR
     JGE @bok
     LDI r0, bx_bz
     LDI r1, bx_az
@@ -692,25 +694,30 @@ box_side:
     RET
 
 ; r0, r1 = addresses of the z of end point P and of the other end Q (lat follows z): moves P along the side to
-; z = 4 SPR_NEAR. Clobbers r2-r4.
+; z = 4 BOX_NEAR, lat exactly (a b / c). Clobbers r2-r4.
 box_clip:
     LDI r2, 1
     ST [bx_clip], r2
-    LD r2, [r0]
-    LD r3, [r1]
-    SUB r3, r2                      ; zQ - zP
-    LDI r4, 4 * SPR_NEAR
-    SUB r4, r2
-    SHL r4, 4
-    DIV r4, r3                      ; t, sixteenths
-    LD r2, [r1 + 2]
+    PUSH r0
+    PUSH r1
+    LD r2, [r1]
+    LD r3, [r0]
+    SUB r2, r3                      ; zQ - zP (> 0)
+    LDI r4, 4 * BOX_NEAR
+    SUB r4, r3                      ; near - zP (> 0)
+    LD r3, [r1 + 2]
+    LD r1, [r0 + 2]
+    MOV r0, r3
+    SUB r0, r1                      ; latQ - latP
+    MOV r1, r4
+    CALL muldiv
+    POP r1
+    MOV r2, r0
+    POP r0
     LD r3, [r0 + 2]
-    SUB r2, r3
-    MUL r2, r4
-    SAR r2, 4
     ADD r3, r2
     ST [r0 + 2], r3
-    LDI r2, 4 * SPR_NEAR
+    LDI r2, 4 * BOX_NEAR
     ST [r0], r2
     RET
 
@@ -773,9 +780,9 @@ box_fillp:
     ST [bx_c], r1
     LD r2, [bx_ce]
     SUB r2, r1                      ; n = columns - 1
-    SHL r0, 3                       ; h in 1/64 px (< 32 768: the near plane keeps h <= F256 / SPR_NEAR = 394)
+    SHL r0, 2                       ; h in 1/32 px (< 32 768: the near plane keeps h <= F256 / BOX_NEAR = 788)
     LD r6, [bx_h8]
-    SHL r6, 3
+    SHL r6, 2
     LDI r5, 0
     CMP r2, 0
     JEQ @q0
@@ -800,8 +807,8 @@ box_fillp:
     JEQ @band
 @col:                               ; ---- a whole side: per column its light, recorded for the tests
     MOV r4, r6
-    ADD r4, 32
-    SHR r4, 6                       ; h
+    ADD r4, 16
+    SHR r4, 5                       ; h
     LD r0, [r7 + col_h]
     CMP r4, r0
     JLE @step                       ; the wall is nearer
@@ -818,8 +825,13 @@ box_fillp:
     ADD r1, r3                      ; its top: hor + h (1/2 - height), one rounding
     MOV r3, r0
     SUB r3, r1                      ; the box's height in px
-    LD r0, [r7 + colfog]            ; this column's light (DESIGN §3.12, as the walls: fog and cone at h <= 394)
-    ADD r0, r4
+    MOV r2, r4                      ; this column's light (DESIGN §3.12, as the walls: fog and cone at min(h, 512))
+    CMP r2, 512
+    JB @hh
+    LDI r2, 512
+@hh:
+    LD r0, [r7 + colfog]
+    ADD r0, r2
     LDB r0, [r0]
     LD r2, [bx_lvo]
     ADD r0, r2
@@ -873,8 +885,8 @@ box_fillp:
     RET
 @band:                              ; ---- a band of the side's height [v0, v1], flat colour (the console's screen)
     MOV r4, r6
-    ADD r4, 32
-    SHR r4, 6                       ; h
+    ADD r4, 16
+    SHR r4, 5                       ; h
     LD r0, [r7 + col_h]
     CMP r4, r0
     JLE @bstep
@@ -952,7 +964,7 @@ box_clipk:
 @out:
     LDI r2, 1
     ST [bx_clip], r2
-    ; g(X) = 2 lat - s 15 z (zero on the line; P and Q are close to the camera here, so it fits in 16 bits)
+    ; g(X) = lat - s 7.5 z (zero on the line)
     PUSH r1
     PUSH r0
     CALL @g
@@ -971,44 +983,53 @@ box_clipk:
     JLT @cross                      ; opposite signs: the side crosses the line
     LDI r0, 1
     RET
-@cross:
+@cross:                             ; P += (Q - P) gP / (gP - gQ), both coordinates exactly
     MOV r3, r5
-    SUB r3, r2                      ; gP - gQ
-    PUSH r0
-    PUSH r1
-    MOV r0, r5
+    SUB r3, r2                      ; gP - gQ (same sign as gP)
     CMP r3, 0
     JGT @den
-    NEG r0
+    NEG r5
     NEG r3
 @den:
-    MOV r2, r3
-    LDI r1, 16
-    CALL muldiv                     ; t = gP / (gP - gQ), sixteenths
-    MOV r3, r0
+    ST [bx_gp], r5
+    ST [bx_gd], r3
+    PUSH r0
+    PUSH r1
+    LD r2, [r1]
+    LD r3, [r0]
+    MOV r0, r2
+    SUB r0, r3                      ; zQ - zP
+    LD r1, [bx_gp]
+    LD r2, [bx_gd]
+    CALL muldiv
+    MOV r6, r0
     POP r1
     POP r0
-    LD r2, [r1]
-    LD r4, [r0]
-    SUB r2, r4
-    MUL r2, r3
-    SAR r2, 4
-    ADD r4, r2
-    ST [r0], r4
+    PUSH r0
+    PUSH r1
     LD r2, [r1 + 2]
-    LD r4, [r0 + 2]
-    SUB r2, r4
-    MUL r2, r3
-    SAR r2, 4
-    ADD r4, r2
-    ST [r0 + 2], r4
+    LD r3, [r0 + 2]
+    MOV r0, r2
+    SUB r0, r3                      ; latQ - latP
+    LD r1, [bx_gp]
+    LD r2, [bx_gd]
+    CALL muldiv
+    POP r1
+    MOV r2, r0
+    POP r0
+    LD r3, [r0 + 2]
+    ADD r3, r2
+    ST [r0 + 2], r3
+    LD r3, [r0]
+    ADD r3, r6
+    ST [r0], r3
     LDI r0, 0
     RET
-@g:                                 ; r0 = address of a point, r6 = s -> r2 = 2 lat - s 15 z. Clobbers r3.
+@g:                                 ; r0 = address of a point, r6 = s -> r2 = lat - s 7.5 z (zero on the line). Clobbers r3.
     LD r2, [r0 + 2]
-    SHL r2, 1
     LD r3, [r0]
     MUL r3, 15
+    SAR r3, 1
     MUL r3, r6
     SUB r2, r3
     RET

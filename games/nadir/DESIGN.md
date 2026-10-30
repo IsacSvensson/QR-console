@@ -398,11 +398,11 @@ som kollisionens halvlåda), höjd i procent av väggen (< 50: under ögat, så 
 - *Hörn.* Vid urvalet transformeras de fyra hörnen (−a, −a), (+a, −a), (+a, +a), (−a, +a) till kamerarymd (z, lat i
   1/1024 cell: mittens produkter som spritarna plus ±a · cos, ±a · sin) och projiceras: x i 1/16 px =
   1024 + lat · h8 / 512, h8 = 8 · F256 / z med avrundat bråk (pinnad 256 px utanför bild om |lat| ≥ 8z). z för
-  sortering = lådans mitt; skärmlådan = hörnens x och golv-/lockrader; ett hörn bakom `SPR_NEAR` → hela skärmen.
+  sortering = lådans mitt; skärmlådan = hörnens x och golv-/lockrader; ett hörn bakom `BOX_NEAR` → hela skärmen.
   Kostnad i budgeten och pacingen (§3.11): 4 + ⌊bredd / 6⌋ rektanglar, en konsol (skärmarna: en andra fyllning)
   4 + 2 · ⌊bredd / 6⌋.
 - *Sidor.* Synlig är västsidan om kamerans x < lådans väst, östsidan om x > öst, likadant nord/syd (högst två). En sida
-  klipps mot z ≥ `SPR_NEAR` och mot linjerna |lat| = 7,5z, projiceras, och fylls i provkolumnerna vars mitt
+  klipps (exakt, a · b / c) mot z ≥ `BOX_NEAR` och mot linjerna |lat| = 7,5z, projiceras, och fylls i provkolumnerna vars mitt
   (32c + 16, 1/16 px) ligger i [xa, xb): h (åttondelar) är exakt i första och sista kolumnen (32-bitars a · b / c) och
   stegas linjärt däremellan (h är linjärt i skärm-x på ett plan); kolumnen ritas där h > `col_h[c]` från överkanten
   `hor + round(h · (128 − K) / 256)` till golvet `hor + h − h / 2` (väggarnas golvlinje). Färg: sidans materialfärg
@@ -431,6 +431,7 @@ försvinner och räknas (`picked_med`, `picked_ammo`).
 | `SPR_LOD1_H` | 24 | sprites lägre än så (px) använder LOD 1 |
 | `SPR_LOD2_H` | 10 | sprites lägre än så använder LOD 2 |
 | `PICK_HALF` | 64 | plockradie per axel utöver spelarens låda (u8.8) |
+| `BOX_NEAR` | 32 | lådornas närplan (u8.8, 0,125 cell; spelaren står ≥ 0,25 från en sida, så en synlig sida ligger på z ≥ 0,21) |
 | `BOX_DETAIL` | 32 | lådor vars största hörn-h är lägre (px) ritas utan lock och linjer |
 
 ---
@@ -533,14 +534,130 @@ Spelaren har 100 HP (M29).
 
 ## 6. Vapen, fiender och AI (M29–M30)
 
-- **Bultbössa:** 5 hagel med fallande skada över avstånd, magasin 6, pump efter varje skott, omladdning när
-  tomt. Varje hagel är en stråle från mitten med fast vinkel som träffar närmaste fiende framför väggen.
-- **Kryp:** 30 HP, snabb, upptakt 20 bildrutor före språng, 15 skada.
-- **Spottare:** 50 HP, håller avstånd 2–8 celler, syraboll var 90:e bildruta, 12 skada + stänk.
-- **AI:** VILA → LARM (siktlinje eller skott i samma/angränsande rum) → JAKT (spelaren vid siktlinje, annars
-  senast kända position, genom dörrar via "nästa rum"-tabellen) → ANFALL → SMÄRTA → DÖD.
+**Ordning per bildruta (M29):** knappar → spelaren (§5; död: ingen styrning) → fienderna (AI, rörelse, språngträff)
+→ vapnet (avfyrning, träffar, omladdning) → världen (nycklar, plock, dörrar) → bilden. Allt som testerna läser
+står i RAM efter bildrutan; en fiendes position efter bildrutan är alltså den position skotten prövades mot.
 
----
+### 6.1 Bultbössan
+
+Tillstånd `w_state`: 0 REDO, 1 SKOTT, 2 PUMP, 3 LADDA; `w_t` = bildrutor i tillståndet (0 = första).
+- **REDO:** hålls A (`BTN`) och `w_mag` > 0 → SKOTT (avfyras i samma bildruta). Är `w_mag` = 0 och `w_res` > 0 →
+  LADDA. Annars inget.
+- **SKOTT** varar `FIRE_FRAMES` bildrutor, sedan PUMP. I första bildrutan: `w_mag` − 1, `shots` + 1, hagelträffarna
+  (§6.2), och mynningsblixten: `w_flash` = `FLASH_FRAMES`.
+- **PUMP** varar `PUMP_FRAMES`, sedan REDO. (Skottcykel 20 bildrutor: tre skott per sekund.)
+- **LADDA** varar `RELOAD_FRAMES`; i sista bildrutan n = min(`MAG` − `w_mag`, `w_res`): `w_mag` + n, `w_res` − n;
+  sedan REDO.
+- `w_flash` minskar med 1 per bildruta (efter vapnets steg) ned till 0. **Mynningsblixten:** en bild vars strålar
+  kastas när `w_flash` > 0 (`rflash` = 1) har ljusnivån `FLASH_LIGHT` steg ljusare i varje kolumn (väggar, maskade
+  plan, sprites och lådor: spannbasen minus `FLASH_LIGHT`, sedan klämning som i §3.5).
+- Start: `w_mag` = `MAG`, `w_res` = `AMMO_START`. **Plock** (§3.12) gäller bara om det behövs: medkit om `hp` <
+  `HP_MAX` (`hp` + `MED_HP`, högst `HP_MAX`), ammunition om `w_res` < `AMMO_MAX` (+ `AMMO_PICK`, högst `AMMO_MAX`).
+- **Ritning:** vapnet är ett `MAP` (8 × 6 rutor à 8 × 8, `art/weapon.txt`) nere i mitten; pumpen ett eget `MAP`
+  som glider bakåt i PUMP; blixten två `SPR` ovanför pipan medan `w_flash` > 0. Förskjutningar: sväng i x
+  `sway_tab[(tick >> 3) & 15]` (±1 px), huvudbobben, rekyl i y `recoil_tab[w_t]` i SKOTT, sänkning i LADDA
+  `reload_tab[w_t >> 2]`, pumpens x `pump_tab[w_t >> 1]`. Magasinet som bärnstensfärgad siffra på vapnet.
+
+### 6.2 Hagel, träff och siktstöd
+
+Ett skott är `PELLETS` = 5 strålar från spelarens punkt med vinklarna `cam_a` + k · `SPREAD`, k = −2 … 2
+(cos/sin s.8 enligt §5). Hagel k träffar fiende e (levande: tillstånd ≠ DÖD) om, med d = fiendens position −
+spelarens (u8.8):
+- t = (d_x · cos + d_y · sin) >> 8 > 0 och t ≤ `RANGE`,
+- |(d_y · cos − d_x · sin) >> 8| ≤ `E_HIT` (fiendens radie plus siktstöd: hagel som passerar nära träffar),
+- siktlinjen (§6.4) från spelaren till fienden är fri.
+Bland sådana fiender träffas den med minst t (lika: lägst index). Skadan = `dmg_tab[t >> 9]` = 8, 6, 4, 2 för
+t i [0, 2), [2, 4), [4, 6), [6, 8] celler (t = 8 celler räknas till sista steget). Hagelutfallen lagras (`pel_hit[k]` = fiendeindex eller 255, `pel_dmg[k]`), skadan dras av i
+ordning k = −2 … 2. En träffad fiende får `e_hit` = `SPARK_FRAMES` (gnistor vid fienden) och går till SMÄRTA, eller
+DÖD om hp ≤ 0 (§6.3).
+
+### 6.3 Kryp
+
+Fiendeposten (`enemies`, `E_SIZE` byte): x, y (u8.8), tillstånd, timer, hp, mål-x/y (senast kända
+spelarposition), siktlinje (senaste resultat), animation (index, timer), språngriktning, träffad-flagga. Kryp
+startar i VILA med `KRYP_HP`. Kryp ritas som en sprite via proptabellen (post `NUM_PROPS` + i: position och
+sprite-typ = aktuell animationsruta; döda ligger kvar som lik).
+
+| Tillstånd | Varar / villkor | Övergångar (inga andra är tillåtna) |
+|---|---|---|
+| 0 VILA | står | → 1 LARM: siktlinje till spelaren (prövad, avstånd ≤ `SIGHT`) eller ett skott med spelaren inom `HEAR` |
+| 1 LARM | `ALERT_FRAMES` | → 2 JAKT när tiden gått |
+| 2 JAKT | går mot målet med `KRYP_V` | → 3 UPPTAKT: siktlinje och avstånd < `LEAP_DIST`; → 0 VILA: målet nått (inom `E_RAD`) utan siktlinje |
+| 3 UPPTAKT | `WINDUP_FRAMES`, står | → 4 SPRÅNG när tiden gått (riktningen = mot spelaren just då) |
+| 4 SPRÅNG | `LEAP_FRAMES`, rör sig med `LEAP_V` | → 5 ÅTERHÄMTNING: tiden gått, stoppad av en vägg, eller träff på spelaren |
+| 5 ÅTERHÄMTNING | `RECOVER_FRAMES`, står | → 2 JAKT |
+| 6 SMÄRTA | `PAIN_FRAMES`, står | → 2 JAKT |
+| 7 DÖD | för alltid | — |
+
+Från 0–6 går en fiende till 6 SMÄRTA när den träffas och överlever, till 7 DÖD när hp ≤ 0 (i vapnets steg).
+- **Avstånd** = max(|d_x|, |d_y|) + min(|d_x|, |d_y|) / 2 (oktagonal norm, u8.8).
+- **Siktlinje** prövas för fiende i när (tick + i) & 3 = 0 och avståndet ≤ `SIGHT`, annars behålls förra
+  resultatet (utanför `SIGHT`: 0). Fri siktlinje → målet = spelarens position.
+- **Rörelse i JAKT:** d = mål − position, L = avståndet; steg = (d_x · `KRYP_V` / L, d_y · `KRYP_V` / L)
+  (heltalsdivision mot noll, L > 0). **SPRÅNG:** steget sätts vid språngets början på samma sätt med `LEAP_V`.
+- **Kollision** som spelarens (§5 steg 5, x sedan y) med halvlådan `E_RAD`, mot väggar, stängda dörrar,
+  blockerande props och spelarens låda (|Δ| < `E_RAD` + `P_RAD` på båda axlarna är överlapp). Blockeras ett
+  språng (någon axel stoppas) slutar det.
+- **Språngträff:** i SPRÅNG, om fiendens och spelarens lådor är inom `E_RAD` + `P_RAD` + `LEAP_REACH` på båda
+  axlarna: spelaren `hp` − `KRYP_DMG`, `hits_taken` + 1, fienden → ÅTERHÄMTNING.
+- **Spelaren** kolliderar också med levande fienders lådor (samma överlappsregel).
+
+**Animation** (sprite-typ per tillstånd, rutorna i ordning, varje `ANIM_K` bildrutor om inget annat):
+VILA: `kryp_i0`, `kryp_i1` (16 bildrutor var), LARM: `kryp_a`, JAKT: `kryp_w0` … `kryp_w3` (6 var),
+UPPTAKT: `kryp_a`, SPRÅNG: `kryp_l`, ÅTERHÄMTNING: `kryp_i0`, SMÄRTA: `kryp_p`, DÖD: `kryp_d0`, `kryp_d1`,
+`kryp_d2` (6 var), sedan `kryp_d2` för alltid. Ett nytt tillstånd börjar om animationen.
+
+### 6.4 Siktlinje
+
+Från A till B (u8.8): N = (max(|Δx|, |Δy|) >> 7) + 1 prov; för k = 1 … N − 1 punkten A + (Δ · k) / N (division mot
+noll per axel). Siktlinjen är fri om ingen sådan punkt ligger i en cell som är solid, en stängd dörr (öppen < 128)
+eller utanför kartan; maskade celler (galler, fönster, räcke, låg vägg) är genomsiktliga.
+
+### 6.5 Hälsa, död och omstart
+
+`hp` = `HP_MAX` vid start. `hp` ändras bara av en språngträff (−`KRYP_DMG`) och av ett medkit (+`MED_HP`, högst
+`HP_MAX`). När `hp` ≤ 0: död (`dead` = `DEATH_FRAMES`): ingen styrning, horisonten sjunker 1 px per 4 bildrutor
+(högst 16), vapnet ritas inte; när `dead` når 0 görs **omstart**: hela spelets tillstånd sätts som vid start
+(dörrar, props, fiender, spelaren i startläget, nycklar, vapen, hp, räknare utom `tick` och `restarts`, som ökar).
+
+**HUD (M29):** hälsa nere till vänster (`NUM`), magasin på vapnet, reserv bredvid, ett sikte (4 px) i mitten,
+nyckelkort uppe till vänster. Slutlig HUD i M31.
+
+| Konstant | Värde | Betydelse |
+|---|---|---|
+| `HP_MAX` | 100 | spelarens hälsa |
+| `MAG` | 6 | magasin |
+| `AMMO_START` | 12 | reserv vid start |
+| `AMMO_MAX` | 48 | största reserv |
+| `AMMO_PICK` | 6 | en ammunitionsask |
+| `MED_HP` | 25 | ett medkit |
+| `FIRE_FRAMES` | 8 | skottets längd (rekyl) |
+| `PUMP_FRAMES` | 12 | pumpning |
+| `RELOAD_FRAMES` | 36 | omladdning |
+| `FLASH_FRAMES` | 3 | mynningsblixtens längd |
+| `FLASH_LIGHT` | 2 | blixtens ljussteg |
+| `PELLETS` | 5 | hagel per skott |
+| `SPREAD` | 20 | vinkel mellan hagel (enheter, 1,8°) |
+| `RANGE` | 2048 | längsta träff (u8.8, 8 celler) |
+| `E_RAD` | 48 | fiendens halva låda (u8.8) |
+| `E_HIT` | 80 | hagelträffens radie (fienden + siktstöd) |
+| `SPARK_FRAMES` | 4 | gnistor vid träff |
+| `KRYP_HP` | 30 | Kryps hälsa |
+| `KRYP_V` | 14 | Kryps fart i JAKT (u8.8 per bildruta) |
+| `LEAP_V` | 36 | språngets fart |
+| `LEAP_DIST` | 512 | avstånd för upptakt (2 celler) |
+| `LEAP_REACH` | 16 | språngträffens marginal |
+| `KRYP_DMG` | 15 | språngets skada |
+| `ALERT_FRAMES` | 16 | larm |
+| `WINDUP_FRAMES` | 20 | upptakt |
+| `LEAP_FRAMES` | 10 | språng |
+| `RECOVER_FRAMES` | 20 | återhämtning |
+| `PAIN_FRAMES` | 8 | smärta |
+| `SIGHT` | 2560 | siktlinje prövas inom (10 celler) |
+| `HEAR` | 2048 | skott hörs inom (8 celler) |
+| `DEATH_FRAMES` | 90 | död till omstart |
+
+**Spottare** (M30): 50 HP, håller avstånd 2–8 celler, syraboll var 90:e bildruta, 12 skada + stänk.
 
 ## 7. Banan (M27, M31)
 

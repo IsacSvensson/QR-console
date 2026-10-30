@@ -2,8 +2,8 @@
 // replay against a floating-point ray / box test (test/nadir/ref.ts): the nearest box side seen there, its height, the
 // y of its top edge and its light level (DESIGN §3.5, W and E sides one level darker).
 import { describe, expect, it } from 'vitest';
-import type { VM } from '@qrc/vm';
-import { K, boxRay, readRefMap, readRefSprites, refBoxK, refLevel, refLight } from './ref';
+import { VM } from '@qrc/vm';
+import { K, boxRay, readRefMap, readRefSprites, refBoxK, refLevel, refLight, solid } from './ref';
 import { REPLAYS, buildNadir, runReplay, type Nadir } from './play';
 
 const map = readRefMap('nadir');
@@ -117,4 +117,56 @@ describe('M28 3D boxes', () => {
       expect(lvlOk, bad.join('\n')).toBe(matched);
       if (name === 'm28-props') expect(matched).toBeGreaterThan(1000);
     });
+
+  it('touching every box (the player against each side, 17 places per side, 64 angles): every column the oracle sees is drawn, with its side and h', async () => {
+    // the human saw a box turn transparent up close: its side was nearer than the sprites' near plane (D-044)
+    const n = await buildNadir();
+    const vm = VM.fromCartridge(n.cart, { seed: 1 });
+    vm.step(0);
+    vm.write16(n.S('dbg_flags'), n.S('FL_NOPACE'));
+    let cols = 0;
+    let ok = 0;
+    let hOk = 0;
+    const bad: string[] = [];
+    map.props.forEach((pr, i) => {
+      const sp = sprites.find((s) => s.char === pr.s)!;
+      if (!sp.box) return;
+      const bx = Math.round(pr.x * 256) / 256;
+      const by = Math.round(pr.y * 256) / 256;
+      const a = sp.block / 256;
+      const d = a + K.P_RAD! / 256 + 1 / 256;
+      const pos: number[][] = [];
+      for (let k = -8; k <= 8; k++) pos.push([bx - d, by + k * 0.06], [bx + d, by + k * 0.06], [bx + k * 0.06, by - d], [bx + k * 0.06, by + d]);
+      for (const [px, py] of pos) {
+        if ([-1, 1].some((u) => [-1, 1].some((v) => solid(map, Math.floor(px! + (u * K.P_RAD!) / 256), Math.floor(py! + (v * K.P_RAD!) / 256))))) continue;
+        for (let ang = 0; ang < 4096; ang += 64) {
+          vm.write16(n.S('cam_x'), Math.round(px! * 256));
+          vm.write16(n.S('cam_y'), Math.round(py! * 256));
+          vm.write16(n.S('cam_a'), ang);
+          vm.step(0);
+          const cx = vm.read16(n.S('rcam_x')) / 256;
+          const cy = vm.read16(n.S('rcam_y')) / 256;
+          const th = ((vm.read16(n.S('rcam_a')) + 0.5) * 2 * Math.PI) / 4096;
+          for (let c = 0; c < 64; c++) {
+            const r = (2 * c + 1 - 64) / F;
+            const hit = boxRay(cx, cy, Math.cos(th) - r * Math.sin(th), Math.sin(th) + r * Math.cos(th), bx, by, a);
+            if (!hit || hit.edge < 0.02) continue;
+            const hf = K.F256! / (256 * hit.t);
+            if (hf <= vm.read16(n.S('col_h') + 2 * c) + 1.5) continue;
+            const face = vm.read16(n.S('col_bface') + 2 * c);
+            if (face >> 2 !== i && face !== 0xffff) continue; // another box in front
+            cols++;
+            if (face === i * 4 + hit.side) ok++;
+            else if (bad.length < 10) bad.push(`box ${i} cam ${cx.toFixed(3)},${cy.toFixed(3)} a ${ang} col ${c}: ${face === 0xffff ? 'nothing drawn' : `side ${face & 3}`}, oracle side ${hit.side}`);
+            const h = vm.read16(n.S('col_bh') + 2 * c);
+            if (face === i * 4 + hit.side && Math.abs(h - hf) <= Math.max(2, hf / 32)) hOk++;
+          }
+        }
+      }
+    });
+    console.log(`[boxes] touching: ${cols} columns, side ${((100 * ok) / cols).toFixed(2)} %, h ±max(2, h/32) ${((100 * hOk) / cols).toFixed(2)} %`);
+    expect(ok, bad.join('\n')).toBeGreaterThanOrEqual(0.995 * cols);
+    expect(hOk).toBeGreaterThanOrEqual(0.99 * cols);
+    expect(cols).toBeGreaterThan(10_000);
+  });
 });
