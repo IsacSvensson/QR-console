@@ -48,7 +48,7 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 
 - [ ] M26 Renderer prototype (risk gate) — built and verified; **cycle gate fails (19.2k / 15.6k vs 14k / 11k), human decision, D-040**
 - [ ] M27 Player, collision, doors, masked walls (feel build) — built and verified; **cycle gate fails (33.8k per image vs 16k), D-042**
-- [ ] M28 Sprites and props — built and verified; since the 3D boxes (M28b, D-044) **prop drawing in the stress replay fails (9 991 vs 5 000 cycles per frame)**; billboards alone pass
+- [x] M28 Sprites and props — 3D boxes (M28b, D-044); prop drawing 9 991 vs 5 000 cycles per frame **accepted by the human** (2026-10-30), the gate stays red in `nadir-gate` as a measurement
 - [ ] M29 Weapon, combat, the first enemy
 - [ ] M30 Atmosphere, effects, the second enemy (budget gate)
 - [ ] M31 The vertical slice and the game around it
@@ -147,10 +147,6 @@ Part 2 done (M12–M18). Both parts await the human's real-device checks (PLAN.m
   46 613 / mean 18 000-31 100 cycles (M28: max 42 288 / mean 17 900-26 800) (M27: max 33 753 / mean 17 000-18 800) against M26's 14 000 / 11 000 and M27's 16 000 (`nadir-gate`, red as specified). The hard
   25 000 per frame is met by adaptive pacing (mask-heavy views draw at 30 images/s). Per the human's "proceed per your
   recommendations": the gate is re-derived after M28-M29 with measured sprite and logic costs; floor layer kept.
-- **NADIR M28 prop-drawing criterion (D-044):** with 3D boxes, drawing the props of the stress replay costs up to
-  9 991 cycles per frame (three crates close by) against 5 000; the frame stays <= 24 866 in every replay (hard 25 000 holds), the
-  billboards alone pass. Kept red in `nadir-gate`. Options: accept (my recommendation: boxes look right and the frame
-  budget holds), drop lid/lines up close, or go back to billboard crates.
 - **NADIR M27 feel test (manual, PLAN Manual acceptance 2):** scan `demo/nadir.gif`, try S2 on a phone (B walks,
   double tap = side step); say if S1 should be the default. Not verified by me (no device).
 

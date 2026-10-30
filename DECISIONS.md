@@ -906,3 +906,6 @@ lid 1 459, lines 1 209). The PLAN M28 criterion (prop drawing <= 5 000) is there
 before D-044). Abandoned: per-column Bresenham stepping of h8 (11 instructions; fixed point is 1).
 Revisit if: the human prefers the 5 000 budget over 3D boxes (then: no lid/lines near, or billboard crates), or
 M29's budget needs the cycles (then: merge equal neighbouring columns, cheaper @hat via per-column ray tables).
+Human decision (2026-10-30): "proceed per your recommendations" on the M28 prop-drawing criterion: the 3D boxes and
+their cost (9 991 cycles per frame against 5 000) are accepted; the frame budget (25 000) is what binds. The gate
+test stays in `nadir-gate` as a measurement.
