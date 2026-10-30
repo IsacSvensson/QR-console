@@ -126,7 +126,9 @@ export const ROUTES: Record<string, Route> = {
       b.turnTo(10);
       b.pushWall(); // the crate
       b.turnTo(-20);
-      for (let i = 0; i < 80; i++) b.step(32); // walking with B (S2)
+      for (let i = 0; i < 40; i++) b.step(32 | 2); // B + RIGHT: sideways (S1, the default since M29)
+      for (let i = 0; i < 40; i++) b.step(32 | 1); // B + LEFT
+      for (let i = 0; i < 20; i++) b.step(32); // B alone: nothing
       b.wait(10);
     },
   },

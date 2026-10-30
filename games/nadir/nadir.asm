@@ -33,6 +33,8 @@ init:
     FARCOPY lmap, lmap_x, MAP_CELLS
     FARCOPY zmap, zmap_x, MAP_CELLS
     CALL ray_init
+    LDI r0, 1                       ; control scheme S1 (DESIGN §5): B + LEFT/RIGHT walks sideways
+    ST [ctl_s1], r0
     JMP game_reset
 
 update:

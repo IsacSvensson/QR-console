@@ -121,6 +121,7 @@ describe('M27 world', () => {
       let dashes = 0;
       let opened = 0;
       let picks = 0;
+      let strafes = 0;
       const lockedRefused = new Set<number>();
       walk(n, name, (f, vm, held, pressed, before) => {
         frames++;
@@ -148,7 +149,7 @@ describe('M27 world', () => {
           expect({ ...got, bob: 0 }, `frame ${f + 1}: dead`).toEqual({ ...before.p, bob: 0 });
           expect(got.bob, `frame ${f + 1}: sinking`).toBe(Math.min(16, (K.DEATH_FRAMES! - dead) >> 2));
         } else {
-          want = stepPlayer(before.p, held, pressed, tick, passable, false, false, (x, y) => propHit(x, y) || enemyHit(x, y));
+          want = stepPlayer(before.p, held, pressed, tick, passable, vm.read16(n.S('ctl_s1')) === 1, false, (x, y) => propHit(x, y) || enemyHit(x, y));
           expect(got, `frame ${f + 1}`).toEqual(want);
         }
         if (got.dashN === K.DASH_FRAMES! - 1) dashes++;
@@ -169,6 +170,8 @@ describe('M27 world', () => {
         maxMove = Math.max(maxMove, move);
         expect(move, `frame ${f + 1}: moved ${move}`).toBeLessThanOrEqual(K.P_RAD!);
         if (got.x === before.p.x && want.x === before.p.x && held & 12) blockedX++;
+        // S1 (DESIGN §5, the default): B + LEFT/RIGHT walks sideways without turning
+        if (held & 32 && held & 3 && got.a === before.p.a && (got.x !== before.p.x || got.y !== before.p.y)) strafes++;
         // keys, then the doors' state machine after the player moved
         // pickups (DESIGN §3.12), after the move
         let med = before.med;
@@ -213,7 +216,10 @@ describe('M27 world', () => {
         expect(opened).toBeGreaterThanOrEqual(3);
         expect(lockedRefused.size).toBe(1);
       }
-      if (name === 'm27-walk') expect(dashes).toBeGreaterThanOrEqual(4);
+      if (name === 'm27-walk') {
+        expect(dashes).toBeGreaterThanOrEqual(4);
+        expect(strafes, 'frames walking sideways with B').toBeGreaterThanOrEqual(30);
+      }
       if (name === 'm29-combat') expect(picks).toBeGreaterThanOrEqual(2); // a medkit (after a hit) and ammunition
       console.log(`[world] ${name}: ${picks} pickups`);
     });

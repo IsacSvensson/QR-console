@@ -1,6 +1,6 @@
 ; NADIR - the player (DESIGN §5): double tap side step, accelerating turns, walking with acceleration, movement
 ; with wall sliding against walls, masked walls and doors that are not fully open, head bob. The camera is the
-; player's eye: cam_x, cam_y, cam_a. Control scheme S2 (B walks forward) unless ctl_s1 is set (B = strafe).
+; player's eye: cam_x, cam_y, cam_a. Control scheme S1 (B = strafe modifier, set by init) unless ctl_s1 is 0 (S2: B walks forward).
 .code
 
 player:

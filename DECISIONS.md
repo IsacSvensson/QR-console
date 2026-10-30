@@ -952,3 +952,6 @@ Measured: every frame of the eight replays <= 24 388 cycles; the bot kills all s
 ROM 31.2 KB of 32 (code 18.8 KB, data 12.5 KB; cartridge 28.7 KB): M30's budget gate starts nearly full.
 Revisit if: M30's budget gate needs ROM (the Kryp frames are ~1 KB of rectangle lists), or the human finds the aim
 assist too generous (E_HIT).
+Human feedback (2026-10-30, after playing M29 on a phone): "do not like walking with B; rather B + left/right
+walks sideways". S1 (DESIGN §5, already built and tested since M27) is now the default (`ctl_s1` = 1 set by init);
+S2 stays as the flag's other value. m27-walk now walks sideways with B both ways and checks B alone does nothing.

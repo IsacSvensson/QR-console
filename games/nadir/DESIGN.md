@@ -490,17 +490,20 @@ skaderiktning i kanten, vinjett som ram.
 
 ## 5. Kontroller och spelaren (M27)
 
-| Knapp | Funktion (S2, standard) |
+| Knapp | Funktion (S1, standard sedan M29: människans val) |
 |---|---|
-| UPP / B (håll) | gå framåt (B så att en touchspelare går med högertummen och styr med vänstertummen) |
+| UPP | gå framåt |
 | NED | gå bakåt |
 | VÄNSTER / HÖGER | vrid; ett tryck = fin vridning, håll = accelererar |
-| dubbeltryck VÄNSTER/HÖGER | snabbt sidosteg åt det hållet |
+| B + VÄNSTER / HÖGER | gå i sidled med `WALK_MAX` (ingen vridning); B ensam gör inget |
+| dubbeltryck VÄNSTER/HÖGER (utan B) | snabbt sidosteg åt det hållet |
 | A | skjut (M29) |
 | dörrar, nycklar | öppnas och plockas när man går in i dem |
 
-**S1** (RAM-flaggan `ctl_s1` = 1, väljs på titelskärmen i M31): B är strafe-modifierare: B + VÄNSTER/HÖGER går i
-sidled med `WALK_MAX` i stället för att vrida, B ensam gör inget; UPP går framåt.
+**S2** (RAM-flaggan `ctl_s1` = 0; S1 är 1 och sätts av init): B håller man för att gå framåt (för en touchspelare
+som vill gå med högertummen och styra med vänstertummen), inget sidledsgående med B. Människan provade S2 på
+telefonen och ville hellre gå med UPP och gå i sidled med B (M29), så S1 är standard; valet kan ligga på
+titelskärmen (M31).
 
 **Spelaren, per bildruta i denna ordning** (positioner u8.8, vinkel u12; cos/sin s.8 = ⌊S(a) / 64⌋ med
 S(a) = tecken · round(|sin((a + ½) · 2π / 4096)| · 16384), dvs. halvstegstabellen sin_h; cos a = sin(a + 1024)):
@@ -804,7 +807,7 @@ på renderarens lager för A/B-mätningar.
 | Fixpunktsartefakter | vinkeltabeller u12, byte-uppdelade produkter, flyttalsorakel varje bildruta |
 | ROM/RAM | xdata, kompakta format, budgetgrind M30, högvatten och stackdjup mäts |
 | Dålig bild trots rätt geometri | kontaktark från M26, granskning, iteration |
-| Touch: en riktning per tumme | S2, sidosteg, sikteshjälp, automatiska dörrar |
+| Touch: en riktning per tumme | S1 (B + vänster/höger = sidled), sidosteg, sikteshjälp, automatiska dörrar |
 | asm-fällor | små rutiner, statisk ROM-kontroll, orakeltester |
 
 ---
@@ -815,6 +818,6 @@ på renderarens lager för A/B-mätningar.
 |---|---|---|
 | 1 | Namn och tema | NADIR, industriell skräck med bioluminescens (alternativ: DJUPET) |
 | 2 | Spelets text | engelska versaler med inbyggd font |
-| 3 | Kontroller | S2; S1 som val om det ryms |
+| 3 | Kontroller | S1 (människans val i M29); S2 som val om det ryms |
 | 4 | Omfång | en bana, ett vapen, två fiendetyper; boss om budgeten räcker |
 | 5 | 8-vägs D-pad i webbappen | görs inte (appändring); idé för senare |
