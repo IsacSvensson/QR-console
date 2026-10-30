@@ -1038,3 +1038,36 @@ Decision: before M31's code, ROM and RAM are freed without changing what the gam
   instead of 32; the candidate loop only takes props of the camera cell's set), so it cannot overflow: RAM -780 B.
 Measured: ROM 31 695 -> 29 991 B, RAM top 0xF71D -> 0xF853, all replays unchanged in logic (hashes regenerated).
 The cut list's step 2 (screens as overlays) is not needed yet.
+
+## D-049 - NADIR M31: the level's objectives, the checkpoint, secrets, the title, the lift and the statistics
+Date: 2026-10-30 - Milestone: M31
+Decision:
+- **LEVEL.md is the oracle** (its tables: the objectives' cells in order, the checkpoint, the secrets); the map
+  carries the same data in `objectives`, `checkpoint`, `secrets` and the generator refuses a map that disagrees.
+  Objectives are cells entered in order (key card, through the security door, the pump's terminal in the core,
+  back in the lift = victory): one rule the engine checks in ~20 instructions and a test can follow exactly.
+- **Secrets are hidden doors:** an ordinary door record with its wall's material and a short reach (HIDE_REACH,
+  the player against the wall), so the renderer, the collision and the door model needed no new code paths;
+  three alcoves with pickups that were in the level already (the prop table stays at 24 = 3 set bytes). The first
+  alcove moved from the shaft's west wall at row 10 to row 8: a sight line through the grate was longer than
+  MAX_SIGHT.
+- **The checkpoint's snapshot** is a table of RAM regions copied RAM -> RAM with COPY (a far address below
+  XDATA_BASE is memory): enemies, props, barrels, doors and the counters, 640 B; a death after it restores them and
+  puts the player at the checkpoint's pose; `game_reset` and `respawn` share the player's motion reset.
+- **States** (title, play, lift, statistics) in `update`; the title renders the level with the same pipeline
+  (`render_step`) along a camera path of four segments of 256 frames with whole steps per frame, `tick` set to the
+  frame of the loop, so the fly-through repeats exactly (P = 1 024); its path keeps half a cell from every wall
+  (an earlier path came within 0.06 cell of a pillar, nearer than a player can be, and missed the oracle). Every
+  old route now starts with A on the title (record.ts), and the oracles find the frames that drew an image by the
+  engine's image counter `img_n` (the press of A draws none).
+- **The statistics** (time m:ss, kills, secrets, accuracy, deaths) are read off the screen in the test with the
+  VM's own font and compared with the replay's events; the time is kept as seconds and frames because DIV is signed.
+- **Interpolation at cell edges (bugs found by the new routes):** a hit within rounding of a face's end can wrap
+  its 16-bit u fraction into the next cell; between two columns of one face the wrapped end is now recognised
+  (the end nearer its boundary) and, across coplanar faces, a column with an end within 1/128 cell of an edge is
+  cast instead of interpolated (u in m30-stress 98.05 -> 99.9 %, masked faces at the low wall 99.47 -> above 99.5 %).
+- ROM stays under 32 KB without the overlay step of the cut list (D-048): 32 403 B of 32 768 with the screens; M32
+  (the rest: art pass, delivery) has 365 B, so its texts go to xdata if it needs ROM (cut list step 1).
+Measured: m31-game plays title -> 4 objectives -> lift -> statistics -> title in 5 366 frames (1:21 of play), max
+24 894, mean 14 185 cycles per frame; the attract loop 1 024 frames (max 16 463); every frame of the twelve
+replays <= 24 894; RAM to 0xFABB, xdata 51 961 B, cartridge 34 472 B.

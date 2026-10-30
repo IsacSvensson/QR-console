@@ -26,6 +26,7 @@
 .include "game.asm"
 .include "fx.asm"
 .include "sound.asm"
+.include "screens.asm"
 .code
 
 init:
@@ -41,7 +42,7 @@ init:
     CALL ray_init
     LDI r0, 1                       ; control scheme S1 (DESIGN §5): B + LEFT/RIGHT walks sideways
     ST [ctl_s1], r0
-    JMP game_reset
+    JMP title_enter                 ; M31: the game starts on the title
 
 update:
     LD r0, [tick]
@@ -51,16 +52,31 @@ update:
     ST [btn], r0
     SYS BTNP
     ST [btnp], r0
+    LD r0, [gstate]                 ; M31: the title, the lift ride, the statistics (screens.asm)
+    CMP r0, GS_PLAY
+    JEQ @play
+    CMP r0, GS_TITLE
+    JEQ title_frame
+    CMP r0, GS_LIFT
+    JEQ lift_frame
+    JMP stats_frame
+@play:
     CALL game_frame
     CALL music_step                 ; the sound after the logic (DESIGN §8.2)
+    LD r0, [won]                    ; the last objective: the lift ride instead of an image
+    CMP r0, 0
+    JNE lift_enter
     LD r0, [lg_heavy]               ; a shot or an explosion this frame: no rendering step, the image waits
     CMP r0, 0
-    JEQ @pace
+    JEQ render_step
     LD r0, [dbg_flags]
     AND r0, FL_NOPACE
-    JNZ @pace
+    JNZ render_step
     RET
-@pace:
+
+; the image: rays, pacing, drawing (DESIGN §3.11); in play and behind the title
+.var img_n
+render_step:
     ; ---- adaptive pacing (DESIGN §3.11): an image whose estimated cost is high is drawn in the next frame (pace = 1);
     ; when the rays alone reach PACE_HEAVY, the sprites are chosen in the next frame and it is drawn in the third
     ; (pace = 2, then 1)
@@ -116,6 +132,9 @@ update:
     ST [pace], r0
     RET
 @draw:
+    LD r0, [img_n]                  ; images drawn (tests: which frames drew one)
+    ADD r0, 1
+    ST [img_n], r0
     CALL draw_bg
     CALL floor_lines
     CALL draw_lamps
@@ -126,5 +145,9 @@ update:
     LDI r0, 1
     CALL draw_masks
     CALL draw_fx
+    LD r0, [gstate]
+    CMP r0, GS_TITLE
+    JEQ title_text
     CALL draw_weapon
+    CALL draw_msg
     JMP draw_dmg

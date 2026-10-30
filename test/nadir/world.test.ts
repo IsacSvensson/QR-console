@@ -2,7 +2,7 @@
 // every frame of every replay, against DESIGN §3.10 and §5 as read by test/nadir/ref.ts.
 import { describe, expect, it } from 'vitest';
 import { VM, expandInputs, type ReplayFile } from '@qrc/vm';
-import { K, MASKED_CHARS, mapByte, readRefMap, readRefSprites, refLight, solid, stepDoor, stepPlayer, type PlayerState } from './ref';
+import { K, MASKED_CHARS, MATERIAL_CHARS, mapByte, readRefMap, readRefSprites, refLight, solid, stepDoor, stepPlayer, type PlayerState } from './ref';
 import { REPLAYS, buildNadir, loadReplay, type Nadir } from './play';
 
 const map = readRefMap('nadir');
@@ -68,10 +68,11 @@ function walk(n: Nadir, name: string, each: (f: number, vm: VM, held: number, pr
   vm.step(inputs[0]!); // init and the first frame (the start pose)
   for (let f = 1; f < rf.frames; f++) {
     const before = readBefore(n, vm);
+    const played = vm.read16(n.S('gstate')) === 1; // M31: the player and the world run only in play
     const held = inputs[f]!;
     const pressed = held & ~inputs[f - 1]!;
     vm.step(held);
-    each(f, vm, held, pressed, before);
+    if (played) each(f, vm, held, pressed, before);
   }
   return vm;
 }
@@ -103,6 +104,9 @@ describe('M27 world', () => {
       expect(r.cell).toBe(d.y * W + d.x);
       expect(r.orient).toBe(solid(map, d.x, d.y - 1) && solid(map, d.x, d.y + 1) ? 1 : 0);
       expect(r.key).toBe(d.key);
+      // M31: a hidden door has its wall's material and opens only at HIDE_REACH (DESIGN §3.10)
+      expect(vm.read8(n.S('doors') + 16 * i + 9), `door ${i} material`).toBe(d.hidden ? MATERIAL_CHARS.indexOf(d.hidden) + 1 : n.S('MAT_DOOR'));
+      expect(vm.read16(n.S('doors') + 16 * i + 10), `door ${i} reach`).toBe(d.hidden ? K.HIDE_REACH! : K.DOOR_REACH!);
     });
     expect(n.S('NUM_KEYS')).toBe(map.keys.length);
     map.keys.forEach((k, i) => {
@@ -210,9 +214,10 @@ describe('M27 world', () => {
         map.doors.forEach((d, i) => {
           const r = doorAt(n, vm, i);
           const bd = before.doors[i]!;
-          const w = stepDoor({ open: bd.open, state: bd.state, timer: bd.timer }, d.x, d.y, d.key, keys, got.x, got.y);
+          const w = stepDoor({ open: bd.open, state: bd.state, timer: bd.timer }, d.x, d.y, d.key, keys, got.x, got.y, d.hidden ? K.HIDE_REACH! : K.DOOR_REACH!);
           expect({ open: r.open, state: r.state, timer: r.timer }, `frame ${f + 1}: door ${i}`).toEqual(w);
-          expect(r.mat).toBe(d.key === 0 || keys & d.key ? n.S('MAT_DOOR') : n.S('MAT_LOCKEDDOOR'));
+          const base = d.hidden ? MATERIAL_CHARS.indexOf(d.hidden) + 1 : n.S('MAT_DOOR'); // M31: a hidden door looks like its wall
+          expect(r.mat).toBe(d.key === 0 || keys & d.key ? base : n.S('MAT_LOCKEDDOOR'));
           if (before.doors[i]!.state === 1 && r.state === 2) opened++;
           // a locked door never leaves CLOSED without its key
           if (d.key && !(keys & d.key)) {

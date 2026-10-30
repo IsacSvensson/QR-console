@@ -4,7 +4,81 @@ import { B, type Bot } from './bot';
 
 export interface Route {
   seed: number;
+  /** M31: the route starts on the title itself (otherwise record.ts presses A there first) */
+  title?: boolean;
   run(b: Bot): void;
+}
+
+/** M30-M31: at the control room's door (open in front of the player) the bot fights whatever comes, then goes in. */
+function doorFight(b: Bot) {
+  b.walkTo(21.5, 10.5);
+  b.turnTo(270);
+  b.wait(300);
+}
+
+/** M31: push into a hidden door from (x, y) facing `deg`, through it to its alcove (ax, ay) and back. */
+function secret(b: Bot, x: number, y: number, deg: number, ax: number, ay: number) {
+  b.walkTo(x, y, 0.05);
+  b.turnTo(deg);
+  b.forward(12); // against the wall: the door opens (HIDE_REACH)
+  b.wait(40);
+  b.walkTo(ax, ay);
+  b.wait(10);
+  b.walkTo(x, y);
+}
+
+/** M31 (LEVEL.md): the whole game in the objectives' order, every secret and pickup on the way, back to the lift. */
+function fullGame(b: Bot) {
+  b.walkTo(3.5, 4.4);
+  b.walkTo(3.5, 7.0);
+  secret(b, 3.3, 8.5, 180, 1.5, 8.5);
+  b.walkTo(3.6, 13.5);
+  b.walkTo(6.5, 14.5);
+  b.walkTo(7.5, 10.5);
+  b.walkTo(11.3, 10.4); // the medkit (taken only when needed: reached)
+  b.walkTo(7.5, 10.5);
+  b.walkTo(7.0, 14.0);
+  b.walkTo(11.0, 14.6);
+  b.walkTo(14.2, 13.5);
+  b.walkTo(16.5, 13.5);
+  b.walkTo(16.5, 12.5); // ammunition
+  b.walkTo(17.5, 11.6);
+  secret(b, 17.5, 11.3, 270, 17.5, 9.5);
+  b.walkTo(19.4, 11.6);
+  b.walkTo(19.5, 12.5);
+  b.walkTo(21.5, 12.5);
+  b.walkTo(21.5, 10.0); // ammunition
+  doorFight(b);
+  b.walkTo(21.5, 7.5);
+  b.walkTo(26.5, 4.0);
+  b.walkTo(27.5, 3.5); // objective 1: the red key
+  b.walkTo(21.5, 7.5);
+  b.walkTo(21.5, 10.5);
+  b.walkTo(21.5, 12.5);
+  b.walkTo(24.5, 12.5); // objective 2: through the security door (the checkpoint)
+  b.walkTo(24.5, 14.0);
+  b.walkTo(24.5, 18.5);
+  b.walkTo(29.5, 18.5);
+  b.walkTo(30.5, 19.5); // objective 3: the pump's terminal
+  b.walkTo(30.5, 18.5);
+  b.walkTo(24.5, 18.5);
+  b.walkTo(24.0, 19.5);
+  b.walkTo(22.5, 19.6);
+  b.walkTo(22.4, 20.4);
+  b.walkTo(19.0, 20.4);
+  b.walkTo(18.5, 19.0);
+  b.walkTo(18.4, 17.7);
+  b.walkTo(14.5, 18.4);
+  secret(b, 14.5, 18.7, 90, 14.5, 20.5);
+  b.walkTo(10.5, 17.5);
+  b.walkTo(10.5, 15.0);
+  b.walkTo(7.0, 14.5);
+  b.walkTo(4.0, 14.5);
+  b.walkTo(3.6, 13.5);
+  b.walkTo(3.5, 7.0);
+  b.walkTo(3.5, 4.4);
+  b.turnTo(270);
+  for (let i = 0; i < 120 && b.read('gstate') === 1; i++) b.step(B.U); // objective 4: into the lift
 }
 
 /** The loop through the level: elevator, shaft, workshop, dark corridor, control room (key), core, south corridor. */
@@ -160,7 +234,7 @@ export const ROUTES: Record<string, Route> = {
       b.pushWall(); // the locked security door
       b.wait(60);
       b.walkTo(21.5, 12.5);
-      b.walkTo(21.5, 10.5);
+      doorFight(b);
       b.walkTo(21.5, 7.5);
       b.walkTo(27.5, 3.5); // the red key
       b.walkTo(21.5, 7.5);
@@ -319,6 +393,57 @@ export const ROUTES: Record<string, Route> = {
       b.wait(30);
       b.step(B.A);
       b.wait(30);
+    },
+  },
+  /** M31: title -> the whole game (every objective, secret and pickup, every enemy killed) -> lift -> statistics -> title. */
+  'm31-game': {
+    seed: 11,
+    run(b) {
+      fullGame(b);
+      b.waitUntil(() => b.read('gstate') === 3, 400); // the lift ride, then the statistics
+      b.wait(90);
+      b.step(B.A); // back to the title
+      b.wait(60);
+    },
+  },
+  /** M31: past the checkpoint, the bot lets the core's Kryp kill it: the game restarts at the checkpoint. */
+  'm31-checkpoint': {
+    seed: 12,
+    run(b) {
+      b.walkTo(3.5, 4.4);
+      b.walkTo(3.5, 7.0);
+      b.walkTo(3.6, 13.5);
+      b.walkTo(6.5, 14.5);
+      b.walkTo(11.0, 14.6);
+      b.walkTo(14.2, 13.5);
+      b.walkTo(16.5, 13.5);
+      b.walkTo(16.5, 11.5);
+      b.walkTo(19.4, 11.6);
+      b.walkTo(19.5, 12.5);
+      b.walkTo(21.5, 12.5);
+      doorFight(b);
+      b.walkTo(21.5, 7.5);
+      b.walkTo(26.5, 4.0);
+      b.walkTo(27.5, 3.5);
+      b.walkTo(21.5, 7.5);
+      b.walkTo(21.5, 10.5);
+      b.walkTo(21.5, 12.5);
+      b.fightOn = false;
+      b.allowDeath = true;
+      b.walkTo(24.5, 12.5); // the checkpoint
+      b.walkTo(26.0, 14.5);
+      b.waitUntil(() => b.read('restarts') >= 1, 3000);
+      b.wait(1); // the checkpoint's pose, at rest
+      b.fightOn = true; // back at the checkpoint (its enemies as they were): fight
+      b.wait(180);
+    },
+  },
+  /** M31: the title's attract fly-through, more than two periods. */
+  'm31-attract': {
+    seed: 13,
+    title: true,
+    run(b) {
+      b.wait(2300);
     },
   },
   'm27-tour': {

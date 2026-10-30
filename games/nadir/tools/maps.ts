@@ -30,6 +30,8 @@ export interface Door {
   y: number;
   /** 0 = no key, otherwise the key bit that unlocks it */
   key: number;
+  /** M31: a hidden door's wall material char (it looks like that wall and opens only at HIDE_REACH) */
+  hidden?: string;
 }
 export interface KeyTrigger {
   x: number;
@@ -56,11 +58,15 @@ export interface GameMap {
   props: Prop[];
   /** DESIGN §6.3, §6.10: enemies at the start (type K = Kryp, S = Spottare) */
   enemies: { x: number; y: number; t: string }[];
+  /** M31 (LEVEL.md): the objectives' cells in order, the objective after which the checkpoint is taken, the secrets' alcoves */
+  objectives: { x: number; y: number }[];
+  checkpoint: number;
+  secrets: { x: number; y: number }[];
 }
 
 export function readMap(name = 'nadir'): GameMap {
   const lines = readFileSync(join(GAME_DIR, 'levels', `${name}.map`), 'utf8').split(/\r?\n/);
-  const m: GameMap = { name: '', W: k('MAP_W'), H: k('MAP_H'), grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [], enemies: [] };
+  const m: GameMap = { name: '', W: k('MAP_W'), H: k('MAP_H'), grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [], enemies: [], objectives: [], checkpoint: 0, secrets: [] };
   let part = '';
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!.trim();
@@ -68,7 +74,9 @@ export function readMap(name = 'nadir'): GameMap {
     if (!line || line.startsWith('#')) continue;
     const [kw, ...args] = line.split(/\s+/);
     if (kw === 'name') m.name = args.join(' ');
-    else if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props', 'enemies'].includes(kw!)) part = kw!;
+    else if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props', 'enemies', 'objectives', 'checkpoint', 'secrets'].includes(kw!) && args.length === 0) part = kw!;
+    else if (part === 'objectives' || part === 'secrets') m[part].push({ x: Number(kw), y: Number(args[0]) });
+    else if (part === 'checkpoint') m.checkpoint = Number(kw);
     else if (part === 'grid') {
       if (line.length !== m.W) throw new Error(`${where}: grid row has ${line.length} cells, expected ${m.W}`);
       m.grid.push(line);
@@ -80,7 +88,7 @@ export function readMap(name = 'nadir'): GameMap {
       m.lamps.push({ x: x!, y: y!, intensity: intensity!, group: group! });
     } else if (part === 'doors') {
       const [x, y, key] = [kw, ...args].map(Number);
-      m.doors.push({ x: x!, y: y!, key: key! });
+      m.doors.push({ x: x!, y: y!, key: key!, ...(args[2] ? { hidden: args[2] } : {}) });
     } else if (part === 'props') {
       m.props.push({ x: Number(kw), y: Number(args[0]), s: args[1]! });
     } else if (part === 'enemies') {
@@ -248,6 +256,30 @@ function ddaSteps(m: GameMap, px: number, py: number, dx: number, dy: number, ma
   return 256;
 }
 
+/** M31: the map's objectives, checkpoint and secrets are LEVEL.md's (its tables are the flow tests' oracle). */
+function checkLevel(m: GameMap) {
+  const level = readFileSync(join(GAME_DIR, 'LEVEL.md'), 'utf8');
+  const table = (head: string) => {
+    const a = level.indexOf(head);
+    if (a < 0) throw new Error(`LEVEL.md: no section ${head}`);
+    const rows = level.slice(a).split('\n## ')[0]!.split('\n').filter((l) => /^\| \d/.test(l));
+    return rows.map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
+  };
+  const cell = (s: string) => s.split(/\s+/).map(Number);
+  const obj = table('## Målen');
+  const same = (a: unknown, b: unknown, what: string) => {
+    if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`levels/nadir.map vs LEVEL.md: ${what}: ${JSON.stringify(a)} vs ${JSON.stringify(b)}`);
+  };
+  same(m.objectives.map((o) => [o.x, o.y]), obj.map((r) => cell(r[2]!)), 'objectives');
+  const cp = table('## Kontrollpunkten')[0]!;
+  same(m.checkpoint, Number(cp[0]), 'checkpoint objective');
+  const pose = m.poses.find((p) => p.name === 'checkpoint');
+  same(pose && [pose.x, pose.y, pose.deg], cell(cp[1]!), 'checkpoint pose');
+  const sec = table('## Hemligheterna');
+  same(m.secrets.map((s) => [s.x, s.y]), sec.map((r) => cell(r[3]!)), 'secrets');
+  same(m.doors.filter((d) => d.hidden).map((d) => [d.x, d.y, d.hidden]), sec.map((r) => [...cell(r[1]!), r[2]]), 'hidden doors');
+}
+
 export function checkMap(m: GameMap) {
   const chars = new Set(readMaterials().map((x) => x.char));
   for (let y = 0; y < m.H; y++)
@@ -257,6 +289,7 @@ export function checkMap(m: GameMap) {
       if ((x === 0 || y === 0 || x === m.W - 1 || y === m.H - 1) && !wallAt(m, x, y)) throw new Error(`${m.name}: the border must be solid (${x},${y})`);
       if (m.zones[y]![x]! > 3) throw new Error(`${m.name}: zone ${m.zones[y]![x]} at ${x},${y}`);
     }
+  if (m.name === 'NADIR') checkLevel(m);
   const doorCells = m.grid.flatMap((row, y) => [...row].flatMap((c, x) => (c === '+' ? [`${x},${y}`] : [])));
   if (doorCells.length > 16) throw new Error(`${m.name}: at most 16 doors`);
   const listed = m.doors.map((d) => `${d.x},${d.y}`);
@@ -376,6 +409,9 @@ export function mapAsm(m: GameMap): string {
     `NUM_POSES = ${m.poses.length}`,
     `NUM_DOORS = ${m.doors.length}`,
     `LIGHT_CELLS = ${lightCells}`,
+    `NUM_OBJ = ${m.objectives.length}`,
+    `CHECK_OBJ = ${m.checkpoint}`,
+    `NUM_SECRETS = ${m.secrets.length}`,
     `PVS_MAX = ${Math.max(...propSets(m).vis.map((v) => v.reduce((s, b) => s + [...b.toString(2)].filter((c) => c === '1').length, 0)))}  ; props in the largest per-cell visible set (bounds the sprite candidates)`,
     `NUM_KEYS = ${m.keys.length}`,
     `NUM_PROPS = ${m.props.length}`,
@@ -388,7 +424,16 @@ export function mapAsm(m: GameMap): string {
     ...byteLines(m.lamps.flatMap((l) => [l.x, l.y, l.intensity, l.group])),
     '; doors (DESIGN §3.10), copied to the RAM door table by init: cell, open, state, timer, orientation, key, material',
     'door_init:',
-    ...m.doors.flatMap((d) => [`    .word ${d.y * m.W + d.x}, 0`, `    .byte 0, 0, ${thinOrient(m, d.x, d.y)}, ${d.key}, ${d.key ? 'MAT_LOCKEDDOOR' : 'MAT_DOOR'}, 0, 0, 0, 0, 0, 0, 0`]),
+    ...m.doors.flatMap((d) => {
+      // byte 9: the material when unlocked (a hidden door's wall), word 10: the reach that opens it (DESIGN §3.10)
+      const base = d.hidden ? String(id.get(d.hidden)!) : 'MAT_DOOR';
+      return [`    .word ${d.y * m.W + d.x}, 0`, `    .byte 0, 0, ${thinOrient(m, d.x, d.y)}, ${d.key}, ${d.key ? 'MAT_LOCKEDDOOR' : base}, ${base}`, `    .word ${d.hidden ? 'HIDE_REACH' : 'DOOR_REACH'}, 0, 0`];
+    }),
+    '; M31 (LEVEL.md): the objectives\' cells in order; the secrets\' alcoves',
+    'obj_tab:',
+    ...wordLines(m.objectives.map((o) => o.y * m.W + o.x)),
+    'sec_tab:',
+    ...wordLines(m.secrets.map((o) => o.y * m.W + o.x)),
     '; props (DESIGN §3.12), copied to the RAM prop table by init: x, y (u8.8), sprite type, alive',
     'prop_init:',
     ...m.props.map((p) => `    .word ${fix(p.x)}, ${fix(p.y)}\n    .byte ${readSprites().findIndex((s) => s.char === p.s)}, 1, 0, 0`),

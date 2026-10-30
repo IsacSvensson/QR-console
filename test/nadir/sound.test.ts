@@ -206,7 +206,9 @@ interface Seen {
 /** Runs a replay against the model; every frame's stream must match it. */
 function check(n: Nadir, name: string): Seen {
   const m = new Model();
-  m.reset(); // init runs game_reset
+  m.reset(); // init: game_reset, then the title's drone (M31)
+  m.setMusic('DRONE');
+  let gPrev = 0;
   const seen: Seen = { effects: new Set(), tracks: new Set(), cues: 0, interrupted: 0, notes: 0 };
   let prevDead = 0;
   let prevRestarts = 0;
@@ -217,6 +219,32 @@ function check(n: Nadir, name: string): Seen {
     const audio = vm.audio;
     const dead = vm.read16(n.S('dead'));
     const restarts = vm.read16(n.S('restarts'));
+    const g = vm.read16(n.S('gstate'));
+    const before = gPrev;
+    const played = before === 1;
+    gPrev = g;
+    if (!played) {
+      // M31: the title, the lift ride, the statistics: no game logic, the voices play on (no track choice, no cue)
+      prevRestarts = restarts;
+      prevDead = dead;
+      if (g === 1) {
+        // A on the title: game_reset (START), no music step in that frame
+        expect(audio, `${where}: the start`).toEqual([]);
+        m.reset();
+        return;
+      }
+      expect(audio.filter((a) => a.sweep !== 0), `${where}: no effects outside play`).toEqual([]);
+      expect(audio, `${where}: the music (${m.cur})`).toEqual(m.voices());
+      seen.tracks.add(m.cur);
+      seen.notes += audio.length;
+      m.tickChannels();
+      if (before === 3 && g === 0) {
+        // the statistics' A: the title (game_reset, then the drone)
+        m.reset();
+        m.setMusic('DRONE');
+      }
+      return;
+    }
     if (restarts !== prevRestarts) m.reset();
     prevRestarts = restarts;
     const fx = audio.filter((a) => a.sweep !== 0);
@@ -257,6 +285,7 @@ function check(n: Nadir, name: string): Seen {
     }
     const want = m.voices();
     expect(music, `${where}: the music (${m.cur})`).toEqual(want);
+    if (g === 2) m.setMusic('VICTORY'); // the last objective: the lift ride's motif from the next frame (M31)
     seen.tracks.add(m.cur);
     for (const a of music) {
       lastMusic[a.channel] = f;
@@ -280,7 +309,7 @@ describe('M32a sound (DESIGN §8)', () => {
       const s = check(n, name);
       all.push(s);
       console.log(`[sound] ${name}: ${s.notes} notes, ${s.cues} threat cues, ${s.effects.size} effects, tracks ${[...s.tracks].join(' ')}, ${s.interrupted} effects interrupted the music and it resumed`);
-      expect(s.notes).toBeGreaterThan(100);
+      expect(s.notes).toBeGreaterThan(name === 'm31-attract' ? 10 : 100); // the title plays only the slow drone
     });
 
   it('every effect of DESIGN §8.1 and the tracks START, DRONE, FIGHT, DEATH are heard in the replays; effects interrupt the music and it resumes', () => {

@@ -125,6 +125,12 @@ en_list:
 en_set:
     STB [r5 + E_ST], r0
     CALL en_sound                   ; DESIGN §8.1
+    CMP r0, ST_DEAD
+    JNE @nk
+    LD r0, [kills]                  ; M31: the statistics
+    ADD r0, 1
+    ST [kills], r0
+@nk:
     LDI r0, 0
     STB [r5 + E_T], r0
     STB [r5 + E_AN], r0

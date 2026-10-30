@@ -2,9 +2,9 @@
 // replay against a floating-point ray / box test (test/nadir/ref.ts): the nearest box side seen there, its height, the
 // y of its top edge and its light level (DESIGN §3.5, W and E sides one level darker).
 import { describe, expect, it } from 'vitest';
-import { VM } from '@qrc/vm';
+import { BUTTONS, VM } from '@qrc/vm';
 import { K, boxRay, refDyn, readRefMap, readRefSprites, refBoxK, refLevel, refLight, solid } from './ref';
-import { REPLAYS, buildNadir, runReplay, type Nadir } from './play';
+import { REPLAYS, buildNadir, imageWatch, runReplay, type Nadir } from './play';
 
 const map = readRefMap('nadir');
 const light = refLight(map);
@@ -41,9 +41,9 @@ describe('M28 3D boxes', () => {
       const bad: string[] = [];
       const note = (s: string) => bad.length < 40 && bad.push(s);
       const rd = (vm: VM, s: string, c: number) => vm.read16(n.S(s) + 2 * c);
+      const drew = imageWatch(n);
       runReplay(n, name, (f, vm) => {
-        if (vm.read16(n.S('pace')) !== 0) return; // rays cast, nothing drawn yet
-        if (vm.read16(n.S('lg_heavy')) !== 0) return; // no rendering step in this frame (DESIGN §3.11)
+        if (!drew(vm)) return; // no image drawn in this frame
         const boxes = drawnBoxes(n, vm);
         const any = boxes.length > 0;
         const cx = vm.read16(n.S('rcam_x')) / 256;
@@ -127,7 +127,8 @@ describe('M28 3D boxes', () => {
     // the human saw a box turn transparent up close: its side was nearer than the sprites' near plane (D-044)
     const n = await buildNadir();
     const vm = VM.fromCartridge(n.cart, { seed: 1 });
-    vm.step(0);
+    vm.step(BUTTONS.A); // M31: from the title into the game
+    vm.step(0); // the start pose
     vm.write16(n.S('dbg_flags'), n.S('FL_NOPACE'));
     let cols = 0;
     let ok = 0;

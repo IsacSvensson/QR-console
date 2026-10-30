@@ -49,20 +49,25 @@ export interface RefMap {
   zones: number[][];
   lamps: { x: number; y: number; i: number; g: number }[];
   poses: { name: string; x: number; y: number; deg: number }[];
-  doors: { x: number; y: number; key: number }[];
+  /** hidden: a hidden door's wall material (M31, LEVEL.md) */
+  doors: { x: number; y: number; key: number; hidden?: string }[];
   keys: { x: number; y: number; bit: number }[];
   props: { x: number; y: number; s: string }[];
   /** DESIGN §6.3: the enemies at the start (K = Kryp) */
   enemies: { x: number; y: number; t: string }[];
+  /** M31 (LEVEL.md): objective cells in order, the checkpoint's objective, the secrets' alcoves */
+  objectives: { x: number; y: number }[];
+  checkpoint: number;
+  secrets: { x: number; y: number }[];
 }
 
 export function readRefMap(name = 'nadir'): RefMap {
-  const m: RefMap = { grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [], enemies: [] };
+  const m: RefMap = { grid: [], zones: [], lamps: [], poses: [], doors: [], keys: [], props: [], enemies: [], objectives: [], checkpoint: 0, secrets: [] };
   let part = '';
   for (const raw of readFileSync(join(GAME_DIR, 'levels', `${name}.map`), 'utf8').split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
-    if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props', 'enemies'].includes(line)) part = line;
+    if (['grid', 'zones', 'lamps', 'poses', 'doors', 'keys', 'props', 'enemies', 'objectives', 'checkpoint', 'secrets'].includes(line)) part = line;
     else if (line.startsWith('name ')) continue;
     else if (part === 'grid') m.grid.push(line);
     else if (part === 'zones') m.zones.push([...line].map(Number));
@@ -70,8 +75,13 @@ export function readRefMap(name = 'nadir'): RefMap {
       const [x, y, i, g] = line.split(/\s+/).map(Number);
       m.lamps.push({ x: x!, y: y!, i: i!, g: g! });
     } else if (part === 'doors') {
-      const [x, y, key] = line.split(/\s+/).map(Number);
-      m.doors.push({ x: x!, y: y!, key: key! });
+      const t = line.split(/\s+/);
+      m.doors.push({ x: +t[0]!, y: +t[1]!, key: +t[2]!, ...(t[3] ? { hidden: t[3] } : {}) });
+    } else if (part === 'objectives' || part === 'secrets') {
+      const [x, y] = line.split(/\s+/).map(Number);
+      m[part].push({ x: x!, y: y! });
+    } else if (part === 'checkpoint') {
+      m.checkpoint = Number(line);
     } else if (part === 'props') {
       const [x, y, ch] = line.split(/\s+/);
       m.props.push({ x: Number(x), y: Number(y), s: ch! });
@@ -339,9 +349,9 @@ export interface DoorState {
 }
 
 /** DESIGN §3.10, one frame of one door at (dx, dy) with its key bit, after the player moved to (px, py) (u8.8). */
-export function stepDoor(d: DoorState, cx: number, cy: number, key: number, keys: number, px: number, py: number): DoorState {
+export function stepDoor(d: DoorState, cx: number, cy: number, key: number, keys: number, px: number, py: number, reach = K.DOOR_REACH!): DoorState {
   const q = { ...d };
-  const near = Math.abs(px - (cx * 256 + 128)) < K.DOOR_REACH! && Math.abs(py - (cy * 256 + 128)) < K.DOOR_REACH!;
+  const near = Math.abs(px - (cx * 256 + 128)) < reach && Math.abs(py - (cy * 256 + 128)) < reach;
   const na = near && (key === 0 || (keys & key) !== 0);
   if (q.state === 0) {
     if (na) q.state = 1;

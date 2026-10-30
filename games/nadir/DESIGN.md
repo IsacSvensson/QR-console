@@ -305,9 +305,11 @@ yta i träffpunkten.
   med samma ljusregel (cellen framför planet). En udda kolumn interpoleras bara om båda grannarna har samma
   maskade yta (eller ingen), och då interpoleras även det maskade lagret.
 
-**Dörrtabell** (16 byte per dörr i RAM): cell (ord), `open` (ord), läge, timer, orientering, nyckelbit, material.
-Varje bildruta, efter spelaren, för varje dörr (dörrens mittpunkt (cx + ½, cy + ½), *nära* = spelarens position
-inom `DOOR_REACH` från mittpunkten i både x och y (strikt mindre), *tillåten* = nyckelbit 0 eller nyckeln finns):
+**Dörrtabell** (16 byte per dörr i RAM): cell (ord), `open` (ord), läge, timer, orientering, nyckelbit, material,
+grundmaterial, räckvidd (ord). Varje bildruta, efter spelaren, för varje dörr (dörrens mittpunkt (cx + ½, cy + ½),
+*nära* = spelarens position inom dörrens räckvidd från mittpunkten i både x och y (strikt mindre), *tillåten* =
+nyckelbit 0 eller nyckeln finns). Räckvidden är `DOOR_REACH`; en **dold dörr** (M31, LEVEL.md: hemligheterna) har
+väggens material som grundmaterial och räckvidden `HIDE_REACH`, så den öppnas bara när spelaren står mot den.
 
 | Läge | Regel |
 |---|---|
@@ -326,6 +328,7 @@ eftersom `DOOR_REACH` är större än spelarens halva låda plus en halv cell ka
 | `DOOR_SPEED` | 8 | dörrens rörelse per bildruta (u8.8): 32 bildrutor att öppna |
 | `DOOR_WAIT` | 90 | bildrutor en öppen dörr väntar efter att spelaren gått |
 | `DOOR_REACH` | 384 | avstånd (u8.8, per axel) från dörrens mitt som öppnar den: 1,5 celler |
+| `HIDE_REACH` | 208 | en dold dörrs räckvidd: spelaren mot väggen (½ cell + `P_RAD` = 192 < 208) |
 
 ### 3.11 Adaptiv pacing (M27–M30)
 
@@ -660,6 +663,20 @@ Död: spelaren och vapnet stegas inte (fienderna och världen gör det), `bob` =
 **HUD (M29):** hälsa nere till vänster (`NUM`), magasin på vapnet, reserv bredvid, ett sikte (4 px) i mitten,
 nyckelkort uppe till vänster. Slutlig HUD i M31.
 
+**Mål, kontrollpunkt, hemligheter och räknare (M31, LEVEL.md):** sist i världens steg: står spelaren i mål `obj` + 1:s
+cell klaras det (`obj` + 1, effekten OBJECTIVE, `msg_t` = `MSG_FRAMES`); är det mål `CHECK_OBJ` sparas
+**ögonblicksbilden** (fienderna, alla props, tunnorna, dörrarna, hp, vapnets magasin och reserv, nycklar, plock,
+`obj`, `kills`, `sec_bits`, `shots`, `shots_hit`); är det det sista vinner spelaren. Står spelaren i en hemlighets
+nisch första gången sätts dess bit i `sec_bits`. `kills` ökar när en fiende går till DÖD, `shots_hit` när minst ett
+hagel av ett skott träffar en fiende. **Omstart** (när `dead` når 0): med `obj` ≥ `CHECK_OBJ` återställs
+ögonblicksbilden och spelaren står vid posen `checkpoint`, effekterna, vapnets läge och spelarens rörelse
+nollställs som vid start; annars startar allt om från början. `restarts` (dödsfall) och speltiden `play_s`:`play_f` (sekunder och bildrutor)
+nollställs aldrig av en omstart.
+
+| Konstant | Värde | Betydelse |
+|---|---|---|
+| `MSG_FRAMES` | 180 | bildrutor HUD:en visar nästa mål |
+
 | Konstant | Värde | Betydelse |
 |---|---|---|
 | `HP_MAX` | 100 | spelarens hälsa |
@@ -788,7 +805,10 @@ natriumljus, ett galler in mot verkstaden) → **verkstaden** (pelare, lådor, e
 **den mörka gången** (zon 3, ledningar) → **kontrollrummet** (cyanterminaler, ett fönster in i ett serverskåp,
 **rött nyckelkort**) → **säkerhetsdörren** (låst, röd lampa tills kortet finns) → **kärnan** (organiska väggar,
 räcke, lila) → **sydgången** tillbaka till verkstaden. Fem dörrar, en nyckel, tolv lampor, fyra zoner.
-Spelets fortsättning (seger via hissen, fiender, föremål) kommer i M29–M31 och beskrivs i `LEVEL.md`.
+Målen, kontrollpunkten och hemligheterna (M31) står i `LEVEL.md`, som är oraklet för flödestesterna; segern är
+hissen när alla mål är klara. Spelet börjar på **titelskärmen** (en flygtur genom verkstaden som upprepas exakt var
+1 024:e bildruta, A startar), segern är **hissfärden** (dörrarna stängs, schaktet rusar förbi, SEGER-motivet) och
+sedan **statistiken** (tid, dödade fiender, hemligheter, träffsäkerhet, dödsfall; A går till titeln).
 
 **Banfilens format:** `grid` (`.` golv, `+` dörr, versal = material), `zones` (en siffra per cell), `doors`
 (`x y nyckelbit`, exakt cellerna med `+`, i dörrtabellens ordning), `keys` (`x y bit`), `lamps` (`x y styrka
@@ -849,6 +869,7 @@ plock, fotsteg, hotsignal 1. Alla effekter har svep ≠ 0, musiken svep 0 (så s
 | KEY | 1 | 880 | 16 | 9 | 30 | 1 | ett nyckelkort plockat |
 | STEP | 2 | 150 | 3 | 4 | -10 | 1 | fotsteg: huvudgungningens fas passerar en halvperiod medan spelaren går |
 | THREAT | 1 | 98 | 4 | 7 | -2 | 1 | hotsignalen (§8.3) |
+| OBJECTIVE | 1 | 523 | 24 | 10 | 20 | 3 | ett mål klarat (M31) |
 
 ### 8.2 Musiken
 
@@ -929,6 +950,10 @@ golvkort 16 KB, bakgrund 2,2 KB, karta 3 KB), kassett 16,9 KB, RAM till 0xD413.
 **Uppmätt i M30** (nio repriser med stressreprisen, D-046): varje bildruta högst **24 597**; stressreprisen (fyra
 levande fiender och två syrabollar i bild, sedan en kedjeexplosion med 24 partiklar) högst 24 597. ROM **30 226 B**
 (kod 22 820, data 7 406), xdata 49 469 B, kassett 31 721 B, RAM till 0xF6FD (1 795 B kvar under 0xFE00).
+
+**Uppmätt i M31** (tolv repriser, D-049): varje bildruta högst **24 894**; hela spelet (`m31-game`) medel 14 185;
+ROM **32 403 B** av 32 768 (365 B kvar), RAM till 0xFABB, xdata 51 961 B, kassett 34 472 B. Nedskärningslistans
+steg 2 (overlay) behövdes inte; steg 1 (texter till xdata) tas i M32 om något mer ska in i ROM.
 
 **Budgetgrinden M30 — prognos för den färdiga skivan** (M31: titel med attract-läge, kontrollpunkt, segersekvens
 och statistik, slutlig HUD, mål, nyckelkort, hemligheter; M32: sekvenserare, effekter, hotljud, motiv, musik):

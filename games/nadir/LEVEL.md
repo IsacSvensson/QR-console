@@ -50,7 +50,7 @@ den. Bakom ligger en nisch med ett föremål. Den räknas som hittad första gå
 
 | # | Dold dörr | Material | Nisch | Föremål |
 |---|---|---|---|---|
-| 1 | 2 10 | R | 1 10 | ammunition |
+| 1 | 2 8 | S | 1 8 | ammunition |
 | 2 | 17 10 | R | 17 9 | medkit |
 | 3 | 14 19 | R | 14 20 | ammunition |
 

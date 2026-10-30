@@ -21,6 +21,8 @@ D_TIMER     = 5
 D_ORIENT    = 6             ; 1: the plane x = cx + 1/2, 0: y = cy + 1/2
 D_KEY       = 7             ; key bit, 0 = none
 D_MAT       = 8             ; material drawn (door or locked door)
+D_BASE      = 9             ; material when not locked (a hidden door: its wall's, M31)
+D_REACH     = 10            ; the reach that opens it (word): DOOR_REACH or HIDE_REACH
 DOOR_SIZE   = 16
 
 ; ---- props (DESIGN §3.12): the prop table entry ---------------------------------------------------------

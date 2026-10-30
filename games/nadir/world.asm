@@ -132,19 +132,24 @@ world:
     SHL r0, 8
     ADD r0, 128                     ; centre y
     LDI r5, 0
+    LD r3, [r6 + D_REACH]           ; DOOR_REACH, or HIDE_REACH for a hidden door (M31)
+    MOV r7, r3
+    SHL r7, 1
+    SUB r7, 1                       ; 2 reach - 1
+    SUB r3, 1
     LD r2, [cam_x]
     SUB r2, r1
-    ADD r2, DOOR_REACH - 1          ; |dx| < DOOR_REACH  <=>  dx + REACH - 1 in 0 .. 2 REACH - 2
-    CMP r2, 2 * DOOR_REACH - 1
+    ADD r2, r3                      ; |dx| < reach  <=>  dx + reach - 1 in 0 .. 2 reach - 2
+    CMP r2, r7
     JAE @far
     LD r2, [cam_y]
     SUB r2, r0
-    ADD r2, DOOR_REACH - 1
-    CMP r2, 2 * DOOR_REACH - 1
+    ADD r2, r3
+    CMP r2, r7
     JAE @far
     LDI r5, 1
 @far:
-    LDI r4, MAT_DOOR
+    LDB r4, [r6 + D_BASE]           ; the door's own material (a hidden door: its wall's)
     LDB r3, [r6 + D_KEY]
     CMP r3, 0
     JEQ @allowed
@@ -217,4 +222,61 @@ world:
     ADD r6, DOOR_SIZE
     JMP @door
 @done:
+    ; ---- M31 (DESIGN §6.5, LEVEL.md): the next objective's cell, the secrets' alcoves
+    LD r1, [cam_x]
+    SHR r1, 8
+    LD r2, [cam_y]
+    SHR r2, 8
+    SHL r2, 5
+    ADD r2, r1                      ; the player's cell
+    LD r3, [obj]
+    CMP r3, NUM_OBJ
+    JAE @sec
+    SHL r3, 1
+    LD r0, [r3 + obj_tab]
+    CMP r0, r2
+    JNE @sec
+    LD r3, [obj]
+    ADD r3, 1
+    ST [obj], r3
+    ST [msg_k], r3                  ; the next objective's text
+    LDI r0, MSG_FRAMES
+    ST [msg_t], r0
+    LDI r0, SFX_OBJECTIVE
+    CALL play_sfx
+    CMP r3, CHECK_OBJ
+    JNE @last
+    PUSH r2
+    CALL snap_save
+    POP r2
+@last:
+    LD r3, [obj]
+    CMP r3, NUM_OBJ
+    JNE @sec
+    LDI r0, 1
+    ST [won], r0
+@sec:
+    LDI r3, 0
+    LDI r4, 1
+@s:
+    CMP r3, NUM_SECRETS * 2
+    JAE @sd
+    LD r0, [r3 + sec_tab]
+    CMP r0, r2
+    JNE @sn
+    LD r0, [sec_bits]
+    MOV r1, r0
+    AND r1, r4
+    JNZ @sn                         ; found before
+    OR r0, r4
+    ST [sec_bits], r0
+    LDI r0, NUM_OBJ                 ; "SECRET FOUND"
+    ST [msg_k], r0
+    LDI r0, MSG_FRAMES
+    ST [msg_t], r0
+@sn:
+    SHL r4, 1
+    ADD r3, 2
+    JMP @s
+@sd:
     RET

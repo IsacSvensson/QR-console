@@ -3,7 +3,7 @@
 // Then run `npm run refs:games` to regenerate the committed per-frame hashes.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Bot } from './bot';
+import { B, Bot } from './bot';
 import { loadGame } from './game';
 import { ROUTES } from './routes';
 import { GAME_DIR } from './util';
@@ -16,6 +16,7 @@ for (const name of names) {
   const g = await loadGame(r.seed);
   const bot = new Bot(g.vm, g.S);
   try {
+    if (!r.title) bot.step(B.A); // M31: the game starts on the title
     r.run(bot);
   } catch (e) {
     console.error(`${name}: failed after ${bot.inputs.length} frames: ${(e as Error).message}`);

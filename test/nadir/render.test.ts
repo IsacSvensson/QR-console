@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { VM, expandInputs } from '@qrc/vm';
 import { K, MASKED_CHARS, MATERIAL_CHARS, castRef, colOff, readRefMap, refDyn, refLevel, refLight, transparency, type RefHit } from './ref';
-import { REPLAYS, buildNadir, loadReplay, runReplay, type Nadir } from './play';
+import { REPLAYS, buildNadir, imageWatch, loadReplay, runReplay, type Nadir } from './play';
 
 
 const map = readRefMap('nadir');
@@ -62,11 +62,12 @@ interface Image {
 function eachImage(n: Nadir, name: string, onImage: (f: number, vm: VM, im: Image) => void) {
   let cast: Map<number, number> | null = null;
   const opens = (vm: VM) => new Map(map.doors.map((d, i) => [d.y * W + d.x, vm.read16(n.S('doors') + 16 * i + 2)]));
+  const drew = imageWatch(n);
   return runReplay(n, name, (f, vm) => {
-    if (vm.read16(n.S('lg_heavy')) !== 0) return; // a shot or an explosion: no rendering step in this frame (DESIGN §3.11)
-    // pace 2 then 1: a heavy image's rays were cast two frames before it is drawn (DESIGN §3.11)
-    if (vm.read16(n.S('pace')) !== 0) {
-      cast ??= opens(vm);
+    // pace 2 then 1: a heavy image's rays were cast two frames before it is drawn (DESIGN §3.11); a frame that
+    // draws nothing (a shot or an explosion, the title's press, M31) is skipped
+    if (!drew(vm)) {
+      if (vm.read16(n.S('pace')) !== 0) cast ??= opens(vm);
       return;
     }
     const o = cast ?? opens(vm);

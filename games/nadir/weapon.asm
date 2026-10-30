@@ -12,6 +12,7 @@ W_LOAD  = 3
 .var w_res                          ; shells in reserve
 .var w_flash                        ; muzzle flash: frames left
 .var shots                          ; shots fired
+.var shots_hit                      ; shots with a pellet in an enemy (M31)
 .var pel_hit, PELLETS               ; per pellet of the last shot: enemy index or 255
 .var pel_dmg, PELLETS               ; and its damage
 .var sh_los, MAX_ENEMIES            ; per enemy at the last shot: 1 if it could be hit (in reach, line of sight)
@@ -396,7 +397,19 @@ shoot:
     ADD r7, 1
     ST [sh_k], r7
     JMP @pel
-@done:
+@done:                              ; M31: a shot with at least one pellet in an enemy counts as a hit
+    LDI r0, 0
+@h:
+    CMP r0, PELLETS
+    JAE @hn
+    LDB r1, [r0 + pel_hit]
+    ADD r0, 1
+    CMP r1, 128
+    JAE @h
+    LD r1, [shots_hit]
+    ADD r1, 1
+    ST [shots_hit], r1
+@hn:
     RET
 ; r0, r1 = a target (u8.8) -> r5 = t, r7 = lateral miss along the pellet (sh_c, sh_s). Clobbers r0-r4.
 @tl:
@@ -522,10 +535,33 @@ draw_weapon:
     JGE @hpos
     LDI r0, 0
 @hpos:
+    PUSH r0
     LDI r1, 14
     LDI r2, 121
     LDI r3, 15
     SYS NUM
+    LDI r0, 28                      ; M31: the health bar (25 px = HP_MAX), green, amber below 50, red below 25
+    LDI r1, 122
+    LDI r2, 25
+    LDI r3, 3
+    LDI r4, 1
+    SYS RECTFILL
+    POP r2
+    SHR r2, 2
+    JZ @hb
+    LDI r4, 11
+    CMP r2, 12
+    JGE @hc
+    LDI r4, 9
+    CMP r2, 6
+    JGE @hc
+    LDI r4, 6
+@hc:
+    LDI r0, 28
+    LDI r1, 122
+    LDI r3, 3
+    SYS RECTFILL
+@hb:
     LD r0, [w_res]
     LDI r1, 112
     LDI r2, 121

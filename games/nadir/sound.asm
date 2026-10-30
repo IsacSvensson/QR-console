@@ -116,6 +116,9 @@ music_step:
     CMP r5, enemies + E_ST + NUM_ENEMIES * E_SIZE
     JB @aw
     ST [mus_awake], r1
+    LD r0, [gstate]                 ; M31: the track choice and the cue only in play
+    CMP r0, GS_PLAY
+    JNE @voices
     LD r0, [dead]
     CMP r0, 0
     JNE @thr0                       ; dead: DÖD plays (set at the death), no cue

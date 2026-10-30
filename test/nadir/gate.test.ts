@@ -3,15 +3,16 @@
 // logic <= 16 000) and M28 (drawing the props of the stress replay <= 5 000 per frame, since D-044 incl. 3D boxes). They are measured per IMAGE: an image drawn one frame after its rays were cast (adaptive pacing,
 // DESIGN §3.11) costs both frames, so pacing cannot make a gate pass.
 import { expect, it } from 'vitest';
-import { REPLAYS, buildNadir, propCosts, runReplay, type Nadir } from './play';
+import { REPLAYS, buildNadir, imageWatch, propCosts, runReplay, type Nadir } from './play';
 
 function imageCosts(n: Nadir, name: string): number[] {
   const out: number[] = [];
+  const drew = imageWatch(n);
   let pending = 0;
   runReplay(n, name, (f, vm) => {
     if (f === 0) return;
     pending += vm.cyclesLastFrame;
-    if (vm.read16(n.S('pace')) !== 0 || vm.read16(n.S('lg_heavy')) !== 0) return; // no image drawn in this frame
+    if (!drew(vm)) return; // no image drawn in this frame
     out.push(pending);
     pending = 0;
   });

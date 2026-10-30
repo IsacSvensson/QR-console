@@ -5,7 +5,7 @@ MUS_DRONE = 2
 MUS_FIGHT = 3
 MUS_DEATH = 4
 MUS_VICTORY = 5
-NUM_SFX = 26
+NUM_SFX = 27
 ; the effects (DESIGN §8.1): the .sfx definitions in the table's order
 .sfx SFX_SHOT, 2, 320, 14, 15, -16
 .sfx SFX_SHOTB, 0, 110, 10, 12, -6
@@ -33,6 +33,7 @@ NUM_SFX = 26
 .sfx SFX_KEY, 1, 880, 16, 9, 30
 .sfx SFX_STEP, 2, 150, 3, 4, -10
 .sfx SFX_THREAT, 1, 98, 4, 7, -2
+.sfx SFX_OBJECTIVE, 1, 523, 24, 10, 20
 .data
 ; per effect: channel, frames, priority, 0
 sfx_meta:
@@ -62,6 +63,7 @@ sfx_meta:
     .byte 1, 16, 1, 0          ; KEY
     .byte 2, 3, 1, 0          ; STEP
     .byte 1, 4, 1, 0          ; THREAT
+    .byte 1, 24, 3, 0          ; OBJECTIVE
 ; per track: the xdata offsets (from mus_x) of voices 0, 1, 2 (0xFFFF: silent) and the successor track
 mus_tracks:
     .word 65535, 65535, 65535, 0          ; NONE

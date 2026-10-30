@@ -658,7 +658,18 @@ interp:
     LD r0, [r2 + col_uf]
     LD r1, [r3 + col_uf]
     CMP r1, r0
-    JB @fu
+    JAE @fi
+    PUSH r4                         ; u falls on one face: an edge's rounding wrapped one end (D-049); the end
+    MOV r4, r0                      ; nearer to its boundary wrapped: the left one (0x10000 - uf_l) or the right one
+    NEG r4
+    CMP r4, r1
+    POP r4
+    JB @fl
+    LDI r1, 0xFFFF                  ; the right one past the face's end
+    JMP @fi
+@fl:
+    LDI r0, 0                       ; the left one before its start
+@fi:
     SUB r1, r0
     SHR r1, 8
     MUL r1, r5
@@ -803,7 +814,18 @@ interp:
     LD r0, [r2 + col_uf]
     LD r1, [r3 + col_uf]
     CMP r1, r0
-    JB @u                           ; equal up to rounding: keep u_l
+    JAE @gi
+    PUSH r4                         ; u falls on one face: an edge's rounding wrapped one end (D-049); the end
+    MOV r4, r0                      ; nearer to its boundary wrapped: the left one (0x10000 - uf_l) or the right one
+    NEG r4
+    CMP r4, r1
+    POP r4
+    JB @gl
+    LDI r1, 0xFFFF                  ; the right one past the face's end
+    JMP @gi
+@gl:
+    LDI r0, 0                       ; the left one before its start
+@gi:
     SUB r1, r0
     SHR r1, 8
     MUL r1, r5
@@ -821,6 +843,14 @@ interp:
     LDI r0, 0
     RET
 @coplanar:
+    LD r0, [r2 + col_uf]            ; an end within 1/128 cell of a cell edge: cast the column instead (the
+    ADD r0, 0x200                   ; edge's rounding may have wrapped its u into the next cell, D-049)
+    CMP r0, 0x400
+    JB @fail
+    LD r0, [r3 + col_uf]
+    ADD r0, 0x200
+    CMP r0, 0x400
+    JB @fail
     PUSH r4
     LD r0, [ip_fr]
     LD r1, [r3 + col_uf]

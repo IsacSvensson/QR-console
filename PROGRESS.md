@@ -2,7 +2,7 @@
 
 _Dashboard, not a diary. Keep it short. Update after every milestone and before long-running tasks._
 
-**Current milestone:** M31 — NADIR vertical slice and the game around it (PLAN.md Part 4)
+**Current milestone:** M32 — NADIR polish and delivery (PLAN.md Part 4; its sound part was done as M32a)
 **Status:** Parts 1–3 complete (one flaky Part 1 acceptance test, see *Blocked / needs human*); they await the
 human's manual acceptance. Part 4 (NADIR, a first-person shooter) planned and approved 2026-10-29: design in
 `games/nadir/DESIGN.md`, milestones M26–M32 in PLAN.md.
@@ -51,12 +51,21 @@ Part 4 — NADIR (design: `games/nadir/DESIGN.md`)
 - [x] M28 Sprites and props — 3D boxes (M28b, D-044); prop drawing 9 991 vs 5 000 cycles per frame **accepted by the human** (2026-10-30), the gate stays red in `nadir-gate` as a measurement
 - [x] M29 Weapon, combat, the first enemy (D-045; the M26/M27/M28 cycle gates stay red, see below)
 - [x] M30 Atmosphere, effects, the second enemy (D-046) — **budget gate: projected ROM 36-38 KB > 32 KB, cut list applies, flagged below**
-- [ ] M31 The vertical slice and the game around it
+- [x] M31 The vertical slice and the game around it (D-048, D-049)
 - [x] M32a Sound (M32's sound part, done before M31 on the human's request, D-047)
 - [ ] M32 Polish, delivery (the rest of M32)
 
 ## Current work
 
+Part 4: M31 done (D-048, D-049): the title with an attract fly-through (repeats exactly every 1 024 frames), four
+objectives in LEVEL.md's order (red key card, security door, the core pump's terminal, the lift), a checkpoint with a
+RAM snapshot, three secrets behind hidden doors, the lift ride with the victory motif, the statistics screen, the
+final HUD (health bar, objective text, "SECRET FOUND"). Tested automatically: a bot plays title -> whole game ->
+statistics -> title; the objectives come in LEVEL.md's order; the statistics read off the screen (VM font) equal
+the replay's events; a death past the checkpoint restores its snapshot; every secret, pickup and enemy is reached or
+killed; all earlier oracles run on twelve replays. Measured: max 24 894, full-game mean 14 185 cycles per frame;
+ROM 32 403 B of 32 768. Fixed on the way: two u-interpolation errors at cell edges. Not verified: playing it on a
+phone (PLAN *Manual acceptance* 3 after M32).
 Part 4: M32a done (D-047), sound before M31 on the human's request: 26 effects with channel priorities (weapon,
 enemies, acid, explosions, doors, pickups, footsteps), an original thrash score (`art/music.txt`: STRID, drone,
 START, DEATH, VICTORY) played from xdata by a three-voice sequencer, the threat cue by distance. Tested

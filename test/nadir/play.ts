@@ -58,14 +58,27 @@ export function runReplay(n: Nadir, name: string, onFrame?: (f: number, vm: VM) 
   return { vm, rf, max, mean: sum / (rf.frames - 1), hashMismatch, expectedFrames: expected.length };
 }
 
+/** M31: true in the frames that drew an image (the engine's image counter `img_n` moved): not a frame that only
+ * cast rays, skipped rendering after a shot (DESIGN §3.11) or showed the title's press, the lift or the statistics. */
+export function imageWatch(n: Nadir) {
+  let last = 0;
+  return (vm: VM) => {
+    const k = vm.read16(n.S('img_n'));
+    const drew = k !== last;
+    last = k;
+    return drew;
+  };
+}
+
 /** Every recorded replay of NADIR (games/nadir/replays, tools/routes.ts). */
-export const REPLAYS = ['m26-fly', 'm27-walk', 'm27-doors', 'm27-masks', 'm27-tour', 'm28-props', 'm29-combat', 'm29-death', 'm30-stress'];
+export const REPLAYS = ['m26-fly', 'm27-walk', 'm27-doors', 'm27-masks', 'm27-tour', 'm28-props', 'm29-combat', 'm29-death', 'm30-stress', 'm31-game', 'm31-checkpoint', 'm31-attract'];
 
 /**
  * The stress replay m28-props (PLAN M28): per frame the cycles of drawing the props (draw_sprites with its callees),
  * of that without the 3D boxes (draw_box), of choosing them (spr_frame) and of the frame; frames that drew eight.
  */
 export function propCosts(n: Nadir) {
+  const drew = imageWatch(n);
   let maxDraw = 0;
   let maxBill = 0;
   let maxSel = 0;
@@ -91,7 +104,7 @@ export function propCosts(n: Nadir) {
         maxBill = Math.max(maxBill, cyc[0]! - cyc[2]!);
         maxSel = Math.max(maxSel, cyc[1]!);
         maxFrame = Math.max(maxFrame, vm.cyclesLastFrame);
-        if (vm.read16(n.S('spr_cn')) - vm.read16(n.S('spr_o0')) / 2 >= 8 && vm.read16(n.S('pace')) === 0) eight++;
+        if (drew(vm) && vm.read16(n.S('spr_cn')) - vm.read16(n.S('spr_o0')) / 2 >= 8) eight++;
       }
       return out;
     };

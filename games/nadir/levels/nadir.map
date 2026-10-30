@@ -13,9 +13,9 @@ RS...SRRRRRRRRRRRRS..........W.C
 RSF+FSRRRRRRRRRRRRT....BB....S.R
 RRR..BCBBBHBBBCBRRS..........CRR
 RRR..B.........BRRS..........SRR
-RRS..S.........BRRS..........SRR
-RRR..S..B...B..BRRSSF+FOSOOOSOOO
-RRR..G.........BRRSSS.SO.......O
+R.+..S.........BRRS..........SRR
+RRR..S..B...B..BR.SSF+FOSOOOSOOO
+RRR..G.........BR+SSS.SO.......O
 RRR..G....B....B....C.RF.......O
 RRS..S.......H.F..C....+....O..O
 RRR..B..BKKKB..+.RCRRRRF..O.O..O
@@ -24,8 +24,8 @@ RRRRRB........HBRRRRRRRO.OLLOO.R
 RRRRRBBBBF+FBHBBRRRRRRRO.......O
 RRRRRRRRRR.........RRRRO..O....O
 RRRRRRRRRR.........RRRRO.......O
-RRRRRRRRRRRRRRRRRR...C.........O
-RRRRRRRRRRRRRRRRRR.....O.......O
+RRRRRRRRRRRRRR+RRR...C.........T
+RRRRRRRRRRRRRR.RRR.....O.......O
 RRRRRRRRRRRRRRRRRRRCRRROOOOOOOOO
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
@@ -71,12 +71,16 @@ zones
 00000000000000000000000000000000
 00000000000000000000000000000000
 doors
-# x y key (0 = none, otherwise the key bit that unlocks it)
+# x y key [material] (key 0 = none, otherwise the key bit that unlocks it; a material char = a hidden door that
+# looks like that wall and opens only when the player stands against it, LEVEL.md "Hemligheterna")
 3 5 0
 15 13 0
 21 9 0
 23 12 1
 10 16 0
+2 8 0 S
+17 10 0 R
+14 19 0 R
 keys
 # x y bit: walking into the cell gives the key
 27 3 1
@@ -96,6 +100,7 @@ lamps
 12 17 3 2
 poses
 # name x y degrees (0 = east, 90 = south)
+checkpoint 24.5 12.5 0
 start 3.5 3.0 90
 shaft 3.5 7.0 90
 grate 4.3 10.2 0
@@ -129,12 +134,12 @@ props
 11.3 10.4 M
 9.0 7.4 X
 23.0 7.8 B
-12.6 11.6 A
+1.5 8.5 A
 19.6 2.6 T
 24.5 2.6 T
 28.3 7.4 T
-19.6 7.5 M
-27.6 5.2 A
+17.5 9.5 M
+14.5 20.5 A
 30.4 10.6 P
 30.4 13.6 P
 29.5 19.4 L
@@ -152,3 +157,17 @@ enemies
 28.5 17.5 K
 28.3 6.2 S
 28.3 8.4 S
+objectives
+# x y: the cells of LEVEL.md's objectives, in order (the last one wins the game)
+27 3
+24 12
+30 19
+3 3
+checkpoint
+# after objective n: the snapshot, and a death restarts at the pose named checkpoint
+2
+secrets
+# x y: the alcove of each hidden door (LEVEL.md "Hemligheterna"): found when the player first stands in it
+1 8
+17 9
+14 20

@@ -3,7 +3,7 @@
 // (Per-frame hashes, the light rule with the dynamic lights and the model of DESIGN §6 run on it in the other files.)
 import { describe, expect, it } from 'vitest';
 import { K } from './ref';
-import { buildNadir, runReplay } from './play';
+import { buildNadir, imageWatch, runReplay } from './play';
 
 describe('M30 stress', () => {
   it('m30-stress: 4 living enemies drawn with 2 acid balls, then an explosion with 24 particles and 4 enemies drawn; <= 25 000 cycles per frame', async () => {
@@ -11,8 +11,9 @@ describe('M30 stress', () => {
     let four = 0; // images: >= 4 living enemies drawn and >= 2 acid balls
     let boom = 0; // images: the explosion's light, PART_MAX particles, >= 2 acid balls, >= 4 enemies drawn (living or dying)
     let maxBoom = 0;
+    const drew = imageWatch(n);
     const run = runReplay(n, 'm30-stress', (_f, vm) => {
-      if (vm.read16(n.S('pace')) !== 0 || vm.read16(n.S('lg_heavy')) !== 0) return; // no image drawn in this frame
+      if (!drew(vm)) return; // no image drawn in this frame
       let alive = 0;
       let drawn = 0;
       for (let i = vm.read16(n.S('spr_o0')) / 2; i < vm.read16(n.S('spr_cn')); i++) {

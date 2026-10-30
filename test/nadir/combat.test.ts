@@ -613,9 +613,11 @@ describe('M29 combat', () => {
       for (let f = 1; f < rf.frames; f++) {
         const b = read(n, vm);
         const paceBefore = vm.read16(n.S('pace'));
+        const played = vm.read16(n.S('gstate')) === 1; // M31: the logic runs only in play (not on the title, the lift, the statistics)
         vm.step(inputs[f]!);
         const a = read(n, vm);
         const where = `frame ${f + 1}`;
+        if (!played) continue;
         if (a.restarts !== b.restarts) {
           restarts++;
           expect(f - deathAt, `${where}: DEATH_FRAMES from death to restart`).toBe(K.DEATH_FRAMES!);
@@ -671,9 +673,12 @@ describe('M29 combat', () => {
     const c = VM.fromCartridge(n.cart, { seed: rf.seed ?? 1 });
     c.mem.set(a.mem);
     c.frame = a.frame;
-    c.write16(n.S('tick'), 0);
-    c.step(0);
+    // (c steps after the fresh start below, with its tick)
+    // a fresh start (M31): init, A on the title, then one frame without input
     const fresh = VM.fromCartridge(n.cart, { seed: rf.seed ?? 1 });
+    fresh.step(BUTTONS.A);
+    c.write16(n.S('tick'), fresh.read16(n.S('tick')));
+    c.step(0);
     fresh.step(0);
     // the game state DESIGN §6.5 resets: player, doors, props, enemies, weapon, health, counters
     const vars: [string, number][] = [
