@@ -2,7 +2,7 @@
 // every frame of every replay, against DESIGN §3.10 and §5 as read by test/nadir/ref.ts.
 import { describe, expect, it } from 'vitest';
 import { VM, expandInputs, type ReplayFile } from '@qrc/vm';
-import { K, mapByte, readRefMap, readRefSprites, refLight, solid, stepDoor, stepPlayer, type PlayerState } from './ref';
+import { K, MASKED_CHARS, mapByte, readRefMap, readRefSprites, refLight, solid, stepDoor, stepPlayer, type PlayerState } from './ref';
 import { REPLAYS, buildNadir, loadReplay, type Nadir } from './play';
 
 const map = readRefMap('nadir');
@@ -87,10 +87,15 @@ describe('M27 world', () => {
       for (let x = 0; x < W; x++) {
         const i = y * W + x;
         expect(vm.read8(n.S('map') + i), `map byte at ${x},${y}`).toBe(mapByte(map, x, y));
+        cells++;
+        // M31: lmap and zmap end after the last row with an open cell (every cell after it is solid)
+        if (i >= n.S('LIGHT_CELLS')) {
+          expect(/[A-Z]/.test(map.grid[y]![x]!) && !MASKED_CHARS.has(map.grid[y]![x]!), `${x},${y} beyond lmap is solid`).toBe(true);
+          continue;
+        }
         expect(vm.read8(n.S('zmap') + i), `zone at ${x},${y}`).toBe(map.zones[y]![x]!);
         const L = light[y]![x]!;
         expect(vm.read8(n.S('lmap') + i), `light at ${x},${y}`).toBe(Math.min(7, L.s) | (Math.min(7, L.f) << 3) | (L.g << 6));
-        cells++;
       }
     expect(n.S('NUM_DOORS')).toBe(map.doors.length);
     map.doors.forEach((d, i) => {

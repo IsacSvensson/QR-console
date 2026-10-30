@@ -124,8 +124,8 @@ col_mlvl  = col_lvl + LAYER
 ; ---- world --------------------------------------------------------------------------------------------
 MAP_CELLS = MAP_W * MAP_H
 .var map, MAP_CELLS         ; DESIGN §3.10 byte per cell (0 = floor)
-.var lmap, MAP_CELLS        ; light byte per cell (DESIGN §3.5)
-.var zmap, MAP_CELLS        ; zone per cell
+.var lmap, LIGHT_CELLS      ; light byte per cell (DESIGN §3.5), the rows down to the last open one
+.var zmap, LIGHT_CELLS      ; zone per cell, likewise
 .var texram, TEX_BYTES      ; textures (from xdata)
 .var coderam, CODE_BYTES    ; compiled LOD 0 texture columns (from xdata; this code runs from RAM)
 .var bgram, BG_BYTES        ; floor/ceiling tiles (from xdata)

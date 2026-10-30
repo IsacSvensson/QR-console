@@ -34,8 +34,10 @@ init:
     FARCOPY coderam, code_x, CODE_BYTES
     FARCOPY bgram, bg_x, BG_BYTES
     FARCOPY map, map_x, MAP_CELLS
-    FARCOPY lmap, lmap_x, MAP_CELLS
-    FARCOPY zmap, zmap_x, MAP_CELLS
+    FARCOPY lmap, lmap_x, LIGHT_CELLS
+    FARCOPY zmap, zmap_x, LIGHT_CELLS
+    FARCOPY wpn_tiles, wpn_tiles_x, WPN_TILES * 32
+    FARCOPY vig_tiles, vig_tiles_x, VIG_BYTES
     CALL ray_init
     LDI r0, 1                       ; control scheme S1 (DESIGN §5): B + LEFT/RIGHT walks sideways
     ST [ctl_s1], r0

@@ -17,7 +17,7 @@ SR_LOD   = 18
 SR_TYPE  = 20                       ; address of its spr_type entry
 SR_CELL  = 22                       ; its map cell (light)
 SR_SIZE  = 58                       ; (boxes keep their corners from byte 24 on: boxes.asm)
-SPR_CAND = 32                       ; candidates at most (all props and enemies)
+SPR_CAND = PVS_MAX + NUM_ENEMIES   ; candidates at most: the props visible from a cell and every enemy (M31)
 
 .var spr_cn                         ; candidates this image
 .var spr_img                        ; images whose sprites were chosen (tests)

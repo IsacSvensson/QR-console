@@ -88,9 +88,12 @@ export function weaponAsm(parts = readWeapon()): string {
     '.data',
     '; per part: tile numbers row by row (0 = empty)',
     ...maps.flatMap(({ part, map }) => [`wpn_${part.name}:`, ...byteLines(map, 16)]),
-    '; 8 x 8 tiles, 4 bits per pixel, colour 0 transparent',
-    'wpn_tiles:',
+    '; 8 x 8 tiles, 4 bits per pixel, colour 0 transparent: in xdata, copied to RAM by init (DESIGN §9 cut list)',
+    `.var wpn_tiles, ${tiles.length * 32}`,
+    '.xdata',
+    'wpn_tiles_x:',
     ...tiles.flatMap((t) => byteLines(t, 16)),
+    '.code',
     '',
   ].join('\n');
 }

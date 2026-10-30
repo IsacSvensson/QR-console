@@ -1025,3 +1025,16 @@ Measured: every frame of the nine replays <= 24 815 cycles (sound ~100-250 per f
 (+1.5 KB: sequencer, hooks, 26 effect definitions), xdata 50.9 KB, cartridge 33.0 KB, RAM to 0xF71D.
 Revisit if: the human wants another style or length of music (the score is text), or M31 needs the ROM (the
 effect hooks could move to an event table).
+
+## D-048 - NADIR M31a: room for the slice (DESIGN §9 cut list, no losses)
+Date: 2026-10-30 - Milestone: M31
+Decision: before M31's code, ROM and RAM are freed without changing what the game does:
+- the weapon's MAP tiles (1 248 B) and the vignette's (544 B) move to xdata and are copied into RAM by init (MAP
+  reads RAM as well as ROM): ROM -1.8 KB, RAM +1.8 KB;
+- `lmap` and `zmap` only cover the rows down to the last one with an open cell (21 rows: 672 B each; the rows
+  below are solid, lookups only happen for open cells; `world.test.ts` checks that every cell beyond is solid):
+  RAM -704 B;
+- the sprite candidate table is sized by the largest per-cell visible prop set plus the enemies (11 + 8 = 19
+  instead of 32; the candidate loop only takes props of the camera cell's set), so it cannot overflow: RAM -780 B.
+Measured: ROM 31 695 -> 29 991 B, RAM top 0xF71D -> 0xF853, all replays unchanged in logic (hashes regenerated).
+The cut list's step 2 (screens as overlays) is not needed yet.

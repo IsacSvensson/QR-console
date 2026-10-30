@@ -17,8 +17,10 @@ wpn_pump:
     .byte 29, 30, 31, 32, 33, 34
 wpn_flash:
     .byte 35, 36, 37, 38
-; 8 x 8 tiles, 4 bits per pixel, colour 0 transparent
-wpn_tiles:
+; 8 x 8 tiles, 4 bits per pixel, colour 0 transparent: in xdata, copied to RAM by init (DESIGN §9 cut list)
+.var wpn_tiles, 1248
+.xdata
+wpn_tiles_x:
     .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     .byte 0, 1, 17, 17, 0, 1, 17, 17, 0, 17, 51, 58, 0, 19, 51, 58
@@ -97,3 +99,4 @@ wpn_tiles:
     .byte 0, 0, 0, 153, 0, 0, 0, 9, 0, 0, 0, 9, 0, 0, 0, 0
     .byte 254, 238, 153, 144, 254, 153, 0, 0, 233, 144, 0, 0, 233, 0, 0, 0
     .byte 153, 0, 0, 0, 144, 0, 0, 0, 144, 0, 0, 0, 0, 0, 0, 0
+.code

@@ -362,8 +362,12 @@ export function mapAsm(m: GameMap): string {
       return id.get(c)!;
     }),
   );
-  const zones = m.zones.flat();
-  const light = lightMap(m);
+  // M31 (DESIGN §9, cut list): lmap and zmap only cover the rows down to the last one with an open cell (the
+  // light and zone are only looked up for open cells); the rows below are solid
+  const lightRows = 1 + Math.max(...m.grid.map((row, y) => (/[^A-Z]/.test(row) ? y : 0)));
+  const lightCells = lightRows * m.W;
+  const zones = m.zones.flat().slice(0, lightCells);
+  const light = lightMap(m).slice(0, lightCells);
   const fix = (v: number) => Math.round(v * 256);
   const ang = (deg: number) => Math.round((deg * ANGLES) / 360) & (ANGLES - 1);
   return [
@@ -371,6 +375,8 @@ export function mapAsm(m: GameMap): string {
     `NUM_LAMPS = ${m.lamps.length}`,
     `NUM_POSES = ${m.poses.length}`,
     `NUM_DOORS = ${m.doors.length}`,
+    `LIGHT_CELLS = ${lightCells}`,
+    `PVS_MAX = ${Math.max(...propSets(m).vis.map((v) => v.reduce((s, b) => s + [...b.toString(2)].filter((c) => c === '1').length, 0)))}  ; props in the largest per-cell visible set (bounds the sprite candidates)`,
     `NUM_KEYS = ${m.keys.length}`,
     `NUM_PROPS = ${m.props.length}`,
     `NUM_ENEMIES = ${m.enemies.length}`,

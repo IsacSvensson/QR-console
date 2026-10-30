@@ -906,7 +906,11 @@ vig_maps:
     .byte 5, 6, 7, 8
     .byte 9, 10, 11, 12
     .byte 13, 14, 15, 16
-vig_tiles:
+; in xdata, copied to RAM by init (DESIGN §9 cut list)
+VIG_BYTES = 544
+.var vig_tiles, VIG_BYTES
+.xdata
+vig_tiles_x:
     .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     .byte 17, 17, 17, 16, 17, 17, 17, 1, 17, 17, 16, 16, 1, 1, 1, 1
@@ -941,6 +945,7 @@ vig_tiles:
     .byte 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 16, 0, 1, 1, 1
     .byte 16, 16, 16, 16, 1, 1, 17, 1, 16, 16, 16, 16, 1, 17, 17, 17
     .byte 16, 16, 16, 16, 1, 1, 17, 17, 16, 17, 17, 17, 1, 17, 17, 17
+.data
 ; the damage direction's bar: x, y, w, h (front = top, right, back = bottom, left)
 dmg_bar:
     .word 32, 0, 64, 4, 124, 32, 4, 64, 32, 124, 64, 4, 0, 32, 4, 64
